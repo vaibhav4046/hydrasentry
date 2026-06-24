@@ -1,97 +1,111 @@
 "use client";
 
 /**
- * Fixed, GPU-cheap noir backdrop: a faint grid, a radial spotlight, a soft
- * white core glow, faint SVG graph lines, and a few slowly drifting dots.
- * Purely decorative (aria-hidden), no external image required. Mount once in
- * the root layout behind everything (it is fixed and -z-10).
+ * Cinematic noir backdrop. Layers, bottom -> top:
+ *   1. base void (#050608)
+ *   2. the asset-pack memory-graph wallpaper (/bg/hero-noir-graph-4k.png),
+ *      dimmed and radially masked so it is strongest behind the hero and
+ *      fades to black toward the edges/bottom — this is the "wallpaper".
+ *   3. a very slow GPU-only drift on that wallpaper layer (transform/opacity
+ *      only, will-change: transform) for subtle life.
+ *   4. a soft radial spotlight glow behind the upper-center hero.
+ *   5. film grain (/bg/noir-noise.png), tiled, soft-light, very low opacity.
+ *   6. a faint grid + a bottom->top vignette so foreground text and glass
+ *      cards keep strong contrast on every page.
+ *
+ * Monochrome only (assets are already black/white). Purely decorative
+ * (aria-hidden), fixed, full-bleed, -z-10, pointer-events-none. The drift is
+ * the single moving part and is disabled under prefers-reduced-motion.
+ * Mount once in the root layout behind everything.
  */
-import { m } from "framer-motion";
-
-const DRIFT_DOTS = [
-  { cx: 800, cy: 320, r: 5, base: 0.9, dur: 7 },
-  { cx: 1070, cy: 72, r: 3, base: 0.6, dur: 9 },
-  { cx: 390, cy: 92, r: 3, base: 0.55, dur: 8 },
-  { cx: 1235, cy: 178, r: 3, base: 0.5, dur: 11 },
-  { cx: 340, cy: 765, r: 3, base: 0.5, dur: 10 },
-  { cx: 790, cy: 690, r: 4, base: 0.65, dur: 12 },
-];
+import { m, useReducedMotion } from "framer-motion";
 
 export function NoirBackground() {
+  const reduceMotion = useReducedMotion();
+
+  // Radial mask: wallpaper strongest behind the upper-center hero, gone by the
+  // edges/bottom so it never washes out foreground text on any page.
+  const wallpaperMask =
+    "radial-gradient(120% 95% at 50% 30%, #000 0%, #000 32%, rgba(0,0,0,0.55) 58%, transparent 82%)";
+
   return (
     <div
       aria-hidden
       className="pointer-events-none fixed inset-0 -z-10 overflow-hidden bg-base"
     >
-      {/* grid */}
-      <div
-        className="absolute inset-0 opacity-70"
+      {/* 2 + 3: dimmed, radially-masked wallpaper with a very slow drift */}
+      <m.div
+        className="absolute inset-0 bg-cover bg-center bg-no-repeat"
         style={{
-          backgroundImage:
-            "linear-gradient(rgba(255,255,255,.045) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.045) 1px, transparent 1px)",
-          backgroundSize: "64px 64px",
-          maskImage:
-            "radial-gradient(circle at 58% 36%, black, transparent 78%)",
-          WebkitMaskImage:
-            "radial-gradient(circle at 58% 36%, black, transparent 78%)",
+          backgroundImage: "url(/bg/hero-noir-graph-4k.png)",
+          opacity: 0.32,
+          maskImage: wallpaperMask,
+          WebkitMaskImage: wallpaperMask,
+          willChange: "transform",
+        }}
+        initial={false}
+        animate={
+          reduceMotion
+            ? undefined
+            : {
+                transform: [
+                  "translate3d(-1.2%, -0.8%, 0) scale(1.06)",
+                  "translate3d(1.2%, 0.8%, 0) scale(1.1)",
+                  "translate3d(-1.2%, -0.8%, 0) scale(1.06)",
+                ],
+              }
+        }
+        transition={{
+          duration: 52,
+          repeat: Infinity,
+          ease: "easeInOut",
         }}
       />
-      {/* radial spotlight */}
+
+      {/* dark overlay to keep the wallpaper firmly in the 25-40% range */}
+      <div className="absolute inset-0 bg-base/35" />
+
+      {/* 4: soft radial spotlight behind the upper-center hero */}
       <div
         className="absolute inset-0"
         style={{
           background:
-            "radial-gradient(circle at 58% 38%, rgba(255,255,255,.16), rgba(255,255,255,.04) 32%, transparent 58%)",
+            "radial-gradient(circle at 50% 32%, rgba(255,255,255,0.10), rgba(255,255,255,0.03) 30%, transparent 56%)",
         }}
       />
-      {/* soft white core */}
-      <div className="absolute left-1/2 top-1/2 h-[720px] w-[1100px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-white/5 blur-3xl" />
-      {/* faint graph lines + drifting dots */}
-      <svg
-        className="absolute inset-0 h-full w-full opacity-45"
-        viewBox="0 0 1400 900"
-        fill="none"
-        preserveAspectRatio="xMidYMid slice"
-      >
-        <path
-          d="M790 690C760 560 760 440 800 320C842 196 942 126 1070 72"
-          stroke="white"
-          strokeOpacity=".28"
-        />
-        <path
-          d="M800 320C650 282 520 205 390 92"
-          stroke="white"
-          strokeOpacity=".18"
-        />
-        <path
-          d="M805 350C960 338 1090 292 1235 178"
-          stroke="white"
-          strokeOpacity=".16"
-        />
-        <path
-          d="M780 510C620 540 480 610 340 765"
-          stroke="white"
-          strokeOpacity=".13"
-        />
-        {DRIFT_DOTS.map((d, i) => (
-          <m.circle
-            key={i}
-            cx={d.cx}
-            cy={d.cy}
-            r={d.r}
-            fill="white"
-            initial={{ opacity: d.base }}
-            animate={{ opacity: [d.base * 0.5, d.base, d.base * 0.5] }}
-            transition={{
-              duration: d.dur,
-              repeat: Infinity,
-              ease: "easeInOut",
-            }}
-          />
-        ))}
-      </svg>
-      {/* bottom fade */}
-      <div className="absolute inset-x-0 bottom-0 h-48 bg-gradient-to-t from-base to-transparent" />
+
+      {/* 6a: faint grid, masked toward center, very low opacity */}
+      <div
+        className="absolute inset-0 opacity-60"
+        style={{
+          backgroundImage:
+            "linear-gradient(rgba(255,255,255,0.035) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.035) 1px, transparent 1px)",
+          backgroundSize: "72px 72px",
+          maskImage: "radial-gradient(circle at 50% 34%, #000, transparent 80%)",
+          WebkitMaskImage:
+            "radial-gradient(circle at 50% 34%, #000, transparent 80%)",
+        }}
+      />
+
+      {/* 5: film grain — tiled, low opacity, soft-light blend */}
+      <div
+        className="absolute inset-0 opacity-[0.06] [mix-blend-mode:soft-light]"
+        style={{
+          backgroundImage: "url(/bg/noir-noise.png)",
+          backgroundRepeat: "repeat",
+          backgroundSize: "256px 256px",
+        }}
+      />
+
+      {/* 6b: bottom -> top vignette so foreground content keeps contrast */}
+      <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-base via-base/70 to-transparent" />
+      {/* edge vignette to seat the composition in the void */}
+      <div
+        className="absolute inset-0"
+        style={{
+          boxShadow: "inset 0 0 220px 60px rgba(5,6,8,0.9)",
+        }}
+      />
     </div>
   );
 }
