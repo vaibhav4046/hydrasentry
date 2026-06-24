@@ -15,6 +15,7 @@ export { MetricCard } from "./MetricCard";
 export { TerminalLog } from "./TerminalLog";
 export { RiskGauge } from "./RiskGauge";
 export { ContextGraphPreview } from "./ContextGraphPreview";
+export { MemoryTree } from "./MemoryTree";
 export { ProductCanvas } from "./ProductCanvas";
 export { DemoTimeline } from "./DemoTimeline";
 export { AgentCrew } from "./AgentCrew";

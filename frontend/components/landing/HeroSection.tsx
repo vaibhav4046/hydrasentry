@@ -5,7 +5,7 @@ import { m } from "framer-motion";
 import { ArrowRight } from "lucide-react";
 import { RunDemoButton } from "./HeroActions";
 import { HERO, METRICS } from "./content";
-import { ProductCanvas } from "@/components/noir/ProductCanvas";
+import { MemoryTree } from "@/components/noir/MemoryTree";
 import { MetricCard } from "@/components/noir/MetricCard";
 import { cn } from "@/lib/cn";
 import { fadeUp, staggerContainer, blurReveal } from "@/lib/motion";
@@ -75,9 +75,18 @@ export function HeroSection() {
         variants={blurReveal}
         initial="hidden"
         animate="show"
-        className="w-full"
+        className="relative w-full"
       >
-        <ProductCanvas />
+        {/* soft radial halo so the luminous tree reads as the focal point */}
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 -z-10"
+          style={{
+            background:
+              "radial-gradient(circle at 52% 42%, rgba(255,255,255,0.10), rgba(255,255,255,0.03) 38%, transparent 66%)",
+          }}
+        />
+        <MemoryTree className="mx-auto max-w-[460px] lg:max-w-none" />
       </m.div>
     </section>
   );
