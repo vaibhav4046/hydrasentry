@@ -1,0 +1,30 @@
+# Render Blueprint - one-click backend host. Render > New > Blueprint > connect this repo.
+# Demo mode needs NO keys. For real HydraDB mode, set the sync:false keys in the Render dashboard.
+services:
+  - type: web
+    name: hydrasentry-backend
+    runtime: python
+    rootDir: backend
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: "/health"
+    envVars:
+      - key: APP_MODE
+        value: demo
+      - key: PYTHON_VERSION
+        value: "3.13.4"
+      - key: HYDRA_DB_SUB_TENANT_ID
+        value: hydrasentry-demo
+      - key: CORS_ORIGINS
+        value: https://frontend-nu-ochre-z41mw3z0l5.vercel.app
+      - key: MCP_SHARED_SECRET
+        generateValue: true
+      - key: HYDRA_DB_API_KEY
+        sync: false
+      - key: GROQ_API_KEY
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: OPENROUTER_API_KEY
+        sync: false

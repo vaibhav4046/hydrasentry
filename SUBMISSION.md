@@ -1,3 +1,11 @@
+## LIVE LINKS
+
+- GitHub: https://github.com/vaibhav4046/hydrasentry
+- Frontend (Vercel, live): https://frontend-nu-ochre-z41mw3z0l5.vercel.app
+- Backend: run locally, or deploy with render.yaml (Render Blueprint), then set Vercel env NEXT_PUBLIC_BACKEND_URL to the Render URL and redeploy.
+
+---
+
 # HydraSentry — Submission
 
 **HydraDB Build Blitz hackathon entry.**

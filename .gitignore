@@ -1,4 +1,4 @@
-﻿# secrets
+# secrets
 .env
 .env.*
 !.env.example
@@ -24,3 +24,5 @@ Thumbs.db
 # run artifacts (keep dir)
 runs/*.json
 !runs/.gitkeep
+.vercel/
+remotion/build/
