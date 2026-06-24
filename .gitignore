@@ -1,0 +1,26 @@
+﻿# secrets
+.env
+.env.*
+!.env.example
+backend/.env
+*.key
+# python
+__pycache__/
+*.pyc
+.venv/
+venv/
+*.db
+# node
+node_modules/
+.next/
+out/
+dist/
+.turbo/
+# remotion
+remotion/out/
+# os
+.DS_Store
+Thumbs.db
+# run artifacts (keep dir)
+runs/*.json
+!runs/.gitkeep

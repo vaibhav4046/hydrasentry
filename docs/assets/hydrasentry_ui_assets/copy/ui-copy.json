@@ -1,0 +1,37 @@
+{
+  "hero": {
+    "kicker": "HYDRADB NATIVE \u00b7 CONTEXT INTEGRITY \u00b7 MCP SECURITY",
+    "headline": "Secure the memory layer before your agent acts.",
+    "subcopy": "HydraSentry replays agent tasks against clean and poisoned HydraDB context, visualizes the exact graph path that caused failure, blocks unsafe memory through MCP, and exports evidence reports.",
+    "primaryCta": "Run Judge Demo",
+    "secondaryCta": "View Architecture"
+  },
+  "features": [
+    "Replay Attacks",
+    "Graph Evidence",
+    "Context Firewall",
+    "SkillMake Verification",
+    "MCP Gateway",
+    "Scheduled Scans",
+    "Regression Rules",
+    "Evidence Reports"
+  ],
+  "metrics": [
+    {
+      "label": "Risk Score",
+      "value": "87/100"
+    },
+    {
+      "label": "Memories Scanned",
+      "value": "124"
+    },
+    {
+      "label": "Skills Verified",
+      "value": "8"
+    },
+    {
+      "label": "Quarantined",
+      "value": "12"
+    }
+  ]
+}

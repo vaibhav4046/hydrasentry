@@ -1,0 +1,8 @@
+<svg width="720" height="128" viewBox="0 0 720 128" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="720" height="128" rx="24" fill="#050608"/>
+  <path d="M66 20L106 43.5V84.5L66 108L26 84.5V43.5L66 20Z" stroke="#F5F7FA" stroke-width="6" stroke-linejoin="round"/>
+  <path d="M66 39L89 52V76L66 89L43 76V52L66 39Z" stroke="#AEB4BE" stroke-width="4" stroke-linejoin="round"/>
+  <circle cx="66" cy="64" r="9" fill="#F5F7FA"/>
+  <text x="132" y="58" fill="#F5F7FA" font-family="Inter, Geist, Arial, sans-serif" font-size="36" font-weight="700" letter-spacing="-1.2">HydraSentry</text>
+  <text x="134" y="86" fill="#9CA3AF" font-family="JetBrains Mono, Geist Mono, monospace" font-size="13" letter-spacing="2">CONTEXT INTEGRITY PLATFORM</text>
+</svg>

@@ -1,0 +1,13 @@
+﻿{
+    "version":  "1.0.0",
+    "name":  "report-template-pack",
+    "patterns_added":  [
+                           "finding_report_v1",
+                           "legal_testing_statement",
+                           "graph_evidence_labeling"
+                       ],
+    "description":  "Finding-report section templates.",
+    "last_update":  "2026-06-24T00:00:00+00:00",
+    "active_checks":  3,
+    "status":  "active"
+}

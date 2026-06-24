@@ -1,0 +1,100 @@
+/* Monochrome overrides for React Flow inside the noir command center.
+   React Flow's base stylesheet is imported alongside this in GraphCanvas.
+   We strip its light defaults and recolor controls, edges, attribution, and
+   the background dots to white-on-black at low opacity. No hue anywhere. */
+
+.hydra-flow .react-flow__attribution {
+  background: rgba(0, 0, 0, 0.4);
+  color: rgba(255, 255, 255, 0.3);
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 9px;
+  padding: 2px 6px;
+  border-radius: 6px;
+}
+
+.hydra-flow .react-flow__controls {
+  box-shadow: none;
+  gap: 4px;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.hydra-flow .react-flow__controls-button {
+  background: rgba(255, 255, 255, 0.04);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.7);
+  width: 30px;
+  height: 30px;
+  transition: background 150ms ease;
+}
+
+.hydra-flow .react-flow__controls-button:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+
+.hydra-flow .react-flow__controls-button svg {
+  fill: currentColor;
+  max-width: 14px;
+  max-height: 14px;
+}
+
+.hydra-flow .react-flow__edge-path {
+  stroke: rgba(255, 255, 255, 0.18);
+}
+
+.hydra-flow .react-flow__edge-text {
+  fill: rgba(255, 255, 255, 0.55);
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 9px;
+  text-transform: lowercase;
+  letter-spacing: 0.04em;
+}
+
+.hydra-flow .react-flow__edge-textbg {
+  fill: rgba(5, 6, 8, 0.85);
+}
+
+.hydra-flow .react-flow__handle {
+  width: 6px;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.hydra-flow .react-flow__node:focus,
+.hydra-flow .react-flow__node:focus-visible {
+  outline: none;
+}
+
+.hydra-flow .react-flow__node.selectable:focus-visible > * {
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.7);
+  border-radius: 14px;
+}
+
+/* Traveling-dash animation for tainted edges (the poison path). */
+@keyframes hydra-dash-flow {
+  to {
+    stroke-dashoffset: -16;
+  }
+}
+
+.hydra-flow .react-flow__edge.tainted .react-flow__edge-path {
+  stroke: rgba(255, 255, 255, 0.95);
+  stroke-width: 2;
+  stroke-dasharray: 6 4;
+  filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.55));
+  animation: hydra-dash-flow 0.7s linear infinite;
+}
+
+.hydra-flow .react-flow__edge.blocked .react-flow__edge-path {
+  stroke: #ffffff;
+  stroke-width: 2.5;
+  stroke-dasharray: 2 3;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hydra-flow .react-flow__edge.tainted .react-flow__edge-path {
+    animation: none;
+  }
+}

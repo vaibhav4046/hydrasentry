@@ -1,0 +1,15 @@
+﻿{
+    "version":  "1.2.0",
+    "name":  "skill-risk-pack",
+    "patterns_added":  [
+                           "hidden_prompt_injection",
+                           "secret_access_verb",
+                           "silent_refund_approval",
+                           "exfil_endpoint",
+                           "semantic_mismatch"
+                       ],
+    "description":  "SkillMake static-scan risk signatures.",
+    "last_update":  "2026-06-24T00:00:00+00:00",
+    "active_checks":  9,
+    "status":  "active"
+}

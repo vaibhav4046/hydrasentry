@@ -1,0 +1,14 @@
+﻿{
+    "version":  "1.1.0",
+    "name":  "model-routing-pack",
+    "patterns_added":  [
+                           "report_writer_claude_gemini",
+                           "replay_judge_groq",
+                           "fallback_openrouter",
+                           "deterministic_demo_fallback"
+                       ],
+    "description":  "Role-to-provider routing and health policy.",
+    "last_update":  "2026-06-24T00:00:00+00:00",
+    "active_checks":  5,
+    "status":  "active"
+}

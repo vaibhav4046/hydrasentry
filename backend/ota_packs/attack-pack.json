@@ -1,0 +1,14 @@
+{
+  "name": "attack-pack",
+  "version": "1.4.33",
+  "last_update": "2026-06-24T00:00:00+00:00",
+  "patterns_added": [
+    "memory_poisoning_refund_override",
+    "indirect_prompt_injection_doc_disclosure",
+    "stale_policy_shadowing",
+    "When attack_type=memory_poisoning, a forbidden marker in the poisoned answer com"
+  ],
+  "active_checks": 15,
+  "status": "active",
+  "description": "Detection patterns for context-poisoning and injection attacks."
+}

@@ -1,0 +1,41 @@
+:root {
+  --hs-bg-base: #050608;
+  --hs-bg-deep: #020305;
+  --hs-bg-panel: #0B0D10;
+  --hs-bg-elevated: #11141A;
+  --hs-glass: rgba(255,255,255,0.055);
+  --hs-glass-strong: rgba(255,255,255,0.085);
+  --hs-border: rgba(255,255,255,0.10);
+  --hs-border-strong: rgba(255,255,255,0.18);
+  --hs-text-primary: #F5F7FA;
+  --hs-text-secondary: #9CA3AF;
+  --hs-text-muted: #5F6875;
+  --hs-white: #FFFFFF;
+  --hs-black: #000000;
+  --hs-danger: #F5F7FA;
+  --hs-safe: #D7DCE5;
+  --hs-warning: #B7BEC9;
+  --hs-shadow-soft: 0 24px 90px rgba(0,0,0,0.55);
+  --hs-glow-white: 0 0 32px rgba(255,255,255,0.22);
+}
+
+.hydra-glass {
+  background: linear-gradient(180deg, rgba(255,255,255,0.075), rgba(255,255,255,0.035));
+  border: 1px solid var(--hs-border);
+  backdrop-filter: blur(22px);
+  box-shadow: var(--hs-shadow-soft), inset 0 1px 0 rgba(255,255,255,0.08);
+}
+
+.hydra-button-primary {
+  background: linear-gradient(180deg, #FFFFFF, #C9CED8);
+  color: #050608;
+  border: 1px solid rgba(255,255,255,0.65);
+  box-shadow: 0 14px 42px rgba(255,255,255,0.14), inset 0 1px 0 rgba(255,255,255,0.9);
+}
+
+.hydra-button-ghost {
+  background: rgba(255,255,255,0.035);
+  color: #F5F7FA;
+  border: 1px solid rgba(255,255,255,0.14);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.06);
+}

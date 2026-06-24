@@ -1,0 +1,28 @@
+<svg width="1920" height="1080" viewBox="0 0 1920 1080" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1920" height="1080" fill="#020305"/>
+  <defs>
+    <radialGradient id="core" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(1110 520) rotate(90) scale(410 520)">
+      <stop stop-color="#F5F7FA" stop-opacity="0.18"/>
+      <stop offset="0.45" stop-color="#F5F7FA" stop-opacity="0.06"/>
+      <stop offset="1" stop-color="#F5F7FA" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="glow"><feGaussianBlur stdDeviation="5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+  </defs>
+  <rect width="1920" height="1080" fill="url(#core)"/>
+  <g stroke="#F5F7FA" stroke-opacity="0.42" stroke-width="1.2" filter="url(#glow)">
+    <path d="M1110 800C1090 710 1090 640 1110 520C1120 430 1160 365 1240 290"/>
+    <path d="M1110 520C1000 480 910 430 790 330"/>
+    <path d="M1110 520C1235 500 1350 465 1500 360"/>
+    <path d="M1110 620C1260 650 1400 695 1580 790"/>
+    <path d="M1085 690C970 720 850 780 700 900"/>
+    <path d="M1098 585C980 590 840 610 650 640"/>
+    <path d="M1120 452C1210 380 1280 310 1370 210"/>
+    <path d="M1080 450C960 355 835 280 680 210"/>
+  </g>
+  <g fill="#F5F7FA">
+    <circle cx="1110" cy="520" r="6"/><circle cx="1240" cy="290" r="4"/><circle cx="790" cy="330" r="4"/><circle cx="1500" cy="360" r="4"/><circle cx="1580" cy="790" r="4"/><circle cx="700" cy="900" r="4"/><circle cx="650" cy="640" r="3"/><circle cx="1370" cy="210" r="3"/><circle cx="680" cy="210" r="3"/>
+  </g>
+  <g stroke="#F5F7FA" stroke-opacity="0.11">
+    <path d="M0 930H1920"/><path d="M0 934H1920"/>
+  </g>
+</svg>
