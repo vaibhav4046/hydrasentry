@@ -92,6 +92,17 @@
     font-variant-numeric: tabular-nums;
   }
 
+  /* On the homepage only, clip horizontal overflow from the full-bleed fixed
+     noir decoration (radar ring, glows) exactly as the design source does with
+     body{overflow-x:hidden}. Scoped via :has() so the cockpit shell — which
+     relies on its own sticky rail / slide-in drawer — is untouched. Applied to
+     both html and body (and using overflow-x:clip) so neither establishes a
+     horizontal scroll region. */
+  html:has(.castellan-landing),
+  body:has(.castellan-landing) {
+    overflow-x: clip;
+  }
+
   /* Castellan selection: cool silver wash. */
   ::selection {
     background: rgba(220, 228, 240, 0.22);
@@ -673,6 +684,66 @@
     rgba(2, 3, 5, 0.72) 100%
   );
 }
+/* ==========================================================
+   Castellan landing (homepage /) — ported from the design source.
+   The homepage reproduces the standalone Castellan landing markup with
+   inline styles; these few rules cover what inline styles can't: the
+   data-reveal entrance, the card hover lift+brighten (replacing the
+   source's per-card JS handlers), and the responsive grid collapses so
+   nothing overflows at 390/768. Scoped under .castellan-landing so they
+   never touch the cockpit screens.
+   ========================================================== */
+.castellan-landing [data-reveal] {
+  animation: hsUp 0.8s cubic-bezier(0.22, 0.61, 0.36, 1) both;
+}
+.castellan-landing .castellan-card {
+  transition: transform 0.3s var(--hs-ease-out-expo),
+    border-color 0.3s var(--hs-ease-out-expo);
+}
+.castellan-landing .castellan-card:hover {
+  transform: translateY(-3px);
+  border-color: rgba(220, 228, 240, 0.28);
+}
+@media (max-width: 1024px) {
+  /* !important is required: the nav element carries an inline display:flex
+     (for SSR-correct layout), which a plain class rule cannot override. */
+  .castellan-landing .castellan-navlinks {
+    display: none !important;
+  }
+}
+/* Mobile nav: tighten padding and drop the secondary "Docs" button so the
+   emblem + primary CTA fit within narrow viewports without forcing the sticky
+   header (and thus the document) wider than the screen. */
+@media (max-width: 560px) {
+  .castellan-landing .castellan-nav-inner {
+    padding-left: 16px !important;
+    padding-right: 16px !important;
+    gap: 12px !important;
+  }
+  .castellan-landing .castellan-docs-btn {
+    display: none !important;
+  }
+}
+@media (max-width: 920px) {
+  .castellan-landing .castellan-grid-4 {
+    grid-template-columns: 1fr 1fr !important;
+  }
+  .castellan-landing .castellan-grid-3 {
+    grid-template-columns: 1fr 1fr !important;
+  }
+  .castellan-landing .castellan-grid-5 {
+    grid-template-columns: 1fr 1fr 1fr !important;
+  }
+}
+@media (max-width: 600px) {
+  .castellan-landing .castellan-grid-4,
+  .castellan-landing .castellan-grid-3,
+  .castellan-landing .castellan-grid-5,
+  .castellan-landing .castellan-replay-band {
+    grid-template-columns: 1fr !important;
+  }
+}
+
 /* Honor reduced-motion: kill transitions/animations and scroll smoothing. */
 @media (prefers-reduced-motion: reduce) {
   html {
