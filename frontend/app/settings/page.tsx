@@ -1,94 +1,162 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Shield } from "lucide-react";
 import { PageShell } from "@/components/shared/PageShell";
-import { InlineError } from "@/components/shared/StateNotice";
-import { CockpitCard } from "@/components/shell/CockpitCard";
-import { ProviderTile } from "@/components/settings/ProviderTile";
 import { getProviders, testProvider } from "@/lib/api";
+import { C } from "@/lib/cockpit/derive";
 import type { ProviderStatus } from "@/lib/types";
 
-// Configuration. Lists every configured model provider with its role, base URL,
-// model, and a MASKED key fingerprint only. Each tile can test its connection
-// and links to where a key is obtained. Raw keys are never rendered. Reskinned
-// to the flat-cockpit system to match Command.
+const MONO = "var(--font-geist-mono), 'JetBrains Mono', monospace";
+
+function str(p: ProviderStatus, key: string, fallback = "—"): string {
+  const v = p[key];
+  return typeof v === "string" && v.length > 0 ? v : fallback;
+}
+
+/**
+ * Configuration — ported 1:1 from the Castellan source. A two-column grid of
+ * provider cards: a status dot + name + status pill, then BASE URL / MODEL /
+ * API KEY (masked) / ROLE rows, a Test connection button and a get-key link.
+ * Providers and their masked-key fingerprints come from the REAL
+ * /settings/providers; Test connection hits the live /settings/providers/test.
+ * Raw keys never reach the browser — only the sha256 fingerprint + length.
+ */
 export default function SettingsPage() {
   const [providers, setProviders] = useState<ProviderStatus[]>([]);
-  const [error, setError] = useState<string | null>(null);
-  const [loaded, setLoaded] = useState(false);
+  const [tested, setTested] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
-    let active = true;
-    void getProviders().then((result) => {
-      if (!active) return;
-      setLoaded(true);
-      if (result.ok) setProviders(result.data);
-      else setError(result.error);
+    void getProviders().then((r) => {
+      if (r.ok) setProviders(r.data);
     });
-    return () => {
-      active = false;
-    };
   }, []);
 
-  async function handleTest(name: string): Promise<boolean> {
-    const result = await testProvider(name);
-    return result.ok && Boolean(result.data.ok ?? result.data.reachable);
+  async function handleTest(name: string) {
+    const r = await testProvider(name);
+    const ok = r.ok && Boolean(r.data.ok ?? r.data.reachable);
+    setTested((prev) => ({ ...prev, [name]: ok }));
   }
-
-  const configuredCount = providers.filter((p) => p.configured).length;
 
   return (
     <PageShell>
-      <div className="flex flex-col gap-6">
-        {/* ===== ROUTING intro ===== */}
-        <section className="cockpit-card p-6">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-            <div className="min-w-0">
-              <div className="cockpit-eyebrow">Routing</div>
-              <h2 className="mt-3 max-w-2xl text-[1.5rem] font-semibold leading-tight tracking-tight text-ink">
-                Bring your own keys
-              </h2>
-              <p className="mt-3 max-w-xl text-[13px] leading-relaxed text-muted">
-                HydraSentry routes each role to a provider, falling back to a
-                deterministic local classifier when none is configured. Keys live
-                in the backend environment and surface here only as masked
-                fingerprints.
-              </p>
+      <div data-page data-stagger className="cockpit-2col" style={{ display: "grid", gridTemplateColumns: "repeat(2,1fr)", gap: 14 }}>
+        {providers.map((pv) => {
+          const isTested = tested[pv.name];
+          const rawStatus = isTested ? "reachable" : str(pv, "status", pv.configured ? "online" : "idle");
+          const status = rawStatus.toLowerCase();
+          const on = status === "online" || status === "reachable";
+          const statusCol = on ? C.accent : status === "offline" ? C.faint : C.muted;
+          const statusBd = on ? "rgba(234,240,250,0.3)" : "rgba(255,255,255,0.12)";
+          const dot = on ? C.accent : C.faint;
+          const key = pv.masked_key ?? str(pv, "key", pv.configured ? "configured" : "not set");
+          const keyCol = pv.configured ? C.silver : C.faint;
+          const baseUrl = str(pv, "base_url", str(pv, "baseUrl"));
+          const model = str(pv, "model");
+          const role = str(pv, "role");
+          const getKey = str(pv, "get_key", str(pv, "getKey", ""));
+
+          return (
+            <div
+              key={pv.name}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = "translateY(-3px)";
+                e.currentTarget.style.borderColor = "rgba(234,240,250,0.28)";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = "translateY(0)";
+                e.currentTarget.style.borderColor = "rgba(255,255,255,0.08)";
+              }}
+              style={{
+                padding: 18,
+                border: "1px solid rgba(255,255,255,0.08)",
+                borderRadius: 16,
+                background: "rgba(255,255,255,0.012)",
+                transition: "transform .25s cubic-bezier(.22,.61,.36,1),border-color .25s",
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <span style={{ width: 9, height: 9, borderRadius: "50%", background: dot, boxShadow: `0 0 8px ${dot}` }} />
+                  <span style={{ fontSize: 15, fontWeight: 600, color: C.ink }}>{pv.name}</span>
+                </div>
+                <span
+                  style={{
+                    fontFamily: MONO,
+                    fontSize: "9.5px",
+                    letterSpacing: "0.1em",
+                    color: statusCol,
+                    border: `1px solid ${statusBd}`,
+                    borderRadius: 999,
+                    padding: "3px 9px",
+                  }}
+                >
+                  {rawStatus.toUpperCase()}
+                </span>
+              </div>
+              <div style={{ marginTop: 14, display: "flex", flexDirection: "column", gap: 8 }}>
+                <KV k="BASE URL" v={baseUrl} vColor={C.muted} truncate />
+                <KV k="MODEL" v={model} vColor={C.silver} />
+                <KV k="API KEY" v={key} vColor={keyCol} />
+                <KV k="ROLE" v={role} vColor={C.muted} />
+              </div>
+              <div style={{ marginTop: 14, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
+                <button
+                  type="button"
+                  onClick={() => void handleTest(pv.name)}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.borderColor = "rgba(255,255,255,0.32)";
+                    e.currentTarget.style.background = "rgba(255,255,255,0.06)";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.borderColor = "rgba(255,255,255,0.16)";
+                    e.currentTarget.style.background = "rgba(255,255,255,0.03)";
+                  }}
+                  style={{
+                    cursor: "pointer",
+                    fontFamily: "inherit",
+                    fontSize: 12,
+                    padding: "8px 13px",
+                    border: "1px solid rgba(255,255,255,0.16)",
+                    borderRadius: 9,
+                    background: "rgba(255,255,255,0.03)",
+                    color: C.silver,
+                    transition: "all .2s",
+                  }}
+                >
+                  {isTested ? "Reachable ✓" : "Test connection"}
+                </button>
+                <span style={{ fontSize: 11, color: C.faint }}>{getKey}</span>
+              </div>
             </div>
-            <div className="flex shrink-0 items-center gap-2 lg:flex-col lg:items-end">
-              <span className="cockpit-eyebrow">Configured</span>
-              <span className="text-[1.6rem] font-semibold leading-none tracking-tight text-ink tabular-nums">
-                {loaded ? `${configuredCount}/${providers.length}` : "—"}
-              </span>
-            </div>
-          </div>
-          <div className="mono mt-5 flex items-center gap-2 rounded-lg border border-hairline bg-white/[.02] px-3.5 py-2.5 text-[12px] text-muted">
-            <Shield className="h-3.5 w-3.5 shrink-0" strokeWidth={1.8} />
-            Keys are never sent to the browser. Only a sha256 fingerprint and
-            length are exposed; the raw value stays server-side.
-          </div>
-        </section>
-
-        {error && <InlineError message={error} />}
-
-        {/* ===== provider cards ===== */}
-        <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {providers.map((provider) => (
-            <ProviderTile
-              key={provider.name}
-              provider={provider}
-              onTest={() => handleTest(provider.name)}
-            />
-          ))}
-        </section>
-
-        {loaded && providers.length === 0 && !error && (
-          <CockpitCard className="p-8 text-center text-sm text-muted">
+          );
+        })}
+        {providers.length === 0 && (
+          <div style={{ fontFamily: MONO, fontSize: 12, color: C.faint, padding: 12 }}>
             No providers reported by the backend.
-          </CockpitCard>
+          </div>
         )}
       </div>
     </PageShell>
+  );
+}
+
+function KV({ k, v, vColor, truncate }: { k: string; v: string; vColor: string; truncate?: boolean }) {
+  return (
+    <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
+      <span style={{ fontFamily: MONO, fontSize: 10, color: C.faint }}>{k}</span>
+      <span
+        style={{
+          fontFamily: MONO,
+          fontSize: "10.5px",
+          color: vColor,
+          textAlign: "right",
+          ...(truncate
+            ? { whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: 200 }
+            : {}),
+        }}
+      >
+        {v}
+      </span>
+    </div>
   );
 }

@@ -27,3 +27,5 @@ runs/*.json
 .vercel/
 remotion/build/
 docs/qa/
+# Castellan design import — reference only, never ship
+docs/castellan_import/

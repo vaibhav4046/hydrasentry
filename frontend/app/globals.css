@@ -1,32 +1,40 @@
 @import "tailwindcss";
 
 /* ============================================================
-   HydraSentry design tokens — black & white noir command center.
+   HydraSentry design tokens — Castellan Cockpit cool silver-blue noir.
    Color law: backgrounds are near-black; all "color" is white/silver
    at varying opacity. Danger/safe communicated via brightness, border,
-   icon, label, and motion — never hue.
+   icon, label, and motion — never hue. Values ported 1:1 from the
+   Castellan Cockpit standalone source.
    ============================================================ */
 :root {
-  --hs-bg-base: #050608;
-  --hs-bg-deep: #020305;
+  /* Cool silver-blue noir base (Castellan body: bg #040506, text #F3F6FB). */
+  --hs-bg-base: #040506;
+  --hs-bg-deep: #020304;
   --hs-bg-panel: #0b0d10;
   --hs-bg-elevated: #11141a;
 
-  --hs-glass: rgba(255, 255, 255, 0.055);
-  --hs-glass-strong: rgba(255, 255, 255, 0.085);
-  --hs-border: rgba(255, 255, 255, 0.1);
+  --hs-glass: rgba(255, 255, 255, 0.02);
+  --hs-glass-strong: rgba(255, 255, 255, 0.06);
+  --hs-border: rgba(255, 255, 255, 0.08);
   --hs-border-strong: rgba(255, 255, 255, 0.18);
 
-  --hs-text-primary: #f5f7fa;
-  --hs-text-secondary: #9ca3af;
+  /* Castellan text ramp: primary #F3F6FB, muted #9BA3AF, faint #5F6875. */
+  --hs-text-primary: #f3f6fb;
+  --hs-text-secondary: #9ba3af;
   --hs-text-muted: #5f6875;
 
   --hs-white: #ffffff;
   --hs-black: #000000;
 
+  /* Castellan accent ramp (cool silver). */
+  --hs-accent: #aeb6c2;
+  --hs-accent-bright: #eaf0fa;
+  --hs-silver: #d9dee7;
+
   /* Intensity tokens — near-white "danger", dimmer "safe". No saturated hue. */
-  --hs-danger: #f5f7fa;
-  --hs-safe: #d7dce5;
+  --hs-danger: #ffffff;
+  --hs-safe: #d9dee7;
   --hs-warning: #b7bec9;
 
   --hs-shadow-soft: 0 24px 90px rgba(0, 0, 0, 0.55);
@@ -77,37 +85,161 @@
   body {
     background: var(--hs-bg-base);
     color: var(--hs-text-primary);
-    font-family: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+    font-family: var(--font-geist-sans), "Inter Tight", system-ui, sans-serif;
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
+    /* Castellan tabular figures across the whole surface. */
+    font-variant-numeric: tabular-nums;
   }
 
+  /* Castellan selection: cool silver wash. */
   ::selection {
-    background: var(--hs-white);
-    color: var(--hs-black);
+    background: rgba(220, 228, 240, 0.22);
+    color: #fff;
   }
 
-  /* Slim monochrome scrollbars to match the terminal mood. */
+  input::placeholder {
+    color: #4a525e;
+  }
+
+  /* Slim Castellan scrollbars (9px thumb at rgba(255,255,255,0.09)). */
   * {
     scrollbar-width: thin;
-    scrollbar-color: rgba(255, 255, 255, 0.16) transparent;
+    scrollbar-color: rgba(255, 255, 255, 0.09) transparent;
   }
   *::-webkit-scrollbar {
-    width: 10px;
-    height: 10px;
+    width: 9px;
+    height: 9px;
   }
   *::-webkit-scrollbar-track {
     background: transparent;
   }
   *::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.14);
-    border-radius: 999px;
-    border: 2px solid transparent;
-    background-clip: padding-box;
+    background: rgba(255, 255, 255, 0.09);
+    border-radius: 9px;
   }
   *::-webkit-scrollbar-thumb:hover {
-    background: rgba(255, 255, 255, 0.26);
-    background-clip: padding-box;
+    background: rgba(255, 255, 255, 0.16);
+  }
+
+  /* ==========================================================
+     Castellan Cockpit keyframes (ported 1:1 from the source).
+     The ambient radar/aurora/drift, status-dot pulse, page/stagger
+     entrances, scan sweep, sheen and blink.
+     ========================================================== */
+  @keyframes hsPulseDot {
+    0%,
+    100% {
+      opacity: 0.4;
+      transform: scale(0.9);
+    }
+    50% {
+      opacity: 1;
+      transform: scale(1.18);
+    }
+  }
+  @keyframes hsUp {
+    from {
+      transform: translateY(10px);
+    }
+    to {
+      transform: none;
+    }
+  }
+  @keyframes hsRadar {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+  @keyframes hsDrift {
+    0% {
+      transform: translate(0, 0);
+    }
+    50% {
+      transform: translate(26px, -20px);
+    }
+    100% {
+      transform: translate(0, 0);
+    }
+  }
+  @keyframes hsAurora {
+    0% {
+      transform: translate(0, 0) scale(1);
+    }
+    50% {
+      transform: translate(46px, -34px) scale(1.16);
+    }
+    100% {
+      transform: translate(0, 0) scale(1);
+    }
+  }
+  @keyframes hsRise {
+    from {
+      transform: translateY(16px);
+    }
+    to {
+      transform: none;
+    }
+  }
+  @keyframes hsScan {
+    0% {
+      transform: translateX(-100%);
+    }
+    100% {
+      transform: translateX(320%);
+    }
+  }
+  @keyframes hsBlink {
+    0%,
+    100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.25;
+    }
+  }
+  @keyframes hsPop {
+    from {
+      transform: translateY(-8px) scale(0.98);
+    }
+    to {
+      transform: none;
+    }
+  }
+
+  /* Page + staggered-children entrances used across the cockpit screens. */
+  [data-page] {
+    animation: hsUp 0.5s cubic-bezier(0.22, 0.61, 0.36, 1) both;
+  }
+  [data-stagger] > * {
+    animation: hsRise 0.55s cubic-bezier(0.22, 0.61, 0.36, 1) both;
+  }
+  [data-stagger] > *:nth-child(1) {
+    animation-delay: 0.02s;
+  }
+  [data-stagger] > *:nth-child(2) {
+    animation-delay: 0.07s;
+  }
+  [data-stagger] > *:nth-child(3) {
+    animation-delay: 0.12s;
+  }
+  [data-stagger] > *:nth-child(4) {
+    animation-delay: 0.17s;
+  }
+  [data-stagger] > *:nth-child(5) {
+    animation-delay: 0.22s;
+  }
+  [data-stagger] > *:nth-child(6) {
+    animation-delay: 0.27s;
+  }
+  [data-stagger] > *:nth-child(7) {
+    animation-delay: 0.32s;
+  }
+  [data-stagger] > *:nth-child(8) {
+    animation-delay: 0.37s;
+  }
+  .hsEntry {
+    animation: hsPop 0.4s cubic-bezier(0.22, 0.61, 0.36, 1) both;
   }
 }
 
@@ -331,6 +463,67 @@
     border: 1px solid var(--hs-border);
     border-radius: 0.35rem;
     padding: 0.1rem 0.35rem;
+  }
+}
+
+/* ==========================================================
+   Castellan Cockpit responsive chrome. The shell is a `248px 1fr`
+   grid on desktop; under 1024px the rail collapses into a slide-in
+   drawer toggled by the top-bar menu button, and the grid becomes a
+   single column. The search box hides on the narrowest viewports.
+   ========================================================== */
+.cockpit-search-box:focus-within {
+  border-color: rgba(255, 255, 255, 0.18) !important;
+  background: rgba(255, 255, 255, 0.04) !important;
+}
+@media (max-width: 1023px) {
+  .cockpit-grid {
+    grid-template-columns: 1fr !important;
+  }
+  .cockpit-rail {
+    display: none !important;
+  }
+  .cockpit-menu-btn {
+    display: grid !important;
+  }
+}
+@media (max-width: 720px) {
+  .cockpit-search-box {
+    display: none !important;
+  }
+}
+
+/* Cockpit page-body grids reflow at narrow widths so no surface overflows at
+   390/768px. Mirrors the source's desktop multi-column layouts collapsing to
+   one/two columns on small screens. */
+@media (max-width: 1100px) {
+  .cockpit-2col-wide,
+  .cockpit-2col,
+  .cockpit-graph-grid,
+  .cockpit-mcp-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+@media (max-width: 860px) {
+  .cockpit-metric-grid,
+  .cockpit-metric-grid-8,
+  .cockpit-3col,
+  .cockpit-sched-grid {
+    grid-template-columns: 1fr 1fr !important;
+  }
+}
+@media (max-width: 560px) {
+  .cockpit-metric-grid,
+  .cockpit-metric-grid-8,
+  .cockpit-3col,
+  .cockpit-sched-grid,
+  .cockpit-crew-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+@media (max-width: 860px) {
+  .cockpit-sched-form {
+    grid-template-columns: 1fr !important;
   }
 }
 

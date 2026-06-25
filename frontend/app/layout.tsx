@@ -1,19 +1,26 @@
 import type { Metadata, Viewport } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Inter_Tight, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { NoirBackground } from "@/components/noir/NoirBackground";
 import { MotionProvider } from "@/components/noir/MotionProvider";
 import { DemoDataPill } from "@/components/shared/DemoDataPill";
 
-const geistSans = Geist({
+// Castellan Cockpit type system: Inter Tight for body/display, JetBrains Mono
+// for labels, IDs, badges, logs, query_paths and model ids. Loaded via
+// next/font (self-hosted, no FOUT/layout shift). The CSS variable names stay
+// --font-geist-* so existing utility references in globals.css keep working;
+// only the underlying font families change.
+const interTight = Inter_Tight({
   variable: "--font-geist-sans",
   subsets: ["latin"],
+  weight: ["400", "500", "600", "700", "800"],
   display: "swap",
 });
 
-const geistMono = Geist_Mono({
+const jetbrainsMono = JetBrains_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
+  weight: ["400", "500", "600"],
   display: "swap",
 });
 
@@ -38,7 +45,7 @@ export default function RootLayout({
     <html
       lang="en"
       data-scroll-behavior="smooth"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${interTight.variable} ${jetbrainsMono.variable} h-full antialiased`}
     >
       <body className="min-h-full">
         <NoirBackground />

@@ -1,72 +1,118 @@
-import {
-  Crosshair,
-  Play,
-  Network,
-  ScanLine,
-  ShieldCheck,
-  CalendarClock,
-  ListChecks,
-  Settings,
-  type LucideIcon,
-} from "lucide-react";
+import type { CockpitIconKey } from "./cockpitIcons";
 
 /**
- * Castellan Cockpit navigation model. Grouped sections with tiny uppercase
- * labels; each item maps a cockpit label to an existing dashboard route. Badges
- * are static counts that echo the demo posture (replays queued, MCP tools,
- * scheduled agents) — purely informational, monochrome.
+ * Castellan Cockpit navigation model — ported from the standalone source.
+ * Grouped sections (OPERATIONS / SECURITY / AUTOMATION / WORKSPACE) with tiny
+ * uppercase mono labels; each item maps a cockpit label to an existing dashboard
+ * route, with the source's exact icon glyph and count badge. Badges echo the
+ * demo posture (5 replays, 7 MCP tools, 6 scheduled agents); the SkillMake and
+ * Findings badges show "1" only once a run is engaged (handled in the sidebar).
  */
 export interface CockpitNavItem {
+  /** Sidebar label (matches the source's LBL map). */
   label: string;
   href: string;
-  Icon: LucideIcon;
-  /** Optional count badge. */
-  badge?: number;
+  /** Source icon glyph key. */
+  icon: CockpitIconKey;
+  /** Static count badge, if any. */
+  badge?: string;
+  /** Badge only shows once a run is engaged (poisoned posture). */
+  badgeWhenEngaged?: boolean;
 }
 
 export interface CockpitNavGroup {
-  /** Tiny uppercase section label. */
+  /** Tiny uppercase mono section label. */
   label: string;
   items: CockpitNavItem[];
 }
 
 export const COCKPIT_NAV: CockpitNavGroup[] = [
   {
-    label: "Operations",
+    label: "OPERATIONS",
     items: [
-      { label: "Command", href: "/mission", Icon: Crosshair },
-      { label: "Replay", href: "/replay", Icon: Play, badge: 5 },
-      { label: "Memory Graph", href: "/graph", Icon: Network },
+      { label: "Mission Control", href: "/mission", icon: "mission" },
+      { label: "Replay Lab", href: "/replay", icon: "replay", badge: "5" },
+      { label: "Context Graph", href: "/graph", icon: "graph" },
     ],
   },
   {
-    label: "Security",
+    label: "SECURITY",
     items: [
-      { label: "SkillMake Verifier", href: "/skillmake", Icon: ScanLine },
-      { label: "MCP Gateway", href: "/mcp", Icon: ShieldCheck, badge: 7 },
+      {
+        label: "SkillMake Verifier",
+        href: "/skillmake",
+        icon: "skill",
+        badge: "1",
+        badgeWhenEngaged: true,
+      },
+      { label: "MCP Gateway", href: "/mcp", icon: "mcp", badge: "7" },
     ],
   },
   {
-    label: "Automation",
+    label: "AUTOMATION",
     items: [
-      { label: "Scheduled Agents", href: "/scheduled", Icon: CalendarClock, badge: 6 },
-      { label: "Findings", href: "/results", Icon: ListChecks },
+      { label: "Scheduled Agents", href: "/scheduled", icon: "scheduled", badge: "6" },
+      {
+        label: "Results Center",
+        href: "/results",
+        icon: "results",
+        badge: "1",
+        badgeWhenEngaged: true,
+      },
     ],
   },
   {
-    label: "Workspace",
-    items: [{ label: "Configuration", href: "/settings", Icon: Settings }],
+    label: "WORKSPACE",
+    items: [{ label: "Configuration", href: "/settings", icon: "settings" }],
   },
 ];
 
-/** Flat lookup of route -> cockpit label, for the top-bar breadcrumb/title. */
-export const ROUTE_META: Record<string, { title: string; section: string }> = {
-  "/mission": { title: "Command", section: "Operations" },
-  "/replay": { title: "Replay", section: "Operations" },
-  "/graph": { title: "Memory Graph", section: "Operations" },
-  "/skillmake": { title: "SkillMake Verifier", section: "Security" },
-  "/mcp": { title: "MCP Gateway", section: "Security" },
-  "/scheduled": { title: "Scheduled Agents", section: "Automation" },
-  "/results": { title: "Findings", section: "Automation" },
-  "/settings": { title: "Configuration", section: "Workspace" },
+/**
+ * Flat route -> { title, crumb } lookup for the top bar. Titles and breadcrumbs
+ * are the source's titleMap / crumbMap with CASTELLAN rebranded to HYDRASENTRY.
+ */
+export const ROUTE_META: Record<
+  string,
+  { title: string; section: string; crumb: string }
+> = {
+  "/mission": {
+    title: "Command",
+    section: "Operations",
+    crumb: "HYDRASENTRY / OPERATIONS",
+  },
+  "/replay": {
+    title: "Replay",
+    section: "Operations",
+    crumb: "HYDRASENTRY / REPLAY",
+  },
+  "/graph": {
+    title: "Memory Graph",
+    section: "Operations",
+    crumb: "HYDRASENTRY / EVIDENCE",
+  },
+  "/skillmake": {
+    title: "SkillMake Verifier",
+    section: "Security",
+    crumb: "HYDRASENTRY / SKILLS",
+  },
+  "/mcp": {
+    title: "MCP Gateway",
+    section: "Security",
+    crumb: "HYDRASENTRY / GATEWAY",
+  },
+  "/scheduled": {
+    title: "Scheduled Agents",
+    section: "Automation",
+    crumb: "HYDRASENTRY / AUTOMATION",
+  },
+  "/results": {
+    title: "Findings",
+    section: "Automation",
+    crumb: "HYDRASENTRY / RESULTS",
+  },
+  "/settings": {
+    title: "Configuration",
+    section: "Workspace",
+    crumb: "HYDRASENTRY / CONFIG",
+  },
 };

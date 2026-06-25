@@ -1,182 +1,389 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { CalendarClock, Info } from "lucide-react";
 import { PageShell } from "@/components/shared/PageShell";
-import { InlineError } from "@/components/shared/StateNotice";
-import {
-  CockpitCard,
-  CockpitField,
-  CockpitPill,
-} from "@/components/shell/CockpitCard";
-import { ToggleSwitch } from "@/components/scheduled/ToggleSwitch";
 import { getScheduledAgents, toggleAgent } from "@/lib/api";
-import { formatTimestamp } from "@/lib/format";
+import { C } from "@/lib/cockpit/derive";
 import type { ScheduledAgent } from "@/lib/types";
 
-// Scheduled Agents. Lists the six in-app simulated monitoring agents with their
-// schedule, last/next run, latest result, action taken and status. Toggling an
-// agent updates optimistically and reconciles with the backend response. A
-// small note states plainly that scheduling is an in-app simulation. Reskinned
-// to the flat-cockpit system to match Command.
+const MONO = "var(--font-geist-mono), 'JetBrains Mono', monospace";
+
+/** A row in the grid (live agent or a locally-created custom agent). */
+interface AgentRow {
+  id: string;
+  name: string;
+  schedule: string;
+  last: string;
+  next: string;
+  result: string;
+  enabled: boolean;
+  custom: boolean;
+}
+
+function readField(a: ScheduledAgent, key: string, fallback = "—"): string {
+  const v = a[key];
+  return typeof v === "string" && v.length > 0 ? v : fallback;
+}
+
+/**
+ * Scheduled Agents — ported 1:1 from the Castellan source. A posture summary
+ * row (active/total/next + Create agent), a slide-in create form (with the scan
+ * sweep), and a three-column grid of agent cards (name + CUSTOM badge, on/off
+ * toggle, schedule, LAST/NEXT, result + status dot). The six standing agents are
+ * REAL (/scheduled-agents); toggling hits the live toggle endpoint and reconciles
+ * optimistically. Scheduling is simulated server-side, so a newly created agent
+ * is added locally (no fabricated cron), matching the guardrail.
+ */
 export default function ScheduledPage() {
-  const [agents, setAgents] = useState<ScheduledAgent[]>([]);
-  const [error, setError] = useState<string | null>(null);
-  const [loaded, setLoaded] = useState(false);
+  const [live, setLive] = useState<ScheduledAgent[]>([]);
+  const [custom, setCustom] = useState<AgentRow[]>([]);
+  const [creating, setCreating] = useState(false);
+  const [name, setName] = useState("");
+  const [sched, setSched] = useState("Nightly 23:00");
+  const [type, setType] = useState("Memory scan");
 
   useEffect(() => {
-    let active = true;
-    void getScheduledAgents().then((result) => {
-      if (!active) return;
-      setLoaded(true);
-      if (result.ok) setAgents(result.data);
-      else setError(result.error);
+    void getScheduledAgents().then((r) => {
+      if (r.ok) setLive(r.data);
     });
-    return () => {
-      active = false;
-    };
   }, []);
 
   async function handleToggle(id: string) {
-    setAgents((prev) =>
-      prev.map((a) => (a.id === id ? { ...a, enabled: !a.enabled } : a)),
-    );
-    const result = await toggleAgent(id);
-    if (result.ok) {
-      const updated = result.data;
-      setAgents((prev) => prev.map((a) => (a.id === updated.id ? updated : a)));
+    // Custom rows toggle locally; live rows reconcile with the backend.
+    if (custom.some((c) => c.id === id)) {
+      setCustom((prev) => prev.map((c) => (c.id === id ? { ...c, enabled: !c.enabled } : c)));
+      return;
+    }
+    setLive((prev) => prev.map((a) => (a.id === id ? { ...a, enabled: !a.enabled } : a)));
+    const r = await toggleAgent(id);
+    if (r.ok) {
+      setLive((prev) => prev.map((a) => (a.id === r.data.id ? r.data : a)));
     } else {
-      // Roll back on failure.
-      setAgents((prev) =>
-        prev.map((a) => (a.id === id ? { ...a, enabled: !a.enabled } : a)),
-      );
-      setError(result.error);
+      setLive((prev) => prev.map((a) => (a.id === id ? { ...a, enabled: !a.enabled } : a)));
     }
   }
 
-  const activeCount = agents.filter((a) => a.enabled).length;
+  function addAgent() {
+    const nx: Record<string, string> = {
+      Hourly: "top of hour",
+      "Every 6 hours": "in 6h",
+      "Nightly 23:00": "tonight 23:00",
+      "Weekly Mon 09:00": "next Mon 09:00",
+      "On incident": "on next incident",
+    };
+    const row: AgentRow = {
+      id: `c-${Date.now()}`,
+      name: name.trim() || "Custom Agent",
+      schedule: sched,
+      last: "never",
+      next: nx[sched] ?? "pending",
+      result: `${type} · armed`,
+      enabled: true,
+      custom: true,
+    };
+    setCustom((prev) => [row, ...prev]);
+    setCreating(false);
+    setName("");
+  }
+
+  const rows: AgentRow[] = [
+    ...custom,
+    ...live.map((a) => ({
+      id: a.id,
+      name: a.name,
+      schedule: a.schedule,
+      last: readField(a, "last_run"),
+      next: a.next_run || "—",
+      result: readField(a, "latest_result", `${readField(a, "status", "armed")}`),
+      enabled: a.enabled,
+      custom: false,
+    })),
+  ];
+  const activeCount = rows.filter((r) => r.enabled).length;
 
   return (
     <PageShell>
-      <div className="flex flex-col gap-6">
-        {/* ===== posture summary ===== */}
-        <section className="cockpit-card p-6">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-            <div className="min-w-0">
-              <div className="cockpit-eyebrow">Monitoring Posture</div>
-              <h2 className="mt-3 text-[1.5rem] font-semibold leading-tight tracking-tight text-ink">
-                Recurring memory scans
-              </h2>
-              <p className="mt-3 max-w-xl text-[13px] leading-relaxed text-muted">
-                Six standing agents watch HydraDB context, skills, and policy on
-                a fixed cadence. Toggle any agent to arm or pause it.
-              </p>
-            </div>
-            <div className="flex shrink-0 items-center gap-2 sm:flex-col sm:items-end">
-              <span className="cockpit-eyebrow">Armed</span>
-              <span className="text-[1.6rem] font-semibold leading-none tracking-tight text-ink tabular-nums">
-                {loaded ? `${activeCount}/${agents.length}` : "—"}
-              </span>
-            </div>
+      <div data-page style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+        {/* Posture summary */}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 14, flexWrap: "wrap" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 18, fontFamily: MONO, fontSize: 11, color: C.muted }}>
+            <span style={{ display: "flex", alignItems: "center", gap: 7 }}>
+              <span
+                style={{
+                  width: 6,
+                  height: 6,
+                  borderRadius: "50%",
+                  background: C.accent,
+                  boxShadow: `0 0 8px ${C.accent}`,
+                  animation: "hsPulseDot 2.4s ease-in-out infinite",
+                }}
+              />
+              <span style={{ color: C.accent }}>{activeCount}</span> active
+            </span>
+            <span>
+              <span style={{ color: "#fff" }}>{rows.length}</span> agents
+            </span>
+            <span>
+              next <span style={{ color: C.silver }}>23:00</span>
+            </span>
           </div>
-          <div className="mono mt-5 flex items-center gap-2 rounded-lg border border-hairline bg-white/[.02] px-3.5 py-2.5 text-[12px] text-muted">
-            <Info className="h-3.5 w-3.5 shrink-0" strokeWidth={1.8} />
-            Scheduling is an in-app simulation. No external cron jobs run;
-            toggling and next-run times are persisted and deterministic for the
-            demo.
-          </div>
-        </section>
+          <button
+            type="button"
+            onClick={() => setCreating((c) => !c)}
+            onMouseEnter={(e) => (e.currentTarget.style.transform = "translateY(-2px)")}
+            onMouseLeave={(e) => (e.currentTarget.style.transform = "translateY(0)")}
+            style={{
+              cursor: "pointer",
+              fontFamily: "inherit",
+              fontSize: 13,
+              fontWeight: 600,
+              color: "#0A0A0A",
+              padding: "10px 18px",
+              border: "none",
+              borderRadius: 11,
+              background: "linear-gradient(180deg,#FFFFFF,#CDD3DC)",
+              boxShadow: "0 8px 22px -10px rgba(220,228,240,0.55)",
+              transition: "transform .2s",
+            }}
+          >
+            {creating ? "Close" : "+ Create agent"}
+          </button>
+        </div>
 
-        {error && <InlineError message={error} />}
-
-        {/* ===== agent cards ===== */}
-        <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {agents.map((agent) => (
-            <AgentCard
-              key={agent.id}
-              agent={agent}
-              onToggle={() => void handleToggle(agent.id)}
+        {/* Create form */}
+        {creating && (
+          <div
+            className="hsEntry"
+            style={{
+              border: "1px solid rgba(234,240,250,0.2)",
+              borderRadius: 16,
+              background: "linear-gradient(180deg,rgba(20,24,30,0.8),rgba(6,8,10,0.7))",
+              padding: 20,
+              position: "relative",
+              overflow: "hidden",
+            }}
+          >
+            <div
+              style={{
+                position: "absolute",
+                top: 0,
+                left: 0,
+                height: 2,
+                width: "40%",
+                background: "linear-gradient(90deg,transparent,rgba(234,240,250,0.7),transparent)",
+                animation: "hsScan 2.6s linear infinite",
+              }}
             />
+            <div style={{ fontFamily: MONO, fontSize: "9.5px", letterSpacing: "0.16em", color: C.accent }}>
+              NEW SCHEDULED AGENT
+            </div>
+            <div
+              className="cockpit-sched-form"
+              style={{ marginTop: 14, display: "grid", gridTemplateColumns: "1.4fr 1fr 1fr auto", gap: 12, alignItems: "end" }}
+            >
+              <FormField label="NAME">
+                <input
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="e.g. Cross-tenant Leak Scan"
+                  style={fieldInputStyle}
+                />
+              </FormField>
+              <FormField label="SCHEDULE">
+                <select value={sched} onChange={(e) => setSched(e.target.value)} style={{ ...fieldInputStyle, cursor: "pointer" }}>
+                  <option>Hourly</option>
+                  <option>Every 6 hours</option>
+                  <option>Nightly 23:00</option>
+                  <option>Weekly Mon 09:00</option>
+                  <option>On incident</option>
+                </select>
+              </FormField>
+              <FormField label="TYPE">
+                <select value={type} onChange={(e) => setType(e.target.value)} style={{ ...fieldInputStyle, cursor: "pointer" }}>
+                  <option>Memory scan</option>
+                  <option>Skill scan</option>
+                  <option>Policy drift</option>
+                  <option>Regression replay</option>
+                  <option>Security report</option>
+                </select>
+              </FormField>
+              <div style={{ display: "flex", gap: 8 }}>
+                <button
+                  type="button"
+                  onClick={addAgent}
+                  style={{
+                    cursor: "pointer",
+                    fontFamily: "inherit",
+                    fontSize: 13,
+                    fontWeight: 600,
+                    color: "#0A0A0A",
+                    padding: "10px 16px",
+                    border: "none",
+                    borderRadius: 10,
+                    background: "linear-gradient(180deg,#FFFFFF,#CDD3DC)",
+                  }}
+                >
+                  Add
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setCreating(false)}
+                  style={{
+                    cursor: "pointer",
+                    fontFamily: "inherit",
+                    fontSize: 13,
+                    color: C.muted,
+                    padding: "10px 14px",
+                    border: "1px solid rgba(255,255,255,0.12)",
+                    borderRadius: 10,
+                    background: "transparent",
+                  }}
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Agent grid */}
+        <div className="cockpit-sched-grid" data-stagger style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 14 }}>
+          {rows.map((s) => (
+            <AgentCard key={s.id} row={s} onToggle={() => void handleToggle(s.id)} />
           ))}
-        </section>
+        </div>
       </div>
     </PageShell>
   );
 }
 
-/** Map a backend status to a monochrome pill tone (brightness, never hue). */
-function pillTone(status: string, enabled: boolean): "neutral" | "bright" {
-  if (!enabled) return "neutral";
-  if (status === "running" || status === "alerted") return "bright";
-  return "neutral";
-}
+const fieldInputStyle: React.CSSProperties = {
+  background: "#020304",
+  color: "#E6ECF6",
+  border: "1px solid rgba(255,255,255,0.12)",
+  borderRadius: 9,
+  padding: "10px 12px",
+  fontFamily: "inherit",
+  fontSize: 13,
+  outline: "none",
+};
 
-function readField(agent: ScheduledAgent, key: string): string {
-  const value = agent[key];
-  return typeof value === "string" && value.length > 0 ? value : "—";
-}
-
-interface AgentCardProps {
-  agent: ScheduledAgent;
-  onToggle: () => void;
-}
-
-function AgentCard({ agent, onToggle }: AgentCardProps) {
-  const latestResult = readField(agent, "latest_result");
-  const actionTaken = readField(agent, "action_taken");
-  const lastRun = readField(agent, "last_run");
-  const status = readField(agent, "status");
-
+function FormField({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <CockpitCard hover className="flex flex-col gap-4 p-5">
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex items-start gap-2.5">
-          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg border border-hairline bg-white/[.04]">
-            <CalendarClock className="h-4 w-4 text-muted" strokeWidth={1.7} />
-          </span>
-          <div>
-            <div className="text-[15px] font-semibold leading-tight tracking-tight text-ink">
-              {agent.name}
-            </div>
-            <div className="mono mt-0.5 text-[11px] text-faint">
-              {agent.schedule}
-            </div>
+    <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+      <span style={{ fontFamily: MONO, fontSize: 9, letterSpacing: "0.12em", color: C.faint }}>{label}</span>
+      {children}
+    </label>
+  );
+}
+
+function AgentCard({ row, onToggle }: { row: AgentRow; onToggle: () => void }) {
+  const off = !row.enabled;
+  return (
+    <div
+      onMouseEnter={(e) => {
+        e.currentTarget.style.transform = "translateY(-3px)";
+        e.currentTarget.style.borderColor = "rgba(234,240,250,0.28)";
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.transform = "translateY(0)";
+        e.currentTarget.style.borderColor = row.custom ? "rgba(234,240,250,0.18)" : "rgba(255,255,255,0.08)";
+      }}
+      style={{
+        padding: 18,
+        border: `1px solid ${row.custom ? "rgba(234,240,250,0.18)" : "rgba(255,255,255,0.08)"}`,
+        borderRadius: 16,
+        background: "linear-gradient(180deg,rgba(16,19,24,0.6),rgba(8,10,13,0.6))",
+        transition: "transform .25s,border-color .25s",
+      }}
+    >
+      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 10 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
+          <div
+            style={{
+              fontSize: 15,
+              fontWeight: 600,
+              color: C.ink,
+              whiteSpace: "nowrap",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+            }}
+          >
+            {row.name}
           </div>
+          {row.custom && (
+            <span
+              style={{
+                fontFamily: MONO,
+                fontSize: 8,
+                letterSpacing: "0.1em",
+                color: C.accent,
+                border: "1px solid rgba(234,240,250,0.3)",
+                borderRadius: 999,
+                padding: "1px 6px",
+              }}
+            >
+              CUSTOM
+            </span>
+          )}
         </div>
-        <ToggleSwitch
-          enabled={agent.enabled}
-          onToggle={onToggle}
-          label={`Toggle ${agent.name}`}
-        />
+        <button
+          type="button"
+          onClick={onToggle}
+          aria-label={`Toggle ${row.name}`}
+          style={{
+            cursor: "pointer",
+            flex: "none",
+            width: 38,
+            height: 22,
+            borderRadius: 999,
+            border: `1px solid ${off ? "rgba(255,255,255,0.12)" : "rgba(234,240,250,0.4)"}`,
+            background: off ? "rgba(255,255,255,0.04)" : "rgba(234,240,250,0.18)",
+            position: "relative",
+            transition: "all .2s",
+          }}
+        >
+          <span
+            style={{
+              position: "absolute",
+              top: 2,
+              left: off ? 2 : 18,
+              width: 16,
+              height: 16,
+              borderRadius: "50%",
+              background: off ? C.faint : "#fff",
+              transition: "all .2s",
+            }}
+          />
+        </button>
       </div>
-
-      <dl className="flex flex-col gap-2 border-t border-hairline pt-3">
-        <CockpitField mono label="last run" value={formatTimestamp(lastRun)} />
-        <CockpitField
-          mono
-          label="next run"
-          value={formatTimestamp(agent.next_run)}
-        />
-        <CockpitField mono label="action taken" value={actionTaken} />
-      </dl>
-
-      <div>
-        <div className="cockpit-eyebrow mb-1.5">latest result</div>
-        <p className="text-[12.5px] leading-relaxed text-muted">
-          {latestResult}
-        </p>
+      <div style={{ marginTop: 6, fontFamily: MONO, fontSize: "10.5px", color: C.muted }}>{row.schedule}</div>
+      <div style={{ marginTop: 14, display: "flex", flexDirection: "column", gap: 7 }}>
+        <Row k="LAST" v={row.last} vColor={C.muted} />
+        <Row k="NEXT" v={off ? "paused" : row.next} vColor={C.silver} />
       </div>
-
-      <div className="mt-auto flex items-center justify-between gap-2 pt-1">
-        <CockpitPill
-          dot
-          tone={pillTone(status, agent.enabled)}
-          label={agent.enabled ? status : "paused"}
-        />
-        <span className="cockpit-eyebrow">
-          {agent.enabled ? "armed" : "disabled"}
-        </span>
+      <div
+        style={{
+          marginTop: 14,
+          paddingTop: 12,
+          borderTop: "1px solid rgba(255,255,255,0.06)",
+          display: "flex",
+          alignItems: "center",
+          gap: 8,
+        }}
+      >
+        <span style={{ width: 7, height: 7, borderRadius: "50%", background: off ? C.faint : C.accent, transition: "background .2s" }} />
+        <span style={{ fontSize: "11.5px", color: C.muted }}>{row.result}</span>
       </div>
-    </CockpitCard>
+    </div>
+  );
+}
+
+function Row({ k, v, vColor }: { k: string; v: string; vColor: string }) {
+  return (
+    <div style={{ display: "flex", justifyContent: "space-between" }}>
+      <span style={{ fontFamily: MONO, fontSize: 10, color: C.faint }}>{k}</span>
+      <span style={{ fontFamily: MONO, fontSize: "10.5px", color: vColor, whiteSpace: "nowrap" }}>{v}</span>
+    </div>
   );
 }
