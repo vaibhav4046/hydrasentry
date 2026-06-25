@@ -16,7 +16,7 @@ export function UseCaseBento() {
   return (
     <section
       id="use-cases"
-      className="mx-auto max-w-7xl scroll-mt-24 px-6 py-20 md:py-28"
+      className="mx-auto max-w-7xl scroll-mt-24 px-6 py-28 md:py-36"
     >
       <SectionHeader
         kicker="THREAT MODEL"
@@ -29,7 +29,7 @@ export function UseCaseBento() {
         initial="hidden"
         whileInView="show"
         viewport={{ once: true, margin: "-60px" }}
-        className="mt-12 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3"
+        className="mt-14 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3"
       >
         {USE_CASES.map((uc) => (
           <BentoTile key={uc.title} useCase={uc} />

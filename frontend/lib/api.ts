@@ -45,7 +45,7 @@ import {
   demoScheduledAgents,
   demoSkillScan,
 } from "./demoData";
-import { markDemoFallback } from "./demoMode";
+import { isDemoFallbackActive, markDemoFallback } from "./demoMode";
 
 /** Explicitly-configured backend URL, if any. */
 const CONFIGURED_BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL;
@@ -273,6 +273,25 @@ function withFallback<T>(
   return { ok: true, data: fixture() };
 }
 
+/**
+ * Like withFallback but ALSO substitutes the fixture when the live call
+ * succeeds yet returns an EMPTY list. Use only for endpoints whose content is
+ * seeded and should never legitimately be empty (e.g. the six scheduled
+ * agents). On a serverless backend the SQLite seed can be missing after a cold
+ * start, which would otherwise render a blank, broken-looking page; serving the
+ * deterministic fixture keeps the surface populated and flips the honest
+ * "demo data" indicator. Endpoints where empty is a valid real state (findings
+ * before any run) must keep plain withFallback.
+ */
+function withListFallback<T>(
+  result: ApiResult<T[]>,
+  fixture: () => T[],
+): ApiResult<T[]> {
+  if (result.ok && result.data.length > 0) return result;
+  markDemoFallback();
+  return { ok: true, data: fixture() };
+}
+
 // --- Reads with demo fallback ----------------------------------------------
 
 export async function getHealth(): Promise<ApiResult<HealthStatus>> {
@@ -312,7 +331,10 @@ export async function getFindings(): Promise<ApiResult<SkillScan[]>> {
 export async function getScheduledAgents(): Promise<
   ApiResult<ScheduledAgent[]>
 > {
-  return withFallback(
+  // Seeded content: six agents always exist in a healthy backend. An empty list
+  // means the serverless SQLite seed did not run on this cold start, so fall
+  // back to the deterministic fixture rather than render a blank page.
+  return withListFallback(
     await request<ScheduledAgent[]>("/scheduled-agents"),
     demoScheduledAgents,
   );
@@ -410,6 +432,17 @@ export async function scanSkill(
 export async function toggleAgent(
   id: string,
 ): Promise<ApiResult<ScheduledAgent>> {
+  // If the agents list was served from the bundled fixture (the live backend
+  // returned an empty seed, or is unreachable), the real toggle endpoint does
+  // not know this fixture id — calling it would 404 and log a console error.
+  // Flip the bundled agent locally instead so the optimistic UI reconciles
+  // cleanly with zero failed requests.
+  if (skipNetwork() || isDemoFallbackActive()) {
+    markDemoFallback();
+    const agent = demoScheduledAgents().find((a) => a.id === id);
+    if (!agent) return { ok: false, error: `agent '${id}' not found` };
+    return { ok: true, data: { ...agent, enabled: !agent.enabled } };
+  }
   const live = await request<ScheduledAgent>(
     `/scheduled-agents/${encodeURIComponent(id)}/toggle`,
     { method: "POST" },

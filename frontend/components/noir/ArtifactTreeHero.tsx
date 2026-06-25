@@ -216,13 +216,13 @@ export function ArtifactTreeHero() {
               {isRunning ? "Running pipeline" : "Launch Interactive Demo"}
             </GlowButton>
             <Link
-              href="#architecture"
+              href="#pipeline"
               className={cn(
                 "hydra-button-secondary inline-flex h-12 items-center justify-center gap-2 rounded-xl px-6 text-[15px] font-semibold tracking-tight",
                 "outline-none focus-visible:ring-2 focus-visible:ring-white/70 focus-visible:ring-offset-2 focus-visible:ring-offset-base",
               )}
             >
-              View Architecture
+              See how it works
               <ArrowRight className="h-4 w-4" strokeWidth={1.8} />
             </Link>
           </m.div>

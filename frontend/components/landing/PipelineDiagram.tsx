@@ -18,7 +18,7 @@ export function PipelineDiagram() {
   return (
     <section
       id="pipeline"
-      className="mx-auto max-w-7xl scroll-mt-24 px-6 py-20 md:py-28"
+      className="mx-auto max-w-7xl scroll-mt-24 px-6 py-28 md:py-36"
     >
       <SectionHeader
         kicker="THE PIPELINE"
@@ -31,7 +31,7 @@ export function PipelineDiagram() {
         initial="hidden"
         whileInView="show"
         viewport={{ once: true, margin: "-60px" }}
-        className="mt-12 flex flex-wrap items-stretch justify-center gap-y-6"
+        className="mt-14 flex flex-wrap items-stretch justify-center gap-y-6"
       >
         {PIPELINE.map((step, i) => (
           <li key={step.label} className="flex items-stretch">

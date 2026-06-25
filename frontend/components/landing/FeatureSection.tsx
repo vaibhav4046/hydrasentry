@@ -15,19 +15,19 @@ export function FeatureSection() {
   return (
     <section
       id="features"
-      className="mx-auto max-w-7xl scroll-mt-24 px-6 py-20 md:py-28"
+      className="mx-auto max-w-7xl scroll-mt-24 px-6 py-28 md:py-36"
     >
       <SectionHeader
         kicker="CAPABILITIES"
         title="Built for memory-native agents."
-        description="Eight capabilities that turn HydraDB context integrity from a hope into a verifiable, repeatable process."
+        description="Six capabilities that turn HydraDB context integrity from a hope into a verifiable, repeatable process."
       />
       <m.div
         variants={staggerContainer}
         initial="hidden"
         whileInView="show"
         viewport={{ once: true, margin: "-60px" }}
-        className="mt-12 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4"
+        className="mt-14 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3"
       >
         {FEATURES.map((feature) => {
           const Icon = feature.Icon;
