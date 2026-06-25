@@ -15,9 +15,11 @@ import { GlassPanel } from "@/components/noir/GlassPanel";
 import { GlowButton } from "@/components/noir/GlowButton";
 import { StatusPill } from "@/components/noir/StatusPill";
 import { MetricCard } from "@/components/noir/MetricCard";
-import { RiskGauge } from "@/components/noir/RiskGauge";
 import { ReportDrawer } from "@/components/noir/ReportDrawer";
 import { SectionHeader } from "@/components/noir/SectionHeader";
+import { AnimatedRiskBadge } from "@/components/noir/AnimatedRiskBadge";
+import { ArtifactTreeGraph } from "@/components/noir/ArtifactTreeGraph";
+import { MAX_STAGE } from "@/components/noir/artifactTreeData";
 import { GraphSourceBadge } from "@/components/graph/GraphSourceBadge";
 import { SelfRefinementTimeline } from "@/components/results/SelfRefinementTimeline";
 import { useRunDemo } from "@/hooks/useRunDemo";
@@ -85,18 +87,44 @@ export default function ResultsPage() {
       actions={<GraphSourceBadge source={run.graph_source} />}
     >
       <div className="flex flex-col gap-5">
-        <div className="grid gap-5 lg:grid-cols-[auto_1fr]">
-          <GlassPanel strong className="flex flex-col items-center gap-4 p-6">
-            <RiskGauge score={run.risk.score} band={run.risk.band} size={220} />
-            <div className="flex flex-wrap items-center justify-center gap-2">
+        {/* ===== cinematic finale hero: risk readout + blocked path tree ===== */}
+        <GlassPanel strong className="flex flex-col gap-5 p-6">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <AnimatedRiskBadge
+              to={run.risk.score}
+              band={`${run.risk.band} RISK`}
+            />
+            <div className="flex flex-wrap items-center gap-2">
               <StatusPill
                 tone="critical"
-                label={`decision ${run.firewall.decision}`}
+                label={`firewall ${run.firewall.decision}`}
               />
               <StatusPill tone="warn" label={run.risk.attack_type} />
+              <GraphSourceBadge source={run.graph_source} />
             </div>
-          </GlassPanel>
+          </div>
+          <div className="relative w-full overflow-hidden rounded-xl2 border border-hairline bg-deep/40 p-2 sm:p-4">
+            <div
+              aria-hidden
+              className="pointer-events-none absolute inset-0 -z-0"
+              style={{
+                background:
+                  "radial-gradient(circle at 50% 38%, rgba(255,255,255,0.07), rgba(255,255,255,0.02) 44%, transparent 70%)",
+              }}
+            />
+            <ArtifactTreeGraph
+              stage={MAX_STAGE}
+              graph={run.graph}
+              className="mx-auto max-w-[720px]"
+            />
+            <p className="mono mt-1 text-center text-[11px] leading-relaxed text-faint">
+              The blocked path: poisoned memory -&gt; policy conflict -&gt; unsafe
+              action, intercepted at the MCP firewall before it could act.
+            </p>
+          </div>
+        </GlassPanel>
 
+        <div className="grid gap-5 lg:grid-cols-1">
           <div className="flex flex-col gap-4">
             <GlassPanel className="flex flex-col gap-3 p-5">
               <div className="flex items-start gap-3">

@@ -1,7 +1,7 @@
 /******/ (() => { // webpackBootstrap
 /******/ 	var __webpack_modules__ = ({
 
-/***/ 9842
+/***/ 3795
 (__unused_webpack_module, __unused_webpack___webpack_exports__, __webpack_require__) {
 
 "use strict";
@@ -1350,24 +1350,881 @@ const HydraSentryDemoFilm = () => {
   }) });
 };
 
+;// ./src/ArtifactTree.tsx
+
+
+
+
+const TREE_W = 1200;
+const TREE_H = 920;
+const CANOPY = { x: 600, y: 320 };
+const BASE = { x: 600, y: 880 };
+const BRANCHES = [
+  { d: "M600 880 C 597 760, 603 590, 600 450", width: 4.2, bright: 1, order: 0 },
+  { d: "M600 520 C 560 450, 500 410, 446 372", width: 3, bright: 0.85, order: 1 },
+  { d: "M600 520 C 642 448, 706 410, 760 372", width: 3, bright: 0.85, order: 1 },
+  { d: "M600 480 C 580 400, 540 350, 512 290", width: 2.6, bright: 0.78, order: 1 },
+  { d: "M600 480 C 622 400, 664 352, 692 292", width: 2.6, bright: 0.78, order: 1 },
+  { d: "M446 372 C 396 340, 356 308, 326 262", width: 1.9, bright: 0.6, order: 2 },
+  { d: "M446 372 C 430 318, 416 280, 408 236", width: 1.7, bright: 0.56, order: 2 },
+  { d: "M512 290 C 488 246, 470 212, 466 176", width: 1.6, bright: 0.54, order: 2 },
+  { d: "M760 372 C 810 340, 852 312, 882 268", width: 1.9, bright: 0.6, order: 2 },
+  { d: "M760 372 C 776 320, 792 282, 800 238", width: 1.7, bright: 0.56, order: 2 },
+  { d: "M692 292 C 716 248, 736 214, 742 178", width: 1.6, bright: 0.54, order: 2 },
+  { d: "M326 262 C 300 232, 284 212, 274 184", width: 1.1, bright: 0.4, order: 3 },
+  { d: "M408 236 C 396 206, 388 186, 386 160", width: 1.1, bright: 0.4, order: 3 },
+  { d: "M882 268 C 908 238, 924 218, 934 190", width: 1.1, bright: 0.4, order: 3 },
+  { d: "M800 238 C 812 208, 820 188, 822 162", width: 1.1, bright: 0.4, order: 3 },
+  { d: "M600 450 C 596 400, 600 372, 600 340", width: 1.5, bright: 0.7, order: 2 }
+];
+const QUERY_PATH_D = "M600 880 C 597 720, 603 590, 600 520 C 642 448, 706 410, 760 372 C 810 340, 852 312, 882 268";
+function mulberry32(seed) {
+  let a = seed >>> 0;
+  return () => {
+    a |= 0;
+    a = a + 1831565813 | 0;
+    let t = Math.imul(a ^ a >>> 15, 1 | a);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+function buildDots() {
+  const rng = mulberry32(19159);
+  const out = [];
+  for (const b of BRANCHES) {
+    const pts = parsePts(b.d);
+    if (!pts) continue;
+    const density = b.order === 0 ? 16 : b.order === 1 ? 10 : b.order === 2 ? 6 : 3;
+    for (let i = 0; i < density; i++) {
+      const t = (i + 0.5) / density;
+      const p = cubicAt(pts, t);
+      const jx = (rng() - 0.5) * (10 - b.order * 1.6);
+      const jy = (rng() - 0.5) * (10 - b.order * 1.6);
+      if (b.order >= 2 && rng() < 0.25) continue;
+      out.push({
+        x: p.x + jx,
+        y: p.y + jy,
+        r: 1.2 + rng() * (b.order === 0 ? 2 : 1.2),
+        bright: Math.max(0.2, b.bright * (0.7 + rng() * 0.45)),
+        phase: rng()
+      });
+    }
+  }
+  return out;
+}
+function parsePts(d) {
+  var _a;
+  const n = (_a = d.match(/-?\d+(?:\.\d+)?/g)) == null ? void 0 : _a.map(Number);
+  if (!n || n.length < 8) return null;
+  return [
+    { x: n[0], y: n[1] },
+    { x: n[2], y: n[3] },
+    { x: n[4], y: n[5] },
+    { x: n[6], y: n[7] }
+  ];
+}
+function cubicAt(p, t) {
+  const mt = 1 - t;
+  const a = mt * mt * mt;
+  const b = 3 * mt * mt * t;
+  const c = 3 * mt * t * t;
+  const e = t * t * t;
+  return {
+    x: a * p[0].x + b * p[1].x + c * p[2].x + e * p[3].x,
+    y: a * p[0].y + b * p[1].y + c * p[2].y + e * p[3].y
+  };
+}
+const DOTS = buildDots();
+const LX = 150;
+const RX = 1050;
+const BADGES = [
+  { id: "user_task", title: "USER TASK", sub: "Process VIP refund", x: 600, y: 80, col: "top", tainted: false, appear: 0.16 },
+  { id: "memory", title: "MEMORY NODE", sub: "VIP = instant refund", x: LX, y: 250, col: "left", tainted: true, appear: 0.16 },
+  { id: "policy", title: "POLICY NODE", sub: "Refunds >\xA3500 need approval", x: LX, y: 400, col: "left", tainted: false, appear: 0.16 },
+  { id: "document", title: "DOCUMENT NODE", sub: "Refund policy v2.1", x: LX, y: 550, col: "left", tainted: false, appear: 0.16 },
+  { id: "tool", title: "TOOL NODE", sub: "approve_refund()", x: LX, y: 700, col: "left", tainted: false, appear: 0.4 },
+  { id: "retrieval", title: "RETRIEVAL PATH", sub: "3 hops \xB7 0.87", x: RX, y: 250, col: "right", tainted: false, appear: 0.4 },
+  { id: "conflict", title: "CONFLICT DETECTED", sub: "Memory vs policy", x: RX, y: 400, col: "right", tainted: true, appear: 0.56 },
+  { id: "risk", title: "RISK DETECTED", sub: "Policy bypass", x: RX, y: 550, col: "right", tainted: true, appear: 0.7 },
+  { id: "firewall", title: "MCP FIREWALL", sub: "Action blocked", x: RX, y: 700, col: "right", tainted: true, appear: 0.84 }
+];
+function badgeCenter(id) {
+  if (id === "canopy") return CANOPY;
+  const b = BADGES.find((n) => n.id === id);
+  return b ? { x: b.x, y: b.y } : CANOPY;
+}
+const EDGES = [
+  { from: "user_task", to: "canopy", tainted: false, appear: 0.16 },
+  { from: "memory", to: "canopy", tainted: false, appear: 0.16 },
+  { from: "policy", to: "canopy", tainted: false, appear: 0.16 },
+  { from: "document", to: "canopy", tainted: false, appear: 0.16 },
+  { from: "tool", to: "canopy", tainted: false, appear: 0.4 },
+  { from: "retrieval", to: "canopy", tainted: false, appear: 0.4 },
+  { from: "memory", to: "conflict", tainted: true, appear: 0.56 },
+  { from: "conflict", to: "risk", tainted: true, appear: 0.7 },
+  { from: "risk", to: "firewall", tainted: true, appear: 0.84 }
+];
+const ArtifactTree = ({
+  progress,
+  taint = 0,
+  block = 0,
+  frame
+}) => {
+  const liveFrame = (0,esm.useCurrentFrame)();
+  const f = frame ?? liveFrame;
+  return /* @__PURE__ */ (0,jsx_runtime.jsxs)(
+    "svg",
+    {
+      width: TREE_W,
+      height: TREE_H,
+      viewBox: `0 0 ${TREE_W} ${TREE_H}`,
+      fill: "none",
+      xmlns: "http://www.w3.org/2000/svg",
+      style: { overflow: "visible" },
+      children: [
+        /* @__PURE__ */ (0,jsx_runtime.jsxs)("defs", { children: [
+          /* @__PURE__ */ (0,jsx_runtime.jsxs)("radialGradient", { id: "atree-spot", cx: "50%", cy: "40%", r: "60%", children: [
+            /* @__PURE__ */ (0,jsx_runtime.jsx)("stop", { offset: "0%", stopColor: "#FFFFFF", stopOpacity: "0.1" }),
+            /* @__PURE__ */ (0,jsx_runtime.jsx)("stop", { offset: "46%", stopColor: "#FFFFFF", stopOpacity: "0.035" }),
+            /* @__PURE__ */ (0,jsx_runtime.jsx)("stop", { offset: "100%", stopColor: "#FFFFFF", stopOpacity: "0" })
+          ] }),
+          /* @__PURE__ */ (0,jsx_runtime.jsxs)("filter", { id: "atree-glow", x: "-60%", y: "-60%", width: "220%", height: "220%", children: [
+            /* @__PURE__ */ (0,jsx_runtime.jsx)("feGaussianBlur", { stdDeviation: "1.8", result: "b" }),
+            /* @__PURE__ */ (0,jsx_runtime.jsxs)("feMerge", { children: [
+              /* @__PURE__ */ (0,jsx_runtime.jsx)("feMergeNode", { in: "b" }),
+              /* @__PURE__ */ (0,jsx_runtime.jsx)("feMergeNode", { in: "SourceGraphic" })
+            ] })
+          ] }),
+          /* @__PURE__ */ (0,jsx_runtime.jsxs)("filter", { id: "atree-taint", x: "-120%", y: "-120%", width: "340%", height: "340%", children: [
+            /* @__PURE__ */ (0,jsx_runtime.jsx)("feGaussianBlur", { stdDeviation: "4", result: "b" }),
+            /* @__PURE__ */ (0,jsx_runtime.jsxs)("feMerge", { children: [
+              /* @__PURE__ */ (0,jsx_runtime.jsx)("feMergeNode", { in: "b" }),
+              /* @__PURE__ */ (0,jsx_runtime.jsx)("feMergeNode", { in: "SourceGraphic" })
+            ] })
+          ] })
+        ] }),
+        /* @__PURE__ */ (0,jsx_runtime.jsx)("rect", { x: 0, y: 0, width: TREE_W, height: TREE_H, fill: "url(#atree-spot)" }),
+        /* @__PURE__ */ (0,jsx_runtime.jsx)(Rings, { progress }),
+        /* @__PURE__ */ (0,jsx_runtime.jsx)(Branches, { progress, frame: f }),
+        /* @__PURE__ */ (0,jsx_runtime.jsx)(Dots, { progress, frame: f }),
+        /* @__PURE__ */ (0,jsx_runtime.jsx)(QueryPath, { progress }),
+        /* @__PURE__ */ (0,jsx_runtime.jsx)(Edges, { progress, taint, frame: f }),
+        /* @__PURE__ */ (0,jsx_runtime.jsx)(Badges, { progress, taint, block, frame: f })
+      ]
+    }
+  );
+};
+const Rings = ({ progress }) => {
+  const op = (0,esm.interpolate)(progress, [0, 0.08], [0, 1], {
+    extrapolateLeft: "clamp",
+    extrapolateRight: "clamp"
+  });
+  return /* @__PURE__ */ (0,jsx_runtime.jsx)("g", { opacity: op, children: [160, 270, 400].map((r) => /* @__PURE__ */ (0,jsx_runtime.jsx)(
+    "circle",
+    {
+      cx: CANOPY.x,
+      cy: CANOPY.y,
+      r,
+      fill: "none",
+      stroke: COLORS.white,
+      strokeOpacity: 0.05,
+      strokeWidth: 1,
+      strokeDasharray: "2 8"
+    },
+    r
+  )) });
+};
+const Branches = ({ progress }) => {
+  return /* @__PURE__ */ (0,jsx_runtime.jsx)("g", { filter: "url(#atree-glow)", children: BRANCHES.map((b, i) => {
+    const start = 0.06 + b.order * 0.05;
+    const draw = (0,esm.interpolate)(progress, [start, start + 0.16], [0, 1], {
+      extrapolateLeft: "clamp",
+      extrapolateRight: "clamp"
+    });
+    const len = approxLen(b.d);
+    return /* @__PURE__ */ (0,jsx_runtime.jsx)(
+      "path",
+      {
+        d: b.d,
+        stroke: COLORS.white,
+        strokeOpacity: (0.18 + b.bright * 0.6) * (draw > 0 ? 1 : 0),
+        strokeWidth: b.width,
+        strokeLinecap: "round",
+        fill: "none",
+        strokeDasharray: len,
+        strokeDashoffset: len * (1 - draw)
+      },
+      i
+    );
+  }) });
+};
+const Dots = ({ progress, frame }) => {
+  const op = (0,esm.interpolate)(progress, [0.1, 0.24], [0, 1], {
+    extrapolateLeft: "clamp",
+    extrapolateRight: "clamp"
+  });
+  return /* @__PURE__ */ (0,jsx_runtime.jsx)("g", { opacity: op, children: DOTS.map((d, i) => {
+    const breathe = (0,esm.interpolate)(
+      Math.sin(frame / (40 + d.phase * 30) + d.phase * 6),
+      [-1, 1],
+      [0.55, 1]
+    );
+    return /* @__PURE__ */ (0,jsx_runtime.jsx)(
+      "circle",
+      {
+        cx: d.x,
+        cy: d.y,
+        r: d.r,
+        fill: COLORS.white,
+        fillOpacity: (0.25 + d.bright * 0.6) * breathe
+      },
+      i
+    );
+  }) });
+};
+const QueryPath = ({ progress }) => {
+  const draw = (0,esm.interpolate)(progress, [0.36, 0.56], [0, 1], {
+    extrapolateLeft: "clamp",
+    extrapolateRight: "clamp"
+  });
+  if (draw <= 0) return null;
+  const len = approxLen(QUERY_PATH_D);
+  return /* @__PURE__ */ (0,jsx_runtime.jsx)(
+    "path",
+    {
+      d: QUERY_PATH_D,
+      stroke: COLORS.white,
+      strokeOpacity: 0.5,
+      strokeWidth: 2.6,
+      strokeLinecap: "round",
+      fill: "none",
+      filter: "url(#atree-glow)",
+      strokeDasharray: len,
+      strokeDashoffset: len * (1 - draw)
+    }
+  );
+};
+const Edges = ({
+  progress,
+  taint,
+  frame
+}) => {
+  return /* @__PURE__ */ (0,jsx_runtime.jsx)("g", { children: EDGES.map((e, i) => {
+    const a = badgeCenter(e.from);
+    const b = badgeCenter(e.to);
+    const draw = (0,esm.interpolate)(progress, [e.appear, e.appear + 0.1], [0, 1], {
+      extrapolateLeft: "clamp",
+      extrapolateRight: "clamp"
+    });
+    if (draw <= 0) return null;
+    const hot = e.tainted ? taint : 0;
+    const op = e.tainted ? 0.6 + hot * 0.36 : 0.2;
+    const w = e.tainted ? 1.8 + hot * 0.8 : 1.2;
+    const len = Math.hypot(b.x - a.x, b.y - a.y);
+    const travelT = e.tainted && hot > 0.4 ? frame % 44 / 44 : null;
+    const px = travelT !== null ? a.x + (b.x - a.x) * travelT : 0;
+    const py = travelT !== null ? a.y + (b.y - a.y) * travelT : 0;
+    return /* @__PURE__ */ (0,jsx_runtime.jsxs)("g", { children: [
+      /* @__PURE__ */ (0,jsx_runtime.jsx)(
+        "line",
+        {
+          x1: a.x,
+          y1: a.y,
+          x2: b.x,
+          y2: b.y,
+          stroke: COLORS.white,
+          strokeOpacity: op,
+          strokeWidth: w,
+          strokeDasharray: e.tainted ? "6 5" : "3 6",
+          strokeDashoffset: len * (1 - draw),
+          style: hot > 0.3 ? { filter: "url(#atree-taint)" } : void 0
+        }
+      ),
+      travelT !== null && draw >= 1 ? /* @__PURE__ */ (0,jsx_runtime.jsx)(
+        "circle",
+        {
+          cx: px,
+          cy: py,
+          r: 5,
+          fill: COLORS.white,
+          style: { filter: "drop-shadow(0 0 9px rgba(255,255,255,0.95))" }
+        }
+      ) : null
+    ] }, i);
+  }) });
+};
+const Badges = ({ progress, taint, block, frame }) => {
+  return /* @__PURE__ */ (0,jsx_runtime.jsx)("g", { children: BADGES.map((bd) => {
+    const op = (0,esm.interpolate)(progress, [bd.appear, bd.appear + 0.08], [0, 1], {
+      extrapolateLeft: "clamp",
+      extrapolateRight: "clamp"
+    });
+    if (op <= 0) return null;
+    const hot = bd.tainted ? taint : 0;
+    const isFirewall = bd.id === "firewall";
+    const pulse = hot > 0.3 ? (0,esm.interpolate)(Math.sin(frame / 8), [-1, 1], [0.6, 1]) : 1;
+    const ringGlow = isFirewall ? Math.max(hot, block) : hot;
+    const r = 26;
+    const labelLeft = bd.col === "right";
+    const tx = labelLeft ? bd.x - r - 14 : bd.x + r + 14;
+    const anchor = labelLeft ? "end" : "start";
+    const topAnchor = bd.col === "top";
+    return /* @__PURE__ */ (0,jsx_runtime.jsxs)("g", { opacity: op, children: [
+      ringGlow > 0.3 ? /* @__PURE__ */ (0,jsx_runtime.jsx)(
+        "circle",
+        {
+          cx: bd.x,
+          cy: bd.y,
+          r: r + 8 * pulse,
+          fill: "none",
+          stroke: COLORS.white,
+          strokeWidth: 1.5,
+          opacity: 0.5 * pulse * ringGlow
+        }
+      ) : null,
+      /* @__PURE__ */ (0,jsx_runtime.jsx)(
+        "circle",
+        {
+          cx: bd.x,
+          cy: bd.y,
+          r,
+          fill: "rgba(255,255,255,0.06)",
+          stroke: COLORS.white,
+          strokeOpacity: hot > 0.3 ? 0.75 : 0.32,
+          strokeWidth: hot > 0.3 ? 2 : 1.2,
+          style: ringGlow > 0.3 ? {
+            filter: `drop-shadow(0 0 ${14 * pulse * ringGlow}px rgba(255,255,255,${0.42 * ringGlow}))`
+          } : void 0
+        }
+      ),
+      isFirewall && block > 0.2 ? /* @__PURE__ */ (0,jsx_runtime.jsxs)("g", { opacity: block, transform: `translate(${bd.x} ${bd.y})`, children: [
+        /* @__PURE__ */ (0,jsx_runtime.jsx)("line", { x1: -9, y1: -9, x2: 9, y2: 9, stroke: COLORS.white, strokeWidth: 2.6 }),
+        /* @__PURE__ */ (0,jsx_runtime.jsx)("line", { x1: 9, y1: -9, x2: -9, y2: 9, stroke: COLORS.white, strokeWidth: 2.6 })
+      ] }) : /* @__PURE__ */ (0,jsx_runtime.jsx)("circle", { cx: bd.x, cy: bd.y, r: 4.5, fill: COLORS.white, fillOpacity: hot > 0.3 ? 1 : 0.7 }),
+      /* @__PURE__ */ (0,jsx_runtime.jsx)(
+        "text",
+        {
+          x: topAnchor ? bd.x : tx,
+          y: topAnchor ? bd.y - r - 14 : bd.y - 4,
+          fill: COLORS.textPrimary,
+          fontFamily: FONTS.mono,
+          fontSize: 15,
+          fontWeight: 600,
+          letterSpacing: "1.4px",
+          textAnchor: topAnchor ? "middle" : anchor,
+          children: bd.title
+        }
+      ),
+      /* @__PURE__ */ (0,jsx_runtime.jsx)(
+        "text",
+        {
+          x: topAnchor ? bd.x : tx,
+          y: topAnchor ? bd.y - r + 4 : bd.y + 16,
+          fill: COLORS.textMuted,
+          fontFamily: FONTS.mono,
+          fontSize: 13,
+          textAnchor: topAnchor ? "middle" : anchor,
+          children: bd.sub
+        }
+      )
+    ] }, bd.id);
+  }) });
+};
+function approxLen(d) {
+  const pts = parsePts(d);
+  if (!pts) return 600;
+  let len = 0;
+  let prev = cubicAt(pts, 0);
+  for (let i = 1; i <= 16; i++) {
+    const p = cubicAt(pts, i / 16);
+    len += Math.hypot(p.x - prev.x, p.y - prev.y);
+    prev = p;
+  }
+  return Math.ceil(len);
+}
+
+;// ./src/HydraArtifactTreeSequence.tsx
+
+
+
+
+
+
+
+
+const FPS = 30;
+const SCENE_FRAMES = [
+  0,
+  // start
+  240,
+  // 1 seed        (0-8s)
+  480,
+  // 2 memory      (8-16s)
+  720,
+  // 3 query path  (16-24s)
+  960,
+  // 4 poison      (24-32s)
+  1290,
+  // 5 conflict   (32-43s)
+  1560,
+  // 6 risk       (43-52s)
+  1860,
+  // 7 firewall   (52-62s)
+  2100
+  // 8 report     (62-70s)
+];
+const HydraArtifactTreeSequence_SCENES = [
+  { Comp: SceneSeed, name: "01 Tree Seed" },
+  { Comp: SceneMemory, name: "02 Memory Nodes" },
+  { Comp: SceneQueryPath, name: "03 Query Path" },
+  { Comp: ScenePoison, name: "04 Poisoned Memory" },
+  { Comp: SceneConflict, name: "05 Conflict Detected" },
+  { Comp: SceneRisk, name: "06 Risk Score" },
+  { Comp: SceneFirewall, name: "07 MCP Firewall" },
+  { Comp: SceneReport, name: "08 Report" }
+];
+const HydraArtifactTreeSequence = () => {
+  return /* @__PURE__ */ (0,jsx_runtime.jsx)(esm.AbsoluteFill, { style: { backgroundColor: COLORS.bgBase }, children: HydraArtifactTreeSequence_SCENES.map((s, i) => {
+    const from = SCENE_FRAMES[i];
+    const durationInFrames = SCENE_FRAMES[i + 1] - from;
+    const Comp = s.Comp;
+    return /* @__PURE__ */ (0,jsx_runtime.jsx)(esm.Sequence, { from, durationInFrames, name: s.name, children: /* @__PURE__ */ (0,jsx_runtime.jsx)(Comp, {}) }, i);
+  }) });
+};
+const TreeStage = ({ progress, taint = 0, block = 0, spotX = 0.5, opacity = 1 }) => {
+  const frame = (0,esm.useCurrentFrame)();
+  return /* @__PURE__ */ (0,jsx_runtime.jsxs)(esm.AbsoluteFill, { children: [
+    /* @__PURE__ */ (0,jsx_runtime.jsx)(NoirBg, { spotX, spotY: 0.4, intensity: 0.85 }),
+    /* @__PURE__ */ (0,jsx_runtime.jsx)(
+      esm.AbsoluteFill,
+      {
+        style: {
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          opacity
+        },
+        children: /* @__PURE__ */ (0,jsx_runtime.jsx)(
+          "div",
+          {
+            style: {
+              position: "relative",
+              width: TREE_W,
+              height: TREE_H,
+              filter: "drop-shadow(0 0 40px rgba(255,255,255,0.06))"
+            },
+            children: /* @__PURE__ */ (0,jsx_runtime.jsx)(ArtifactTree, { progress, taint, block, frame })
+          }
+        )
+      }
+    )
+  ] });
+};
+const TitleCard = ({ kicker, title, appear, align = "left" }) => {
+  const y = (0,esm.interpolate)(appear, [0, 1], [24, 0]);
+  return /* @__PURE__ */ (0,jsx_runtime.jsxs)(
+    "div",
+    {
+      style: {
+        position: "absolute",
+        left: align === "center" ? 0 : 120,
+        right: align === "center" ? 0 : void 0,
+        bottom: 96,
+        opacity: appear,
+        transform: `translateY(${y}px)`,
+        display: "flex",
+        flexDirection: "column",
+        gap: 12,
+        alignItems: align === "center" ? "center" : "flex-start",
+        textAlign: align === "center" ? "center" : "left"
+      },
+      children: [
+        /* @__PURE__ */ (0,jsx_runtime.jsx)(
+          "span",
+          {
+            style: {
+              fontFamily: FONTS.mono,
+              fontSize: 16,
+              letterSpacing: "5px",
+              color: COLORS.textMuted,
+              textTransform: "uppercase"
+            },
+            children: kicker
+          }
+        ),
+        /* @__PURE__ */ (0,jsx_runtime.jsx)(
+          "span",
+          {
+            style: {
+              fontFamily: FONTS.sans,
+              fontSize: 46,
+              fontWeight: 700,
+              letterSpacing: "-1px",
+              color: COLORS.textPrimary,
+              maxWidth: 1100,
+              lineHeight: 1.08
+            },
+            children: title
+          }
+        )
+      ]
+    }
+  );
+};
+const useAppear = (start, end) => {
+  const frame = (0,esm.useCurrentFrame)();
+  return (0,esm.interpolate)(frame, [start, end], [0, 1], {
+    extrapolateLeft: "clamp",
+    extrapolateRight: "clamp",
+    easing: esm.Easing.out(esm.Easing.cubic)
+  });
+};
+const useFade = (durationInFrames, hold = 18) => {
+  const frame = (0,esm.useCurrentFrame)();
+  return (0,esm.interpolate)(
+    frame,
+    [0, hold, durationInFrames - hold, durationInFrames],
+    [0, 1, 1, 0],
+    { extrapolateLeft: "clamp", extrapolateRight: "clamp" }
+  );
+};
+function SceneSeed() {
+  const frame = (0,esm.useCurrentFrame)();
+  const { fps } = (0,esm.useVideoConfig)();
+  const wm = (0,esm.spring)({ frame: frame - 6, fps, config: { damping: 200, mass: 0.6, stiffness: 120 } });
+  const progress = (0,esm.interpolate)(frame, [10, 220], [0, 0.16], {
+    extrapolateLeft: "clamp",
+    extrapolateRight: "clamp"
+  });
+  const fade = useFade(SCENE_FRAMES[1] - SCENE_FRAMES[0]);
+  return /* @__PURE__ */ (0,jsx_runtime.jsxs)(esm.AbsoluteFill, { style: { opacity: fade }, children: [
+    /* @__PURE__ */ (0,jsx_runtime.jsx)(TreeStage, { progress, spotX: 0.5 }),
+    /* @__PURE__ */ (0,jsx_runtime.jsx)(
+      "div",
+      {
+        style: {
+          position: "absolute",
+          top: 90,
+          left: 0,
+          right: 0,
+          display: "flex",
+          justifyContent: "center",
+          opacity: wm,
+          transform: `translateY(${(0,esm.interpolate)(wm, [0, 1], [-20, 0])}px)`
+        },
+        children: /* @__PURE__ */ (0,jsx_runtime.jsx)(Wordmark, { scale: 0.72, tagline: "CONTEXT INTEGRITY PLATFORM", markDraw: wm, markGlow: 0.4 })
+      }
+    ),
+    /* @__PURE__ */ (0,jsx_runtime.jsx)(
+      TitleCard,
+      {
+        kicker: "HydraDB native",
+        title: "Every agent memory is a node on the context tree.",
+        appear: useAppear(60, 96),
+        align: "center"
+      }
+    )
+  ] });
+}
+function SceneMemory() {
+  const frame = (0,esm.useCurrentFrame)();
+  const progress = (0,esm.interpolate)(frame, [0, 200], [0.16, 0.34], {
+    extrapolateLeft: "clamp",
+    extrapolateRight: "clamp"
+  });
+  const fade = useFade(SCENE_FRAMES[2] - SCENE_FRAMES[1]);
+  return /* @__PURE__ */ (0,jsx_runtime.jsxs)(esm.AbsoluteFill, { style: { opacity: fade }, children: [
+    /* @__PURE__ */ (0,jsx_runtime.jsx)(TreeStage, { progress }),
+    /* @__PURE__ */ (0,jsx_runtime.jsx)(
+      TitleCard,
+      {
+        kicker: "Context retrieval",
+        title: "Memories, policies and documents surface as labelled nodes.",
+        appear: useAppear(20, 56)
+      }
+    )
+  ] });
+}
+function SceneQueryPath() {
+  const frame = (0,esm.useCurrentFrame)();
+  const progress = (0,esm.interpolate)(frame, [0, 210], [0.36, 0.54], {
+    extrapolateLeft: "clamp",
+    extrapolateRight: "clamp"
+  });
+  const fade = useFade(SCENE_FRAMES[3] - SCENE_FRAMES[2]);
+  return /* @__PURE__ */ (0,jsx_runtime.jsxs)(esm.AbsoluteFill, { style: { opacity: fade }, children: [
+    /* @__PURE__ */ (0,jsx_runtime.jsx)(TreeStage, { progress }),
+    /* @__PURE__ */ (0,jsx_runtime.jsx)(
+      TitleCard,
+      {
+        kicker: "query_paths",
+        title: "A clean retrieval path glows through the trusted branches.",
+        appear: useAppear(20, 56)
+      }
+    )
+  ] });
+}
+function ScenePoison() {
+  const frame = (0,esm.useCurrentFrame)();
+  const progress = (0,esm.interpolate)(frame, [0, 120], [0.55, 0.58], {
+    extrapolateLeft: "clamp",
+    extrapolateRight: "clamp"
+  });
+  const taint = (0,esm.interpolate)(frame, [40, 150], [0, 0.55], {
+    extrapolateLeft: "clamp",
+    extrapolateRight: "clamp"
+  });
+  const fade = useFade(SCENE_FRAMES[4] - SCENE_FRAMES[3]);
+  return /* @__PURE__ */ (0,jsx_runtime.jsxs)(esm.AbsoluteFill, { style: { opacity: fade }, children: [
+    /* @__PURE__ */ (0,jsx_runtime.jsx)(TreeStage, { progress, taint, spotX: 0.32 }),
+    /* @__PURE__ */ (0,jsx_runtime.jsx)(
+      TitleCard,
+      {
+        kicker: "memory poisoning",
+        title: "A tampered memory claims VIP customers always get instant refunds.",
+        appear: useAppear(24, 60)
+      }
+    )
+  ] });
+}
+function SceneConflict() {
+  const frame = (0,esm.useCurrentFrame)();
+  const progress = (0,esm.interpolate)(frame, [0, 160], [0.58, 0.72], {
+    extrapolateLeft: "clamp",
+    extrapolateRight: "clamp"
+  });
+  const taint = (0,esm.interpolate)(frame, [0, 90], [0.55, 1], {
+    extrapolateLeft: "clamp",
+    extrapolateRight: "clamp"
+  });
+  const fade = useFade(SCENE_FRAMES[5] - SCENE_FRAMES[4]);
+  return /* @__PURE__ */ (0,jsx_runtime.jsxs)(esm.AbsoluteFill, { style: { opacity: fade }, children: [
+    /* @__PURE__ */ (0,jsx_runtime.jsx)(TreeStage, { progress, taint, spotX: 0.6 }),
+    /* @__PURE__ */ (0,jsx_runtime.jsx)(
+      TitleCard,
+      {
+        kicker: "conflict detected",
+        title: "The poisoned memory overrides the refund policy \u2014 the path goes hot.",
+        appear: useAppear(20, 56)
+      }
+    )
+  ] });
+}
+function SceneRisk() {
+  const progress = 0.74;
+  const taint = 1;
+  const fade = useFade(SCENE_FRAMES[6] - SCENE_FRAMES[5]);
+  const panel = useAppear(8, 36);
+  return /* @__PURE__ */ (0,jsx_runtime.jsxs)(esm.AbsoluteFill, { style: { opacity: fade }, children: [
+    /* @__PURE__ */ (0,jsx_runtime.jsx)(TreeStage, { progress, taint, spotX: 0.34, opacity: 0.62 }),
+    /* @__PURE__ */ (0,jsx_runtime.jsxs)(
+      "div",
+      {
+        style: {
+          position: "absolute",
+          right: 120,
+          top: 0,
+          bottom: 0,
+          width: 720,
+          display: "flex",
+          flexDirection: "column",
+          justifyContent: "center",
+          gap: 30,
+          opacity: panel,
+          transform: `translateX(${(0,esm.interpolate)(panel, [0, 1], [40, 0])}px)`
+        },
+        children: [
+          /* @__PURE__ */ (0,jsx_runtime.jsx)(RiskCounter, { from: 12, to: 87, startFrame: 36, durationFrames: 70, label: "RISK SCORE", size: 220 }),
+          /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { style: { display: "flex", flexDirection: "column", gap: 8 }, children: [
+            /* @__PURE__ */ (0,jsx_runtime.jsx)("span", { style: { fontFamily: FONTS.mono, fontSize: 16, letterSpacing: "4px", color: COLORS.textMuted }, children: "MEMORY POISONING \xB7 HIGH" }),
+            /* @__PURE__ */ (0,jsx_runtime.jsx)("span", { style: { fontFamily: FONTS.sans, fontSize: 30, fontWeight: 700, color: COLORS.textPrimary }, children: "Rules + replay + judge agree" }),
+            /* @__PURE__ */ (0,jsx_runtime.jsx)("span", { style: { fontFamily: FONTS.sans, fontSize: 20, color: COLORS.textSecondary, maxWidth: 600 }, children: "The deterministic engine scores the tainted path 87 / 100." })
+          ] })
+        ]
+      }
+    )
+  ] });
+}
+function SceneFirewall() {
+  const frame = (0,esm.useCurrentFrame)();
+  const progress = (0,esm.interpolate)(frame, [0, 90], [0.74, 0.92], {
+    extrapolateLeft: "clamp",
+    extrapolateRight: "clamp"
+  });
+  const taint = (0,esm.interpolate)(frame, [120, 170], [1, 0.35], {
+    extrapolateLeft: "clamp",
+    extrapolateRight: "clamp"
+  });
+  const block = (0,esm.interpolate)(frame, [110, 140, 240], [0, 1, 1], {
+    extrapolateLeft: "clamp",
+    extrapolateRight: "clamp"
+  });
+  const fade = useFade(SCENE_FRAMES[7] - SCENE_FRAMES[6]);
+  const badge = useAppear(140, 168);
+  return /* @__PURE__ */ (0,jsx_runtime.jsxs)(esm.AbsoluteFill, { style: { opacity: fade }, children: [
+    /* @__PURE__ */ (0,jsx_runtime.jsx)(TreeStage, { progress, taint, block, spotX: 0.5 }),
+    /* @__PURE__ */ (0,jsx_runtime.jsx)(
+      "div",
+      {
+        style: {
+          position: "absolute",
+          top: 120,
+          left: 0,
+          right: 0,
+          display: "flex",
+          justifyContent: "center",
+          opacity: badge,
+          transform: `scale(${(0,esm.interpolate)(badge, [0, 1], [0.9, 1])})`
+        },
+        children: /* @__PURE__ */ (0,jsx_runtime.jsxs)(
+          "div",
+          {
+            style: {
+              display: "flex",
+              alignItems: "center",
+              gap: 16,
+              padding: "14px 28px",
+              borderRadius: 999,
+              border: "1px solid rgba(255,255,255,0.6)",
+              background: "rgba(255,255,255,0.08)",
+              boxShadow: "0 0 28px rgba(255,255,255,0.25)"
+            },
+            children: [
+              /* @__PURE__ */ (0,jsx_runtime.jsxs)("svg", { width: 22, height: 22, viewBox: "0 0 24 24", fill: "none", children: [
+                /* @__PURE__ */ (0,jsx_runtime.jsx)("line", { x1: 5, y1: 5, x2: 19, y2: 19, stroke: COLORS.white, strokeWidth: 2.6 }),
+                /* @__PURE__ */ (0,jsx_runtime.jsx)("line", { x1: 19, y1: 5, x2: 5, y2: 19, stroke: COLORS.white, strokeWidth: 2.6 })
+              ] }),
+              /* @__PURE__ */ (0,jsx_runtime.jsx)("span", { style: { fontFamily: FONTS.mono, fontSize: 18, letterSpacing: "4px", color: COLORS.textPrimary }, children: "CONTEXT FIREWALL \xB7 BLOCK" })
+            ]
+          }
+        )
+      }
+    ),
+    /* @__PURE__ */ (0,jsx_runtime.jsx)(
+      TitleCard,
+      {
+        kicker: "mcp gateway",
+        title: "The firewall blocks the unsafe memory before the agent can act.",
+        appear: useAppear(30, 66)
+      }
+    )
+  ] });
+}
+function SceneReport() {
+  const frame = (0,esm.useCurrentFrame)();
+  const { fps } = (0,esm.useVideoConfig)();
+  const progress = 0.94;
+  const fade = useFade(SCENE_FRAMES[8] - SCENE_FRAMES[7], 24);
+  const card = (0,esm.spring)({ frame: frame - 16, fps, config: { damping: 22, mass: 0.8, stiffness: 80 } });
+  const wm = useAppear(120, 160);
+  return /* @__PURE__ */ (0,jsx_runtime.jsxs)(esm.AbsoluteFill, { style: { opacity: fade }, children: [
+    /* @__PURE__ */ (0,jsx_runtime.jsx)(TreeStage, { progress, taint: 0.3, block: 1, spotX: 0.5, opacity: 0.5 }),
+    /* @__PURE__ */ (0,jsx_runtime.jsx)(esm.AbsoluteFill, { style: { display: "flex", alignItems: "center", justifyContent: "center" }, children: /* @__PURE__ */ (0,jsx_runtime.jsxs)(
+      "div",
+      {
+        style: {
+          width: 880,
+          borderRadius: 18,
+          border: `1px solid ${COLORS.borderStrong}`,
+          background: "linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.03))",
+          boxShadow: "0 30px 100px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.1)",
+          backdropFilter: "blur(24px)",
+          overflow: "hidden",
+          opacity: card,
+          transform: `translateY(${(0,esm.interpolate)(card, [0, 1], [40, 0])}px)`
+        },
+        children: [
+          /* @__PURE__ */ (0,jsx_runtime.jsxs)(
+            "div",
+            {
+              style: {
+                padding: "18px 28px",
+                borderBottom: `1px solid ${COLORS.border}`,
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center"
+              },
+              children: [
+                /* @__PURE__ */ (0,jsx_runtime.jsx)("span", { style: { fontFamily: FONTS.mono, fontSize: 15, letterSpacing: "3px", color: COLORS.textSecondary }, children: "EVIDENCE REPORT \xB7 hydrasentry-run.md" }),
+                /* @__PURE__ */ (0,jsx_runtime.jsx)("span", { style: { fontFamily: FONTS.mono, fontSize: 13, letterSpacing: "2px", color: COLORS.textMuted }, children: "generated" })
+              ]
+            }
+          ),
+          /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { style: { padding: "28px", display: "flex", flexDirection: "column", gap: 12, fontFamily: FONTS.mono, fontSize: 18, color: COLORS.textSecondary }, children: [
+            /* @__PURE__ */ (0,jsx_runtime.jsx)(ReportRow, { k: "risk_score", v: "87 / 100 \xB7 HIGH" }),
+            /* @__PURE__ */ (0,jsx_runtime.jsx)(ReportRow, { k: "attack_type", v: "memory_poisoning" }),
+            /* @__PURE__ */ (0,jsx_runtime.jsx)(ReportRow, { k: "firewall.decision", v: "block" }),
+            /* @__PURE__ */ (0,jsx_runtime.jsx)(ReportRow, { k: "quarantine", v: "mem_poison_047" }),
+            /* @__PURE__ */ (0,jsx_runtime.jsx)(ReportRow, { k: "graph_source", v: "REAL HYDRADB QUERY_PATHS" })
+          ] })
+        ]
+      }
+    ) }),
+    /* @__PURE__ */ (0,jsx_runtime.jsx)(
+      "div",
+      {
+        style: {
+          position: "absolute",
+          bottom: 90,
+          left: 0,
+          right: 0,
+          display: "flex",
+          justifyContent: "center",
+          opacity: wm
+        },
+        children: /* @__PURE__ */ (0,jsx_runtime.jsx)(Wordmark, { scale: 0.6, tagline: "SECURE THE MEMORY LAYER", markDraw: wm, markGlow: 0.5 })
+      }
+    )
+  ] });
+}
+const ReportRow = ({ k, v }) => /* @__PURE__ */ (0,jsx_runtime.jsxs)(
+  "div",
+  {
+    style: {
+      display: "flex",
+      justifyContent: "space-between",
+      borderBottom: `1px solid ${COLORS.border}`,
+      paddingBottom: 10
+    },
+    children: [
+      /* @__PURE__ */ (0,jsx_runtime.jsx)("span", { style: { color: COLORS.textMuted }, children: k }),
+      /* @__PURE__ */ (0,jsx_runtime.jsx)("span", { style: { color: COLORS.textPrimary }, children: v })
+    ]
+  }
+);
+
 ;// ./src/Root.tsx
 
 
 
 
 
+
 const RemotionRoot = () => {
-  return /* @__PURE__ */ (0,jsx_runtime.jsx)(
-    esm.Composition,
-    {
-      id: "HydraSentryDemoFilm",
-      component: HydraSentryDemoFilm,
-      durationInFrames: VIDEO.durationInFrames,
-      fps: VIDEO.fps,
-      width: VIDEO.width,
-      height: VIDEO.height
-    }
-  );
+  return /* @__PURE__ */ (0,jsx_runtime.jsxs)(jsx_runtime.Fragment, { children: [
+    /* @__PURE__ */ (0,jsx_runtime.jsx)(
+      esm.Composition,
+      {
+        id: "HydraSentryDemoFilm",
+        component: HydraSentryDemoFilm,
+        durationInFrames: VIDEO.durationInFrames,
+        fps: VIDEO.fps,
+        width: VIDEO.width,
+        height: VIDEO.height
+      }
+    ),
+    /* @__PURE__ */ (0,jsx_runtime.jsx)(
+      esm.Composition,
+      {
+        id: "HydraArtifactTreeSequence",
+        component: HydraArtifactTreeSequence,
+        durationInFrames: 2100,
+        fps: 30,
+        width: 1920,
+        height: 1080
+      }
+    )
+  ] });
 };
 
 ;// ./src/index.ts
@@ -33331,7 +34188,7 @@ var NoReactInternals = {
 /******/ 	// Load entry module and return exports
 /******/ 	// This entry module is referenced by other modules so it can't be inlined
 /******/ 	__webpack_require__(6507);
-/******/ 	__webpack_require__(9842);
+/******/ 	__webpack_require__(3795);
 /******/ 	__webpack_require__(3610);
 /******/ 	var __webpack_exports__ = __webpack_require__(3482);
 /******/ 	

@@ -11,8 +11,10 @@ import { ReplayCard } from "@/components/replay/ReplayCard";
 import { GlassPanel } from "@/components/noir/GlassPanel";
 import { GlowButton } from "@/components/noir/GlowButton";
 import { StatusPill } from "@/components/noir/StatusPill";
-import { RiskGauge } from "@/components/noir/RiskGauge";
 import { SectionHeader } from "@/components/noir/SectionHeader";
+import { AnimatedRiskBadge } from "@/components/noir/AnimatedRiskBadge";
+import { ArtifactTreeGraph } from "@/components/noir/ArtifactTreeGraph";
+import { MAX_STAGE } from "@/components/noir/artifactTreeData";
 import { runScenario, runJudgeDemo } from "@/lib/api";
 import { useDemoStore } from "@/store/useDemoStore";
 import { formatPercent } from "@/lib/format";
@@ -121,19 +123,37 @@ export default function ReplayPage() {
             </div>
 
             <div className="grid gap-4 lg:grid-cols-[auto_1fr]">
-              <GlassPanel className="flex flex-col items-center justify-center gap-3 p-6">
-                <RiskGauge
-                  score={artifact.risk.score}
-                  band={artifact.risk.band}
-                  size={190}
+              <GlassPanel className="flex w-full flex-col gap-4 p-6 lg:max-w-sm">
+                <AnimatedRiskBadge
+                  to={artifact.risk.score}
+                  band={`${artifact.risk.band} RISK`}
                 />
-                <div className="flex flex-wrap items-center justify-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   <StatusPill tone="critical" label={artifact.risk.attack_type} />
                   <StatusPill
                     tone="warn"
                     label={`conf ${formatPercent(artifact.risk.confidence)}`}
                   />
                 </div>
+                <div className="relative w-full overflow-hidden rounded-xl border border-hairline bg-deep/40 p-1.5">
+                  <div
+                    aria-hidden
+                    className="pointer-events-none absolute inset-0 -z-0"
+                    style={{
+                      background:
+                        "radial-gradient(circle at 50% 40%, rgba(255,255,255,0.06), transparent 70%)",
+                    }}
+                  />
+                  <ArtifactTreeGraph
+                    stage={MAX_STAGE}
+                    graph={artifact.graph}
+                    className="mx-auto max-w-[360px]"
+                  />
+                </div>
+                <p className="mono text-center text-[10.5px] leading-relaxed text-faint">
+                  How the poison reached the agent: tainted memory overrides the
+                  refund policy on the white-hot path.
+                </p>
               </GlassPanel>
 
               <div className="grid gap-4 sm:grid-cols-2">

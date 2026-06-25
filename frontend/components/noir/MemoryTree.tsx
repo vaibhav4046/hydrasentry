@@ -1,253 +1,345 @@
 "use client";
 
 import { useMemo } from "react";
-import { m, useReducedMotion, type Variants } from "framer-motion";
+import { m, useReducedMotion } from "framer-motion";
 import { cn } from "@/lib/cn";
 import { EASE_OUT_EXPO } from "@/lib/motion";
 
 interface MemoryTreeProps {
   className?: string;
-  /** Run the grow -> nodes -> tainted-path -> loop arc (default true). */
+  /** Run the grow -> nodes -> edges -> tainted-path arc (default true). */
   animate?: boolean;
-  /** Show the small mono risk accent near the tainted canopy (default true). */
+  /** Show the bright `87 / RISK` node-box at top-right (default true). */
   showRisk?: boolean;
 }
 
 /**
- * Cinematic monochrome "memory tree": a luminous white neural graph rendered as
- * a bioluminescent tree on black noir. A trunk rises from a glowing base and
- * fans into branches; node-dots pop in along them; one branch is the tainted
- * path that lights white-hot with a traveling dash and pulsing nodes; faint
- * particles drift behind a soft radial spotlight.
+ * Pixelated voxel "memory tree" + context node-box graph, in HydraSentry noir.
  *
- * Color law (matches the project): WHITE / silver / gray / opacity only. Danger
- * is expressed by intensity (brighter stroke, heavier width, pulse) — never hue.
+ * Echoes HydraDB.com's signature hero — a tree built from thousands of small
+ * square cells, a thick trunk splitting into branches that splay up and to the
+ * RIGHT, scattering to embers at the tips, whose right limbs extend into a
+ * graph of small outlined node-boxes joined by dashed edges. HydraDB renders it
+ * as an orange heat-map; ours is strictly MONOCHROME: the "heat" becomes WHITE
+ * BRIGHTNESS. Hottest cells (trunk core + the tainted path) are bright white;
+ * cooler/outer cells fade to dim gray (#5F6875) and low opacity. No hue, ever —
+ * danger is intensity, not colour (the project's hard brand law).
  *
- * GPU-friendly: animates only opacity, transform, SVG pathLength, and
- * stroke-dashoffset, plus a sparing drop-shadow glow. No layout animation, no
- * per-frame JS. Honors prefers-reduced-motion by rendering the final composed
- * static tree. Geometry is hand-authored and deterministic (the only jitter is
- * a fixed seeded array) so SSR and CSR match with no hydration mismatch.
+ * The rightward graph tells HydraSentry's story: node-boxes labelled `policy
+ * v2`, `mem_poison_047`, `tool_action`, `MCP BLOCK`, and the bright `87 / RISK`.
+ * The chain poison -> action -> RISK is the TAINTED PATH: brightest, heavier,
+ * with a perpetual traveling dash + soft pulse. Other edges are faint dashed.
+ *
+ * Technique: SVG <rect> cells (vector-sharp at every DPI), count capped ~720.
+ * Geometry is DETERMINISTIC — a seeded mulberry32 PRNG drives a fixed layout in
+ * useMemo, so SSR and client render identical markup (no hydration mismatch, no
+ * Math.random at module/render scope). GPU-light: animates only opacity /
+ * transform / stroke-dashoffset. prefers-reduced-motion renders the fully
+ * composed static scene (no growth, no loops).
  */
 
-// ---- deterministic geometry ------------------------------------------------
-// viewBox is 360 wide x 460 tall; the tree grows upward from a base near y=430.
+// ---- viewBox -----------------------------------------------------------------
+// 360 wide x 460 tall. Tree grows upward from a base puck near y=438. Branches
+// lean right; the upper-right quadrant hosts the node-box graph.
+const VB_W = 360;
+const VB_H = 460;
 
-interface Branch {
-  /** SVG cubic path, authored base -> tip so pathLength draws upward. */
-  d: string;
-  /** Stroke base opacity for the safe (untainted) limbs. */
-  o: number;
-  /** Stroke width in user units. */
-  w: number;
-  /** Reveal order bucket (lower draws first). */
-  gen: number;
-}
+const CELL = 7; // square edge in user units
+const GAP = 1; // visual gap -> rect drawn at CELL - GAP
+const STEP = CELL; // grid pitch (cell centers land on this lattice)
+const DRAW = CELL - GAP;
 
-interface TreeNode {
-  x: number;
-  y: number;
-  /** Dot radius. */
-  r: number;
-  /** Base opacity for safe nodes. */
-  o: number;
-  /** Pop-in order bucket. */
-  gen: number;
-}
-
-// Trunk + safe branches. Hand-tuned so the canopy fans symmetrically.
-const TRUNK: Branch = {
-  d: "M180 430 C 180 380 179 348 180 312",
-  o: 0.82,
-  w: 3.4,
-  gen: 0,
-};
-
-const SAFE_BRANCHES: Branch[] = [
-  // primary fork left/right out of the trunk crown
-  { d: "M180 312 C 168 286 150 270 128 250", o: 0.6, w: 2.4, gen: 1 },
-  { d: "M180 312 C 192 286 210 270 232 250", o: 0.6, w: 2.4, gen: 1 },
-  { d: "M180 318 C 178 290 176 262 176 232", o: 0.52, w: 2.1, gen: 1 },
-  // secondary limbs (left side)
-  { d: "M128 250 C 112 234 100 214 92 190", o: 0.42, w: 1.7, gen: 2 },
-  { d: "M128 250 C 118 230 110 212 96 152", o: 0.4, w: 1.6, gen: 2 },
-  { d: "M176 232 C 166 210 150 196 132 176", o: 0.4, w: 1.6, gen: 2 },
-  // secondary limbs (right side)
-  { d: "M232 250 C 248 234 260 214 268 190", o: 0.42, w: 1.7, gen: 2 },
-  { d: "M232 250 C 242 230 252 212 268 156", o: 0.4, w: 1.6, gen: 2 },
-  { d: "M176 232 C 188 210 206 196 224 176", o: 0.4, w: 1.6, gen: 2 },
-  // fine twigs into the canopy
-  { d: "M92 190 C 84 176 78 164 70 150", o: 0.3, w: 1.2, gen: 3 },
-  { d: "M132 176 C 126 162 122 150 118 134", o: 0.3, w: 1.2, gen: 3 },
-  { d: "M224 176 C 230 162 234 150 240 134", o: 0.3, w: 1.2, gen: 3 },
-  { d: "M268 190 C 276 176 282 164 290 150", o: 0.3, w: 1.2, gen: 3 },
-  { d: "M176 232 C 176 208 178 192 180 168", o: 0.32, w: 1.3, gen: 3 },
-];
-
-// Safe canopy node-dots (tips + junctions). Coords match branch endpoints.
-const SAFE_NODES: TreeNode[] = [
-  { x: 180, y: 312, r: 4.2, o: 0.9, gen: 1 },
-  { x: 128, y: 250, r: 3.4, o: 0.7, gen: 2 },
-  { x: 232, y: 250, r: 3.4, o: 0.7, gen: 2 },
-  { x: 176, y: 232, r: 3.2, o: 0.66, gen: 2 },
-  { x: 92, y: 190, r: 2.8, o: 0.6, gen: 3 },
-  { x: 132, y: 176, r: 2.8, o: 0.6, gen: 3 },
-  { x: 224, y: 176, r: 2.8, o: 0.6, gen: 3 },
-  { x: 268, y: 190, r: 2.8, o: 0.6, gen: 3 },
-  { x: 70, y: 150, r: 2.3, o: 0.52, gen: 4 },
-  { x: 118, y: 134, r: 2.3, o: 0.52, gen: 4 },
-  { x: 240, y: 134, r: 2.3, o: 0.52, gen: 4 },
-  { x: 290, y: 150, r: 2.3, o: 0.52, gen: 4 },
-  { x: 96, y: 152, r: 2.1, o: 0.48, gen: 4 },
-  { x: 268, y: 156, r: 2.1, o: 0.48, gen: 4 },
-  { x: 180, y: 168, r: 2.4, o: 0.55, gen: 4 },
-];
-
-// The tainted path: trunk crown -> a single branch chain ending in the canopy.
-// Drawn brighter + heavier; a traveling dash runs along it; its nodes pulse.
-const TAINT_BRANCHES: Branch[] = [
-  { d: "M180 312 C 196 288 214 276 236 258", o: 1, w: 2.8, gen: 1 },
-  { d: "M236 258 C 256 240 268 222 282 198", o: 1, w: 2.4, gen: 2 },
-  { d: "M282 198 C 296 178 304 162 314 138", o: 1, w: 2, gen: 3 },
-];
-// Single continuous overlay path (for the traveling dash highlight).
-const TAINT_TRAVEL_D =
-  "M180 312 C 196 288 214 276 236 258 C 256 240 268 222 282 198 C 296 178 304 162 314 138";
-
-// poison entry node (enters from off the right edge into the tainted chain)
-const POISON_NODE: TreeNode = { x: 236, y: 258, r: 5, o: 1, gen: 1 };
-const TAINT_NODES: TreeNode[] = [
-  POISON_NODE,
-  { x: 282, y: 198, r: 4, o: 1, gen: 2 },
-  { x: 314, y: 138, r: 4.4, o: 1, gen: 3 },
-];
-
-// Fixed seeded background particles — no Math.random so SSR === CSR.
-const PARTICLES: { cx: number; cy: number; r: number; base: number; dur: number }[] = [
-  { cx: 64, cy: 96, r: 1.6, base: 0.5, dur: 8 },
-  { cx: 300, cy: 84, r: 1.4, base: 0.45, dur: 10 },
-  { cx: 120, cy: 60, r: 1.2, base: 0.4, dur: 9 },
-  { cx: 250, cy: 116, r: 1.5, base: 0.5, dur: 11 },
-  { cx: 44, cy: 210, r: 1.3, base: 0.4, dur: 12 },
-  { cx: 330, cy: 240, r: 1.4, base: 0.42, dur: 9.5 },
-  { cx: 196, cy: 48, r: 1.2, base: 0.38, dur: 13 },
-  { cx: 92, cy: 300, r: 1.3, base: 0.36, dur: 10.5 },
-];
-
-const WHITE = "#ffffff";
+// ---- palette (monochrome only) ----------------------------------------------
+const WHITE = "#FFFFFF";
 const SILVER = "#D9DEE7";
+const MUTED = "#5F6875"; // --hs-text-muted
+const BLACK = "#000000";
 
-// ---- motion variants -------------------------------------------------------
+// ---- deterministic PRNG ------------------------------------------------------
+// mulberry32: tiny, fast, fully deterministic from a 32-bit seed. Used only to
+// jitter cell placement and brightness so the silhouette reads organic while
+// staying identical across SSR/CSR.
+function mulberry32(seed: number): () => number {
+  let a = seed >>> 0;
+  return () => {
+    a |= 0;
+    a = (a + 0x6d2b79f5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
 
-/** Master timeline: stagger generations of limbs, then nodes, then taint. */
-const treeContainer: Variants = {
-  hidden: {},
-  show: { transition: { staggerChildren: 0.05, delayChildren: 0.1 } },
+interface Cell {
+  /** snapped grid coords (top-left of the rect) */
+  gx: number;
+  gy: number;
+  /** 0..1 brightness; drives opacity + tone (white -> muted gray) */
+  b: number;
+  /** reveal bucket 0..N from base upward, for staggered growth */
+  gen: number;
+  /** true if part of the tainted limb -> rendered white-hot */
+  taint: boolean;
+}
+
+interface Spine {
+  /** start point */
+  x0: number;
+  y0: number;
+  /** end point */
+  x1: number;
+  y1: number;
+  /** half-thickness in cells at the base of this spine */
+  t0: number;
+  /** half-thickness in cells at the tip */
+  t1: number;
+  /** base brightness for this limb */
+  bright: number;
+  taint: boolean;
+}
+
+// Authored skeleton: trunk + limbs leaning up-and-right, then fine right twigs.
+// Coordinates are hand-placed; the generator fills voxels around each spine.
+const SPINES: Spine[] = [
+  // trunk (thick, bright core), bottom-center rising slightly right
+  { x0: 168, y0: 436, x1: 176, y1: 300, t0: 3.1, t1: 1.7, bright: 1.0, taint: false },
+  // primary fork: left limb
+  { x0: 176, y0: 318, x1: 120, y1: 236, t0: 1.7, t1: 0.9, bright: 0.66, taint: false },
+  // primary fork: upright-left
+  { x0: 174, y0: 322, x1: 156, y1: 214, t0: 1.6, t1: 0.8, bright: 0.62, taint: false },
+  // primary fork: right limb (leans hard right -> toward graph)
+  { x0: 176, y0: 314, x1: 246, y1: 250, t0: 1.9, t1: 1.0, bright: 0.78, taint: false },
+  // primary fork: upright-right
+  { x0: 176, y0: 320, x1: 206, y1: 212, t0: 1.6, t1: 0.8, bright: 0.6, taint: false },
+  // secondary left twigs
+  { x0: 120, y0: 236, x1: 86, y1: 190, t0: 0.9, t1: 0.5, bright: 0.46, taint: false },
+  { x0: 120, y0: 236, x1: 104, y1: 168, t0: 0.9, t1: 0.5, bright: 0.42, taint: false },
+  { x0: 156, y0: 214, x1: 138, y1: 156, t0: 0.8, t1: 0.45, bright: 0.42, taint: false },
+  // secondary right twigs (denser, brighter — the active side)
+  { x0: 246, y0: 250, x1: 286, y1: 214, t0: 0.95, t1: 0.5, bright: 0.56, taint: false },
+  { x0: 246, y0: 250, x1: 300, y1: 246, t0: 0.9, t1: 0.5, bright: 0.5, taint: false },
+  { x0: 206, y0: 212, x1: 236, y1: 168, t0: 0.8, t1: 0.45, bright: 0.46, taint: false },
+  { x0: 206, y0: 212, x1: 190, y1: 158, t0: 0.7, t1: 0.4, bright: 0.4, taint: false },
+  // fine canopy twigs (sparse embers)
+  { x0: 86, y0: 190, x1: 70, y1: 152, t0: 0.5, t1: 0.3, bright: 0.34, taint: false },
+  { x0: 138, y0: 156, x1: 126, y1: 120, t0: 0.5, t1: 0.3, bright: 0.34, taint: false },
+  { x0: 236, y0: 168, x1: 250, y1: 128, t0: 0.5, t1: 0.3, bright: 0.36, taint: false },
+  { x0: 286, y0: 214, x1: 304, y1: 182, t0: 0.5, t1: 0.3, bright: 0.36, taint: false },
+];
+
+// The tainted limb: a continuous chain off the right fork that drives the graph.
+// Brightest, slightly thicker; cells flagged taint -> white-hot in render.
+const TAINT_SPINES: Spine[] = [
+  { x0: 176, y0: 314, x1: 238, y1: 256, t0: 1.5, t1: 1.0, bright: 1.0, taint: true },
+  { x0: 238, y0: 256, x1: 288, y1: 196, t0: 1.0, t1: 0.8, bright: 1.0, taint: true },
+  { x0: 288, y0: 196, x1: 316, y1: 138, t0: 0.85, t1: 0.6, bright: 1.0, taint: true },
+];
+
+/** Snap a coordinate to the cell lattice. */
+function snap(v: number): number {
+  return Math.round(v / STEP) * STEP;
+}
+
+/**
+ * Walk a spine and stamp voxels in a thinning band around it. Brightness falls
+ * off toward the tip and toward the band edges; a little seeded jitter scatters
+ * the outer cells like embers. Returns a keyed map so overlapping limbs dedupe
+ * to the brightest contributor.
+ */
+function stampSpine(
+  spine: Spine,
+  rng: () => number,
+  out: Map<string, Cell>,
+  genBase: number,
+): void {
+  const dx = spine.x1 - spine.x0;
+  const dy = spine.y1 - spine.y0;
+  const len = Math.hypot(dx, dy);
+  const steps = Math.max(2, Math.round(len / (STEP * 0.7)));
+  // unit normal for lateral spread
+  const nx = -dy / len;
+  const ny = dx / len;
+
+  for (let i = 0; i <= steps; i++) {
+    const f = i / steps; // 0 at base, 1 at tip
+    const cx = spine.x0 + dx * f;
+    const cy = spine.y0 + dy * f;
+    const halfT = spine.t0 + (spine.t1 - spine.t0) * f; // cells
+    const reach = Math.max(0, Math.round(halfT));
+
+    for (let s = -reach; s <= reach; s++) {
+      // outer cells thin out: skip with rising probability toward the edge/tip
+      const edge = reach === 0 ? 0 : Math.abs(s) / reach;
+      const skip = edge * 0.55 + f * 0.32;
+      if (s !== 0 && rng() < skip) continue;
+
+      const px = cx + nx * s * STEP;
+      const py = cy + ny * s * STEP;
+      const gx = snap(px);
+      const gy = snap(py);
+      if (gy < 0 || gy > VB_H || gx < 0 || gx > VB_W) continue;
+
+      // brightness: limb base brightness, dimmed toward tip + band edge,
+      // with a touch of jitter so the field shimmers rather than banding.
+      const fall = 1 - f * 0.5 - edge * 0.4;
+      const jitter = 0.85 + rng() * 0.3;
+      const b = Math.max(0.1, Math.min(1, spine.bright * fall * jitter));
+      const gen = genBase + Math.round((1 - f) * 1.5);
+
+      const key = `${gx},${gy}`;
+      const prev = out.get(key);
+      if (!prev || spine.taint || b > prev.b) {
+        out.set(key, { gx, gy, b, gen, taint: spine.taint || prev?.taint || false });
+      }
+    }
+  }
+}
+
+interface BuiltScene {
+  cells: Cell[];
+  maxGen: number;
+}
+
+/** Build the full deterministic voxel field once. */
+function buildScene(): BuiltScene {
+  const rng = mulberry32(0x5e47); // fixed seed -> identical SSR/CSR
+  const map = new Map<string, Cell>();
+
+  // Safe limbs first (lower gen near base), tainted limbs last (always win).
+  SPINES.forEach((sp, i) => stampSpine(sp, rng, map, i === 0 ? 0 : 1 + Math.floor(i / 4)));
+  TAINT_SPINES.forEach((sp) => stampSpine(sp, rng, map, 3));
+
+  const cells = Array.from(map.values());
+  let maxGen = 0;
+  for (const c of cells) if (c.gen > maxGen) maxGen = c.gen;
+  return { cells, maxGen };
+}
+
+// ---- node-box graph (SVG overlay) -------------------------------------------
+interface NodeBox {
+  x: number; // top-left
+  y: number;
+  w: number;
+  h: number;
+  label: string;
+  /** brightness 0..1 */
+  b: number;
+  taint: boolean;
+  /** big-number box (87 / RISK) */
+  risk?: boolean;
+}
+
+// Squares with a tiny mono label above, placed where right branches reach.
+const NODE_BOXES: NodeBox[] = [
+  { x: 196, y: 196, w: 22, h: 22, label: "policy v2", b: 0.5, taint: false },
+  { x: 236, y: 244, w: 24, h: 24, label: "mem_poison_047", b: 1, taint: true },
+  { x: 284, y: 198, w: 22, h: 22, label: "tool_action", b: 1, taint: true },
+  { x: 252, y: 150, w: 22, h: 22, label: "MCP BLOCK", b: 0.62, taint: false },
+  { x: 300, y: 250, w: 20, h: 20, label: "ctx_chunk", b: 0.4, taint: false },
+];
+
+const RISK_BOX: NodeBox = {
+  x: 308,
+  y: 96,
+  w: 40,
+  h: 40,
+  label: "RISK",
+  b: 1,
+  taint: true,
+  risk: true,
 };
 
-/** Branch stroke draws in from the base upward. */
-const branchDraw = (gen: number): Variants => ({
-  hidden: { pathLength: 0, opacity: 0 },
-  show: {
-    pathLength: 1,
-    opacity: 1,
-    transition: {
-      pathLength: { duration: 0.85, ease: EASE_OUT_EXPO, delay: gen * 0.28 },
-      opacity: { duration: 0.3, delay: gen * 0.28 },
-    },
-  },
-});
+interface Edge {
+  x1: number;
+  y1: number;
+  x2: number;
+  y2: number;
+  taint: boolean;
+  /** reveal order */
+  gen: number;
+}
 
-/** Node-dot pops in (soft) after its limb has drawn. */
-const nodePop = (gen: number): Variants => ({
-  hidden: { scale: 0, opacity: 0 },
-  show: {
-    scale: 1,
-    opacity: 1,
-    transition: {
-      duration: 0.5,
-      ease: EASE_OUT_EXPO,
-      delay: 0.55 + gen * 0.22,
-    },
-  },
-});
+const center = (n: NodeBox) => ({ cx: n.x + n.w / 2, cy: n.y + n.h / 2 });
 
-const TAINT_REVEAL_DELAY = 1.7;
+// Faint edges (context graph) + the tainted backbone poison -> action -> RISK.
+const [POLICY, POISON, ACTION, MCP, CHUNK] = NODE_BOXES;
+const EDGES: Edge[] = [
+  // faint context links
+  { ...lineBetween(POLICY, POISON), taint: false, gen: 0 },
+  { ...lineBetween(POLICY, MCP), taint: false, gen: 0 },
+  { ...lineBetween(POISON, CHUNK), taint: false, gen: 1 },
+  { ...lineBetween(MCP, RISK_BOX), taint: false, gen: 2 },
+  // tainted backbone
+  { ...lineBetween(POISON, ACTION), taint: true, gen: 1 },
+  { ...lineBetween(ACTION, RISK_BOX), taint: true, gen: 2 },
+];
 
-/** Tainted limb draws in white-hot, slightly after the safe tree settles. */
-const taintDraw = (gen: number): Variants => ({
-  hidden: { pathLength: 0, opacity: 0 },
-  show: {
-    pathLength: 1,
-    opacity: 1,
-    transition: {
-      pathLength: {
-        duration: 0.7,
-        ease: EASE_OUT_EXPO,
-        delay: TAINT_REVEAL_DELAY + gen * 0.22,
-      },
-      opacity: { duration: 0.3, delay: TAINT_REVEAL_DELAY + gen * 0.22 },
-    },
-  },
-});
+function lineBetween(a: NodeBox, b: NodeBox): { x1: number; y1: number; x2: number; y2: number } {
+  const ca = center(a);
+  const cb = center(b);
+  return { x1: ca.cx, y1: ca.cy, x2: cb.cx, y2: cb.cy };
+}
 
-export function MemoryTree({
-  className,
-  animate = true,
-  showRisk = true,
-}: MemoryTreeProps) {
+// Continuous tainted path (tree right-fork -> poison -> action -> RISK) for the
+// traveling-dash highlight. Built from the taint spine tip + node centers.
+const POISON_C = center(POISON);
+const ACTION_C = center(ACTION);
+const RISK_C = center(RISK_BOX);
+const TAINT_TRAVEL_D = `M176 314 L238 256 L${POISON_C.cx} ${POISON_C.cy} L${ACTION_C.cx} ${ACTION_C.cy} L${RISK_C.cx} ${RISK_C.cy}`;
+
+// ---- tone helper -------------------------------------------------------------
+// Map brightness -> fill tone: bright cells white, dim cells fade toward muted
+// gray. Opacity carries most of the falloff; tone adds the cool dim look.
+function toneFor(b: number): string {
+  if (b >= 0.72) return WHITE;
+  if (b >= 0.45) return SILVER;
+  return MUTED;
+}
+
+// Per-generation reveal delay (s) for the staggered "growth from the base".
+const GROW_STEP = 0.13;
+const GROW_DUR = 0.4;
+const NODE_DELAY = 1.45; // node-boxes pop after the canopy settles
+const EDGE_DELAY = 1.85; // dashed edges draw next
+const TAINT_DELAY = 2.25; // tainted path lights white-hot + loop begins
+const RISK_DELAY = 2.75;
+
+export function MemoryTree({ className, animate = true, showRisk = true }: MemoryTreeProps) {
   const prefersReduced = useReducedMotion();
-  // When reduced motion is requested, render the fully composed static tree.
   const isAnimated = animate && !prefersReduced;
+
+  // Deterministic, built once. Same output on server and client.
+  const { cells, maxGen } = useMemo(() => buildScene(), []);
 
   // Stable filter ids (component may mount more than once on a page).
   const ids = useMemo(
-    () => ({
-      spot: "mt-spot",
-      coreGlow: "mt-core-glow",
-      nodeGlow: "mt-node-glow",
-      taintGlow: "mt-taint-glow",
-    }),
+    () => ({ spot: "mt-spot", base: "mt-base", taintGlow: "mt-taint-glow" }),
     [],
   );
 
-  const initial = isAnimated ? "hidden" : false;
-  const animateProp = isAnimated ? "show" : undefined;
-
   return (
-    <div
-      className={cn("relative w-full select-none", className)}
-      aria-hidden="true"
-    >
+    <div className={cn("relative w-full select-none", className)} aria-hidden="true">
       <svg
-        viewBox="0 0 360 460"
+        viewBox={`0 0 ${VB_W} ${VB_H}`}
         className="block h-auto w-full"
         fill="none"
         preserveAspectRatio="xMidYMid meet"
         role="presentation"
+        shapeRendering="crispEdges"
       >
         <defs>
-          {/* soft radial spotlight behind the canopy */}
-          <radialGradient id={ids.spot} cx="52%" cy="40%" r="58%">
-            <stop offset="0%" stopColor={WHITE} stopOpacity="0.16" />
-            <stop offset="42%" stopColor={WHITE} stopOpacity="0.05" />
+          <radialGradient id={ids.spot} cx="58%" cy="40%" r="60%">
+            <stop offset="0%" stopColor={WHITE} stopOpacity="0.14" />
+            <stop offset="44%" stopColor={WHITE} stopOpacity="0.045" />
             <stop offset="100%" stopColor={WHITE} stopOpacity="0" />
           </radialGradient>
-          {/* glowing base gradient */}
-          <radialGradient id={ids.coreGlow} cx="50%" cy="50%" r="50%">
-            <stop offset="0%" stopColor={WHITE} stopOpacity="0.55" />
-            <stop offset="55%" stopColor={WHITE} stopOpacity="0.12" />
+          <radialGradient id={ids.base} cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stopColor={WHITE} stopOpacity="0.5" />
+            <stop offset="55%" stopColor={WHITE} stopOpacity="0.1" />
             <stop offset="100%" stopColor={WHITE} stopOpacity="0" />
           </radialGradient>
-          <filter id={ids.nodeGlow} x="-120%" y="-120%" width="340%" height="340%">
-            <feGaussianBlur stdDeviation="2.2" result="b" />
-            <feMerge>
-              <feMergeNode in="b" />
-              <feMergeNode in="SourceGraphic" />
-            </feMerge>
-          </filter>
           <filter id={ids.taintGlow} x="-160%" y="-160%" width="420%" height="420%">
-            <feGaussianBlur stdDeviation="3.4" result="b" />
+            <feGaussianBlur stdDeviation="2.4" result="b" />
             <feMerge>
               <feMergeNode in="b" />
               <feMergeNode in="SourceGraphic" />
@@ -255,117 +347,71 @@ export function MemoryTree({
           </filter>
         </defs>
 
-        {/* radial spotlight wash */}
-        <rect x="0" y="0" width="360" height="460" fill={`url(#${ids.spot})`} />
+        {/* soft spotlight wash behind the canopy */}
+        <rect x="0" y="0" width={VB_W} height={VB_H} fill={`url(#${ids.spot})`} />
 
-        {/* drifting background particles */}
+        {/* glowing base puck the trunk rises from */}
+        <ellipse cx="172" cy="438" rx="60" ry="18" fill={`url(#${ids.base})`} />
+
+        {/* ---- voxel tree: many small <rect> cells, staggered growth ---- */}
+        <g shapeRendering="crispEdges">
+          {cells.map((c, i) => {
+            const baseOpacity = c.taint
+              ? Math.min(1, 0.7 + c.b * 0.3)
+              : Math.max(0.16, c.b * 0.92);
+            const delay = ((maxGen - c.gen) / (maxGen || 1)) * (maxGen * GROW_STEP);
+            return (
+              <m.rect
+                key={`c-${i}`}
+                x={c.gx}
+                y={c.gy}
+                width={DRAW}
+                height={DRAW}
+                fill={c.taint ? WHITE : toneFor(c.b)}
+                style={{ transformBox: "fill-box", transformOrigin: "center" }}
+                initial={isAnimated ? { opacity: 0, scale: 0.4 } : false}
+                animate={
+                  isAnimated
+                    ? { opacity: baseOpacity, scale: 1 }
+                    : { opacity: baseOpacity, scale: 1 }
+                }
+                transition={
+                  isAnimated
+                    ? { duration: GROW_DUR, ease: EASE_OUT_EXPO, delay }
+                    : undefined
+                }
+              />
+            );
+          })}
+        </g>
+
+        {/* ---- graph edges (faint dashed) then tainted backbone ---- */}
         <g>
-          {PARTICLES.map((p, i) => (
-            <m.circle
-              key={`p-${i}`}
-              cx={p.cx}
-              cy={p.cy}
-              r={p.r}
-              fill={SILVER}
-              initial={{ opacity: p.base }}
-              animate={
-                isAnimated
-                  ? { opacity: [p.base * 0.4, p.base, p.base * 0.4] }
-                  : { opacity: p.base }
-              }
+          {EDGES.map((e, i) => (
+            <m.line
+              key={`e-${i}`}
+              x1={e.x1}
+              y1={e.y1}
+              x2={e.x2}
+              y2={e.y2}
+              stroke={e.taint ? WHITE : SILVER}
+              strokeOpacity={e.taint ? 0.95 : 0.32}
+              strokeWidth={e.taint ? 1.5 : 0.9}
+              strokeDasharray="3 3"
+              initial={isAnimated ? { pathLength: 0, opacity: 0 } : false}
+              animate={isAnimated ? { pathLength: 1, opacity: 1 } : { opacity: 1 }}
               transition={
                 isAnimated
-                  ? { duration: p.dur, repeat: Infinity, ease: "easeInOut" }
+                  ? {
+                      pathLength: { duration: 0.6, ease: EASE_OUT_EXPO, delay: EDGE_DELAY + e.gen * 0.18 },
+                      opacity: { duration: 0.3, delay: EDGE_DELAY + e.gen * 0.18 },
+                    }
                   : undefined
               }
             />
           ))}
-        </g>
 
-        {/* glowing base puck the trunk rises from */}
-        <ellipse
-          cx="180"
-          cy="430"
-          rx="62"
-          ry="20"
-          fill={`url(#${ids.coreGlow})`}
-        />
-        <m.ellipse
-          cx="180"
-          cy="430"
-          rx="30"
-          ry="9"
-          fill={WHITE}
-          initial={{ opacity: isAnimated ? 0 : 0.85 }}
-          animate={
-            isAnimated
-              ? { opacity: [0.55, 0.9, 0.55] }
-              : { opacity: 0.85 }
-          }
-          transition={
-            isAnimated
-              ? { duration: 4, repeat: Infinity, ease: "easeInOut" }
-              : undefined
-          }
-          style={{ filter: `url(#${ids.taintGlow})` }}
-        />
-
-        {/* ---- the tree: branches then nodes, staggered ---- */}
-        <m.g
-          variants={isAnimated ? treeContainer : undefined}
-          initial={initial}
-          animate={animateProp}
-        >
-          {/* trunk + safe limbs */}
-          {[TRUNK, ...SAFE_BRANCHES].map((b, i) => (
-            <m.path
-              key={`b-${i}`}
-              d={b.d}
-              stroke={WHITE}
-              strokeOpacity={b.o}
-              strokeWidth={b.w}
-              strokeLinecap="round"
-              fill="none"
-              variants={isAnimated ? branchDraw(b.gen) : undefined}
-            />
-          ))}
-
-          {/* safe canopy nodes */}
-          {SAFE_NODES.map((n, i) => (
-            <m.circle
-              key={`n-${i}`}
-              cx={n.x}
-              cy={n.y}
-              r={n.r}
-              fill={SILVER}
-              fillOpacity={n.o}
-              stroke={WHITE}
-              strokeOpacity={Math.min(1, n.o + 0.2)}
-              strokeWidth={0.8}
-              style={{ filter: `url(#${ids.nodeGlow})`, transformBox: "fill-box", transformOrigin: "center" }}
-              variants={isAnimated ? nodePop(n.gen) : undefined}
-            />
-          ))}
-        </m.g>
-
-        {/* ---- tainted path: white-hot, heavier, with traveling dash ---- */}
-        <g style={{ filter: `url(#${ids.taintGlow})` }}>
-          {TAINT_BRANCHES.map((b, i) => (
-            <m.path
-              key={`tb-${i}`}
-              d={b.d}
-              stroke={WHITE}
-              strokeOpacity={b.o}
-              strokeWidth={b.w}
-              strokeLinecap="round"
-              fill="none"
-              initial={isAnimated ? "hidden" : false}
-              animate={isAnimated ? "show" : undefined}
-              variants={isAnimated ? taintDraw(b.gen) : undefined}
-            />
-          ))}
-
-          {/* traveling dash running along the whole tainted chain */}
+          {/* traveling dash along the whole tainted path (single perpetual loop) */}
           {isAnimated && (
             <m.path
               d={TAINT_TRAVEL_D}
@@ -374,114 +420,69 @@ export function MemoryTree({
               strokeWidth={1.6}
               strokeLinecap="round"
               fill="none"
-              strokeDasharray="10 150"
-              initial={{ strokeDashoffset: 160, opacity: 0 }}
-              animate={{ strokeDashoffset: [160, -160], opacity: [0, 1, 1, 0] }}
+              strokeDasharray="8 120"
+              style={{ filter: `url(#${ids.taintGlow})` }}
+              initial={{ strokeDashoffset: 128, opacity: 0 }}
+              animate={{ strokeDashoffset: [128, -128], opacity: [0, 1, 1, 0] }}
               transition={{
-                strokeDashoffset: {
-                  duration: 2.4,
-                  ease: "linear",
-                  repeat: Infinity,
-                  delay: TAINT_REVEAL_DELAY + 0.7,
-                },
-                opacity: {
-                  duration: 2.4,
-                  ease: "linear",
-                  repeat: Infinity,
-                  delay: TAINT_REVEAL_DELAY + 0.7,
-                },
+                strokeDashoffset: { duration: 2.6, ease: "linear", repeat: Infinity, delay: TAINT_DELAY },
+                opacity: { duration: 2.6, ease: "linear", repeat: Infinity, delay: TAINT_DELAY },
               }}
             />
           )}
+        </g>
 
-          {/* poison entry: a dot sliding in from off the right edge */}
-          <m.circle
-            cx={POISON_NODE.x}
-            cy={POISON_NODE.y}
-            r={POISON_NODE.r}
-            fill={WHITE}
-            initial={
-              isAnimated
-                ? { opacity: 0, cx: 360, cy: 244 }
-                : { opacity: 1 }
-            }
-            animate={
-              isAnimated
-                ? { opacity: 1, cx: POISON_NODE.x, cy: POISON_NODE.y }
-                : { opacity: 1 }
-            }
-            transition={
-              isAnimated
-                ? {
-                    duration: 0.7,
-                    ease: EASE_OUT_EXPO,
-                    delay: TAINT_REVEAL_DELAY - 0.35,
-                  }
-                : undefined
-            }
-          />
-
-          {/* tainted nodes pulse white-hot */}
-          {TAINT_NODES.map((n, i) => (
-            <m.circle
-              key={`tn-${i}`}
-              cx={n.x}
-              cy={n.y}
-              r={n.r}
-              fill={WHITE}
-              initial={{ opacity: isAnimated ? 0 : 1 }}
-              animate={
-                isAnimated
-                  ? { opacity: [0.6, 1, 0.6] }
-                  : { opacity: 1 }
-              }
-              transition={
-                isAnimated
-                  ? {
-                      duration: 1.8,
-                      repeat: Infinity,
-                      ease: "easeInOut",
-                      delay: TAINT_REVEAL_DELAY + 0.4 + i * 0.12,
-                    }
-                  : undefined
-              }
+        {/* ---- node-boxes: outlined squares with mono labels ---- */}
+        <g className="mono">
+          {NODE_BOXES.map((n, i) => (
+            <NodeBoxView
+              key={`nb-${i}`}
+              node={n}
+              isAnimated={isAnimated}
+              delay={NODE_DELAY + i * 0.12}
+              taintGlowId={ids.taintGlow}
             />
           ))}
         </g>
 
-        {/* small mono risk accent near the tainted canopy */}
+        {/* ---- bright 87 / RISK box, top-right ---- */}
         {showRisk && (
           <m.g
+            className="mono"
             initial={isAnimated ? { opacity: 0, y: 6 } : { opacity: 1 }}
             animate={isAnimated ? { opacity: 1, y: 0 } : { opacity: 1 }}
-            transition={
-              isAnimated
-                ? { duration: 0.6, ease: EASE_OUT_EXPO, delay: TAINT_REVEAL_DELAY + 1 }
-                : undefined
-            }
+            transition={isAnimated ? { duration: 0.6, ease: EASE_OUT_EXPO, delay: RISK_DELAY } : undefined}
+            style={{ filter: `url(#${ids.taintGlow})` }}
           >
+            <rect
+              x={RISK_BOX.x}
+              y={RISK_BOX.y}
+              width={RISK_BOX.w}
+              height={RISK_BOX.h}
+              fill={BLACK}
+              fillOpacity="0.55"
+              stroke={WHITE}
+              strokeWidth="1.4"
+            />
             <text
-              x="322"
-              y="116"
+              x={RISK_BOX.x + RISK_BOX.w / 2}
+              y={RISK_BOX.y + 20}
               textAnchor="middle"
-              className="mono"
-              fontSize="22"
-              fontWeight="600"
+              fontSize="16"
+              fontWeight="700"
               fill={WHITE}
               letterSpacing="0.5"
-              style={{ filter: `url(#${ids.taintGlow})` }}
             >
               87
             </text>
             <text
-              x="322"
-              y="130"
+              x={RISK_BOX.x + RISK_BOX.w / 2}
+              y={RISK_BOX.y + 31}
               textAnchor="middle"
-              className="mono"
-              fontSize="7"
+              fontSize="6"
               fill={SILVER}
-              fillOpacity="0.7"
-              letterSpacing="1.4"
+              fillOpacity="0.85"
+              letterSpacing="1.6"
             >
               RISK
             </text>
@@ -489,5 +490,65 @@ export function MemoryTree({
         )}
       </svg>
     </div>
+  );
+}
+
+// ---- node-box subcomponent ---------------------------------------------------
+interface NodeBoxViewProps {
+  node: NodeBox;
+  isAnimated: boolean;
+  delay: number;
+  taintGlowId: string;
+}
+
+function NodeBoxView({ node, isAnimated, delay, taintGlowId }: NodeBoxViewProps) {
+  const stroke = node.taint ? WHITE : SILVER;
+  const strokeOpacity = node.taint ? 1 : 0.45 + node.b * 0.3;
+  const cx = node.x + node.w / 2;
+  return (
+    <m.g
+      initial={isAnimated ? { opacity: 0, scale: 0.6 } : false}
+      animate={isAnimated ? { opacity: 1, scale: 1 } : { opacity: 1 }}
+      transition={isAnimated ? { duration: 0.45, ease: EASE_OUT_EXPO, delay } : undefined}
+      style={{
+        transformBox: "fill-box",
+        transformOrigin: "center",
+        filter: node.taint ? `url(#${taintGlowId})` : undefined,
+      }}
+    >
+      {/* the outlined square */}
+      <rect
+        x={node.x}
+        y={node.y}
+        width={node.w}
+        height={node.h}
+        fill={BLACK}
+        fillOpacity="0.5"
+        stroke={stroke}
+        strokeOpacity={strokeOpacity}
+        strokeWidth={node.taint ? 1.3 : 0.9}
+      />
+      {/* tiny inner value tick */}
+      <rect
+        x={node.x + node.w / 2 - 2}
+        y={node.y + node.h / 2 - 2}
+        width={4}
+        height={4}
+        fill={node.taint ? WHITE : SILVER}
+        fillOpacity={node.taint ? 1 : 0.6}
+      />
+      {/* mono label above the box */}
+      <text
+        x={cx}
+        y={node.y - 3}
+        textAnchor="middle"
+        fontSize="6"
+        fill={node.taint ? WHITE : SILVER}
+        fillOpacity={node.taint ? 0.95 : 0.6}
+        letterSpacing="0.4"
+      >
+        {node.label}
+      </text>
+    </m.g>
   );
 }
