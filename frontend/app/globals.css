@@ -227,6 +227,111 @@
       monospace;
     font-feature-settings: "tnum" 1, "ss01" 1;
   }
+
+  /* ==========================================================
+     Castellan Cockpit layer — a left-sidebar command console.
+     Premium, minimal, Linear/Vercel-grade. Monochrome only: all
+     emphasis comes from white/silver at varying opacity, hairline
+     borders, scale contrast, and tiny mono labels. No hue.
+     ========================================================== */
+
+  /* Tiny uppercase section/eyebrow label used everywhere in the cockpit. */
+  .cockpit-eyebrow {
+    font-family: var(--font-geist-mono), ui-monospace, monospace;
+    font-size: 10px;
+    line-height: 1;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--hs-text-muted);
+  }
+
+  /* Refined card: flatter, calmer, hairline-bordered surface. Distinct from the
+     glassy landing panels — the cockpit reads as a quiet instrument, not a hero. */
+  .cockpit-card {
+    position: relative;
+    background: linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.026),
+      rgba(255, 255, 255, 0.012)
+    );
+    border: 1px solid var(--hs-border);
+    border-radius: 0.9rem;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    transition: border-color var(--hs-duration-normal) var(--hs-ease-out-expo),
+      background var(--hs-duration-normal) var(--hs-ease-out-expo);
+  }
+  .cockpit-card-hover:hover {
+    border-color: var(--hs-border-strong);
+    background: linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.04),
+      rgba(255, 255, 255, 0.018)
+    );
+  }
+
+  /* Sidebar nav item. Active = subtle filled pill + left edge tick. */
+  .cockpit-nav-item {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    width: 100%;
+    border-radius: 0.65rem;
+    padding: 0.5rem 0.6rem;
+    font-size: 13px;
+    font-weight: 500;
+    letter-spacing: -0.01em;
+    color: var(--hs-text-secondary);
+    border: 1px solid transparent;
+    transition: color var(--hs-duration-fast) var(--hs-ease-out-expo),
+      background var(--hs-duration-fast) var(--hs-ease-out-expo),
+      border-color var(--hs-duration-fast) var(--hs-ease-out-expo);
+  }
+  .cockpit-nav-item:hover {
+    color: var(--hs-text-primary);
+    background: rgba(255, 255, 255, 0.035);
+  }
+  .cockpit-nav-item[data-active="true"] {
+    color: var(--hs-text-primary);
+    background: rgba(255, 255, 255, 0.07);
+    border-color: var(--hs-border);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  }
+  .cockpit-nav-item[data-active="true"]::before {
+    content: "";
+    position: absolute;
+    left: -1px;
+    top: 50%;
+    height: 1rem;
+    width: 2px;
+    transform: translateY(-50%);
+    border-radius: 999px;
+    background: var(--hs-white);
+  }
+
+  /* Cockpit search field in the top bar. */
+  .cockpit-search {
+    background: rgba(255, 255, 255, 0.025);
+    border: 1px solid var(--hs-border);
+    transition: border-color var(--hs-duration-fast) var(--hs-ease-out-expo),
+      background var(--hs-duration-fast) var(--hs-ease-out-expo);
+  }
+  .cockpit-search:focus-within {
+    border-color: var(--hs-border-strong);
+    background: rgba(255, 255, 255, 0.04);
+  }
+
+  /* Small keycap chip (⌘K, etc.) — mono, hairline, dim. */
+  .cockpit-kbd {
+    font-family: var(--font-geist-mono), ui-monospace, monospace;
+    font-size: 10px;
+    letter-spacing: 0.04em;
+    color: var(--hs-text-muted);
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid var(--hs-border);
+    border-radius: 0.35rem;
+    padding: 0.1rem 0.35rem;
+  }
 }
 
 /* Animated silver border-sweep for premium feature/use-case cards. A conic

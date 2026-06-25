@@ -4,52 +4,55 @@ import { useEffect, useRef, useState } from "react";
 import { animate, useInView } from "framer-motion";
 import { cn } from "@/lib/cn";
 
-interface MetricCardProps {
+interface CockpitMetricProps {
+  /** Tiny uppercase label, e.g. "RISK SCORE". */
   label: string;
-  /** Final display value, e.g. "87/100" or "124". */
+  /** Big display value, e.g. "87", "—", "2026-06-25". */
   value: string;
+  /** Small sub line under the value. */
   sub?: string;
   /**
-   * If set, the leading number animates from 0 to this on view. The non-numeric
-   * remainder of `value` (e.g. "/100") is appended verbatim. Leave undefined to
-   * render `value` statically.
+   * If set, the leading number counts up from 0 on view; the non-numeric
+   * remainder of `value` is appended verbatim. Omit for static values.
    */
   countTo?: number;
   className?: string;
 }
 
 /**
- * Compact metric tile (label / value / sub). Optional count-up animates the
- * numeric prefix on scroll-in and respects reduced motion (jumps to final).
+ * Cockpit metric tile: a big number with a tiny uppercase label and a small sub
+ * line, on a flat hairline card. The flagship Command-row primitive. Optional
+ * count-up respects reduced motion (jumps to final).
  */
-export function MetricCard({
+export function CockpitMetric({
   label,
   value,
   sub,
   countTo,
   className,
-}: MetricCardProps) {
+}: CockpitMetricProps) {
   const ref = useRef<HTMLDivElement>(null);
   const inView = useInView(ref, { once: true, margin: "-40px" });
-  const [display, setDisplay] = useState<string>(
-    countTo !== undefined ? formatCount(0, value) : value,
-  );
+  const [counted, setCounted] = useState<string | null>(null);
 
   useEffect(() => {
     if (countTo === undefined || !inView) return;
     const controls = animate(0, countTo, {
-      duration: 1.1,
+      duration: 1,
       ease: [0.22, 1, 0.36, 1],
-      onUpdate: (v) => setDisplay(formatCount(v, value)),
+      onUpdate: (v) => setCounted(formatCount(v, value)),
     });
     return () => controls.stop();
   }, [countTo, inView, value]);
 
+  // Static values render verbatim; counting values show the animated number once
+  // it has started, otherwise the zeroed template (avoids a flash of the final
+  // value before the count-up runs).
+  const display =
+    countTo === undefined ? value : (counted ?? formatCount(0, value));
+
   return (
-    <div
-      ref={ref}
-      className={cn("cockpit-card cockpit-card-hover p-5", className)}
-    >
+    <div ref={ref} className={cn("cockpit-card cockpit-card-hover p-5", className)}>
       <div className="cockpit-eyebrow">{label}</div>
       <div className="mt-3 text-[2rem] font-semibold leading-none tracking-tight text-ink tabular-nums">
         {display}
