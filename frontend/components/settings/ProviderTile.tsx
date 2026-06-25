@@ -8,9 +8,8 @@ import {
   ExternalLink,
   KeyRound,
 } from "lucide-react";
-import { GlassPanel } from "@/components/noir/GlassPanel";
+import { CockpitCard, CockpitField, CockpitPill } from "@/components/shell/CockpitCard";
 import { GlowButton } from "@/components/noir/GlowButton";
-import { StatusPill } from "@/components/noir/StatusPill";
 import { humanize } from "@/lib/format";
 import { cn } from "@/lib/cn";
 import type { ProviderStatus } from "@/lib/types";
@@ -57,42 +56,42 @@ export function ProviderTile({ provider, onTest, className }: ProviderTileProps)
   }
 
   return (
-    <GlassPanel className={cn("flex flex-col gap-4 p-5", className)}>
+    <CockpitCard hover className={cn("flex flex-col gap-4 p-5", className)}>
       <div className="flex items-start justify-between gap-3">
         <div>
           <div className="text-[15px] font-semibold tracking-tight text-ink">
             {label}
           </div>
           {role && (
-            <div className="mono mt-0.5 text-[10.5px] uppercase tracking-[0.14em] text-faint">
-              {humanize(role)}
-            </div>
+            <div className="cockpit-eyebrow mt-1">{humanize(role)}</div>
           )}
         </div>
-        <StatusPill
-          tone={provider.configured ? "active" : "neutral"}
+        <CockpitPill
+          dot
+          tone={provider.configured ? "bright" : "neutral"}
           label={provider.configured ? "configured" : "not set"}
         />
       </div>
 
       <dl className="flex flex-col gap-2">
         {provider.model && (
-          <Row label="model" value={String(provider.model)} />
+          <CockpitField mono label="model" value={String(provider.model)} />
         )}
-        {baseUrl && <Row label="base url" value={baseUrl} />}
-        <div className="flex items-center justify-between gap-3">
-          <dt className="mono text-[10.5px] uppercase tracking-[0.14em] text-faint">
-            key
-          </dt>
-          <dd className="mono flex items-center gap-1.5 text-[11.5px] text-ink/85">
-            <KeyRound className="h-3 w-3 text-faint" strokeWidth={1.9} />
-            {isLocal
-              ? "localhost (no key)"
-              : fingerprint
-                ? fingerprint
-                : "not set"}
-          </dd>
-        </div>
+        {baseUrl && <CockpitField mono label="base url" value={baseUrl} />}
+        <CockpitField
+          mono
+          label="key"
+          value={
+            <span className="inline-flex items-center gap-1.5">
+              <KeyRound className="h-3 w-3 text-faint" strokeWidth={1.9} />
+              {isLocal
+                ? "localhost (no key)"
+                : fingerprint
+                  ? fingerprint
+                  : "not set"}
+            </span>
+          }
+        />
       </dl>
 
       <div className="flex flex-wrap items-center justify-between gap-3 border-t border-hairline pt-4">
@@ -132,24 +131,6 @@ export function ProviderTile({ provider, onTest, className }: ProviderTileProps)
           )}
         </div>
       </div>
-    </GlassPanel>
-  );
-}
-
-interface RowProps {
-  label: string;
-  value: string;
-}
-
-function Row({ label, value }: RowProps) {
-  return (
-    <div className="flex items-center justify-between gap-3">
-      <dt className="mono text-[10.5px] uppercase tracking-[0.14em] text-faint">
-        {label}
-      </dt>
-      <dd className="mono max-w-[60%] truncate text-[11.5px] text-ink/85">
-        {value}
-      </dd>
-    </div>
+    </CockpitCard>
   );
 }

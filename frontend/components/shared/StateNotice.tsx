@@ -2,7 +2,6 @@
 
 import type { ReactNode } from "react";
 import { AlertTriangle } from "lucide-react";
-import { GlassPanel } from "@/components/noir/GlassPanel";
 import { cn } from "@/lib/cn";
 
 interface InlineErrorProps {
@@ -43,9 +42,9 @@ export function EmptyState({
   className,
 }: EmptyStateProps) {
   return (
-    <GlassPanel
+    <div
       className={cn(
-        "flex flex-col items-center gap-4 p-12 text-center",
+        "cockpit-card flex flex-col items-center gap-4 p-12 text-center",
         className,
       )}
     >
@@ -54,6 +53,6 @@ export function EmptyState({
         {description}
       </p>
       {action}
-    </GlassPanel>
+    </div>
   );
 }

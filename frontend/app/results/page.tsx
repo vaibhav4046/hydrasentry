@@ -2,22 +2,17 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import {
-  Loader2,
-  Play,
-  Download,
-  ArrowLeft,
-  Target,
-} from "lucide-react";
+import { Loader2, Play, Download, ArrowLeft, Target } from "lucide-react";
 import { PageShell } from "@/components/shared/PageShell";
 import { EmptyState, InlineError } from "@/components/shared/StateNotice";
-import { GlassPanel } from "@/components/noir/GlassPanel";
+import {
+  CockpitCard,
+  CockpitPill,
+  CockpitSectionLabel,
+} from "@/components/shell/CockpitCard";
+import { CockpitMetric } from "@/components/shell/CockpitMetric";
 import { GlowButton } from "@/components/noir/GlowButton";
-import { StatusPill } from "@/components/noir/StatusPill";
-import { MetricCard } from "@/components/noir/MetricCard";
 import { ReportDrawer } from "@/components/noir/ReportDrawer";
-import { SectionHeader } from "@/components/noir/SectionHeader";
-import { AnimatedRiskBadge } from "@/components/noir/AnimatedRiskBadge";
 import { ArtifactTreeGraph } from "@/components/noir/ArtifactTreeGraph";
 import { MAX_STAGE } from "@/components/noir/artifactTreeData";
 import { GraphSourceBadge } from "@/components/graph/GraphSourceBadge";
@@ -27,11 +22,12 @@ import { getResultsSummary, getFindings } from "@/lib/api";
 import { downloadText, formatTimestamp } from "@/lib/format";
 import type { ResultsSummary } from "@/lib/types";
 
-// Results Center: the finale. Reads the current run from the store; on a cold
-// load it pulls the aggregate summary and findings and offers to run the judge
-// demo. When a run is present it shows the full evidence: metrics, the
-// recommended next action, the self-refinement loop, the downloadable report,
-// and the headline risk + firewall decision + graph-source honesty badge.
+// Findings: the finale. Reads the current run from the store; on a cold load it
+// pulls the aggregate summary and findings and offers to run the judge demo.
+// When a run is present it shows the full evidence: metrics, the recommended
+// next action, the self-refinement loop, the downloadable report, and the
+// headline risk + firewall decision + graph-source honesty badge. Reskinned to
+// the flat-cockpit system to match Command.
 export default function ResultsPage() {
   const { run, isRunning, error, trigger } = useRunDemo();
   const [summary, setSummary] = useState<ResultsSummary | null>(null);
@@ -51,10 +47,6 @@ export default function ResultsPage() {
   if (!run) {
     return (
       <PageShell
-        kicker="COMMAND CENTER"
-        title="Results"
-        statusLabel="no run loaded"
-        statusTone="neutral"
         actions={
           <Link href="/">
             <GlowButton variant="ghost" size="sm">
@@ -79,39 +71,29 @@ export default function ResultsPage() {
   const recommended = run.firewall.actions[0] ?? "review findings";
 
   return (
-    <PageShell
-      kicker="COMMAND CENTER"
-      title="Results"
-      statusLabel="run loaded"
-      statusTone="active"
-      actions={<GraphSourceBadge source={run.graph_source} />}
-    >
+    <PageShell actions={<GraphSourceBadge source={run.graph_source} />}>
       <div className="flex flex-col gap-5">
-        {/* ===== cinematic finale hero: risk readout + blocked path tree ===== */}
-        <GlassPanel strong className="flex flex-col gap-5 p-6">
+        {/* ===== finale hero: risk readout + blocked-path tree ===== */}
+        <CockpitCard className="flex flex-col gap-5 p-6">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-            <AnimatedRiskBadge
-              to={run.risk.score}
-              band={`${run.risk.band} RISK`}
-            />
+            <div>
+              <div className="cockpit-eyebrow">Risk Score</div>
+              <div className="mt-3 text-[3rem] font-semibold leading-none tracking-tight text-ink tabular-nums">
+                {run.risk.score}
+              </div>
+            </div>
             <div className="flex flex-wrap items-center gap-2">
-              <StatusPill
-                tone="critical"
+              <CockpitPill
+                dot
+                tone="bright"
                 label={`firewall ${run.firewall.decision}`}
               />
-              <StatusPill tone="warn" label={run.risk.attack_type} />
+              <CockpitPill dot tone="bright" label={run.risk.band} />
+              <CockpitPill label={run.risk.attack_type} />
               <GraphSourceBadge source={run.graph_source} />
             </div>
           </div>
-          <div className="relative w-full overflow-hidden rounded-xl2 border border-hairline bg-deep/40 p-2 sm:p-4">
-            <div
-              aria-hidden
-              className="pointer-events-none absolute inset-0 -z-0"
-              style={{
-                background:
-                  "radial-gradient(circle at 50% 38%, rgba(255,255,255,0.07), rgba(255,255,255,0.02) 44%, transparent 70%)",
-              }}
-            />
+          <div className="relative w-full overflow-hidden rounded-lg border border-hairline bg-deep/40 p-2 sm:p-4">
             <ArtifactTreeGraph
               stage={MAX_STAGE}
               graph={run.graph}
@@ -122,83 +104,96 @@ export default function ResultsPage() {
               action, intercepted at the MCP firewall before it could act.
             </p>
           </div>
-        </GlassPanel>
+        </CockpitCard>
 
-        <div className="grid gap-5 lg:grid-cols-1">
-          <div className="flex flex-col gap-4">
-            <GlassPanel className="flex flex-col gap-3 p-5">
-              <div className="flex items-start gap-3">
-                <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-hairline-strong bg-white/[.06]">
-                  <Target className="h-5 w-5 text-ink" strokeWidth={1.7} />
-                </span>
-                <div>
-                  <div className="mono text-[11px] uppercase tracking-[0.16em] text-faint">
-                    recommended next action
-                  </div>
-                  <div className="mt-1 text-lg font-semibold tracking-tight text-ink">
-                    {recommended}
-                  </div>
-                  <p className="mt-1 text-[13px] leading-relaxed text-muted">
-                    Firewall {run.firewall.decision.toUpperCase()} on{" "}
-                    {run.mission.title}. {run.firewall.actions.length} actions
-                    queued: {run.firewall.actions.join(", ")}.
-                  </p>
-                </div>
+        {/* ===== recommended action ===== */}
+        <CockpitCard className="flex flex-col gap-3 p-6">
+          <div className="flex items-start gap-3">
+            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-lg border border-hairline-strong bg-white/[.05]">
+              <Target className="h-5 w-5 text-ink" strokeWidth={1.7} />
+            </span>
+            <div>
+              <div className="cockpit-eyebrow">recommended next action</div>
+              <div className="mt-1.5 text-lg font-semibold tracking-tight text-ink">
+                {recommended}
               </div>
-              <div className="flex flex-wrap gap-3 border-t border-hairline pt-4">
-                <GlowButton
-                  variant="primary"
-                  onClick={() => setReportOpen(true)}
-                  iconLeft={<Download className="h-4 w-4" strokeWidth={1.8} />}
-                >
-                  Download report
-                </GlowButton>
-                <Link href="/graph" className="inline-flex">
-                  <GlowButton variant="secondary">View context graph</GlowButton>
-                </Link>
-              </div>
-            </GlassPanel>
-
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              <MetricCard
-                label="Total risks"
-                value={String(run.risk.score)}
-                sub={run.risk.band}
-              />
-              <MetricCard label="Critical issues" value="1" sub={run.risk.attack_type} />
-              <MetricCard
-                label="Memories quarantined"
-                value={run.quarantine.memory_id ? "1" : "0"}
-                sub={run.quarantine.status}
-              />
-              <MetricCard
-                label="Skills scanned"
-                value={run.skill_scan ? "1" : "8"}
-                sub={run.skill_scan?.band ?? "monitored"}
-              />
+              <p className="mt-1 text-[13px] leading-relaxed text-muted">
+                Firewall {run.firewall.decision.toUpperCase()} on{" "}
+                {run.mission.title}. {run.firewall.actions.length} actions queued:{" "}
+                {run.firewall.actions.join(", ")}.
+              </p>
             </div>
           </div>
-        </div>
+          <div className="flex flex-wrap gap-3 border-t border-hairline pt-4">
+            <GlowButton
+              variant="primary"
+              onClick={() => setReportOpen(true)}
+              iconLeft={<Download className="h-4 w-4" strokeWidth={1.8} />}
+            >
+              Download report
+            </GlowButton>
+            <Link href="/graph" className="inline-flex">
+              <GlowButton variant="secondary">View context graph</GlowButton>
+            </Link>
+          </div>
+        </CockpitCard>
 
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <MetricCard label="Replay tests passed" value="1" sub="baseline safe" />
-          <MetricCard label="Replay tests failed" value="1" sub="poisoned compromised" />
-          <MetricCard label="Report generated" value="Yes" sub="evidence ready" />
-          <MetricCard
+        {/* ===== metrics ===== */}
+        <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <CockpitMetric
+            label="Total risks"
+            value={String(run.risk.score)}
+            countTo={run.risk.score}
+            sub={run.risk.band}
+          />
+          <CockpitMetric
+            label="Critical issues"
+            value="1"
+            countTo={1}
+            sub={run.risk.attack_type}
+          />
+          <CockpitMetric
+            label="Memories quarantined"
+            value={run.quarantine.memory_id ? "1" : "0"}
+            sub={run.quarantine.status}
+          />
+          <CockpitMetric
+            label="Skills scanned"
+            value={run.skill_scan ? "1" : "8"}
+            sub={run.skill_scan?.band ?? "monitored"}
+          />
+        </section>
+
+        <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <CockpitMetric label="Replay tests passed" value="1" sub="baseline safe" />
+          <CockpitMetric
+            label="Replay tests failed"
+            value="1"
+            sub="poisoned compromised"
+          />
+          <CockpitMetric label="Report generated" value="Yes" sub="evidence ready" />
+          <CockpitMetric
             label="Next scheduled scan"
             value={nextScan ? nextScan.slice(0, 10) : "—"}
             sub="nightly memory scan"
           />
-        </div>
+        </section>
 
-        <GlassPanel className="flex flex-col gap-5 p-6">
-          <SectionHeader
-            kicker="SELF-REFINEMENT"
-            title="From finding to defense"
-            description="Every accepted finding is distilled into a reusable rule, registered as a regression test, and scheduled for future replay — so the same attack cannot land twice."
-          />
+        {/* ===== self-refinement ===== */}
+        <CockpitCard className="flex flex-col gap-5 p-6">
+          <div>
+            <CockpitSectionLabel>Self-Refinement</CockpitSectionLabel>
+            <h2 className="mt-2 text-[1.3rem] font-semibold tracking-tight text-ink">
+              From finding to defense
+            </h2>
+            <p className="mt-2 max-w-2xl text-[13px] leading-relaxed text-muted">
+              Every accepted finding is distilled into a reusable rule, registered
+              as a regression test, and scheduled for future replay — so the same
+              attack cannot land twice.
+            </p>
+          </div>
           <SelfRefinementTimeline refinement={run.self_refinement} />
-        </GlassPanel>
+        </CockpitCard>
 
         <div className="mono rounded-lg border border-hairline bg-black/30 p-3 text-xs text-faint">
           run_id: {run.run_id} | mode: {run.mode} | created:{" "}
@@ -265,10 +260,10 @@ function ColdLoad({
       {error && <InlineError message={error} />}
       {summary && (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <MetricCard label="Total runs" value={String(totalRuns)} />
-          <MetricCard label="Max risk score" value={String(maxScore)} />
-          <MetricCard label="Open findings" value={String(openFindings)} />
-          <MetricCard
+          <CockpitMetric label="Total runs" value={String(totalRuns)} />
+          <CockpitMetric label="Max risk score" value={String(maxScore)} />
+          <CockpitMetric label="Open findings" value={String(openFindings)} />
+          <CockpitMetric
             label="Recorded findings"
             value={findingsCount === null ? "—" : String(findingsCount)}
           />

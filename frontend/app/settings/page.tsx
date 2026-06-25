@@ -4,15 +4,15 @@ import { useEffect, useState } from "react";
 import { Shield } from "lucide-react";
 import { PageShell } from "@/components/shared/PageShell";
 import { InlineError } from "@/components/shared/StateNotice";
-import { GlassPanel } from "@/components/noir/GlassPanel";
-import { SectionHeader } from "@/components/noir/SectionHeader";
+import { CockpitCard } from "@/components/shell/CockpitCard";
 import { ProviderTile } from "@/components/settings/ProviderTile";
 import { getProviders, testProvider } from "@/lib/api";
 import type { ProviderStatus } from "@/lib/types";
 
-// Provider Settings. Lists every configured model provider with its role, base
-// URL, model, and a MASKED key fingerprint only. Each tile can test its
-// connection and links to where a key is obtained. Raw keys are never rendered.
+// Configuration. Lists every configured model provider with its role, base URL,
+// model, and a MASKED key fingerprint only. Each tile can test its connection
+// and links to where a key is obtained. Raw keys are never rendered. Reskinned
+// to the flat-cockpit system to match Command.
 export default function SettingsPage() {
   const [providers, setProviders] = useState<ProviderStatus[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -39,30 +39,41 @@ export default function SettingsPage() {
   const configuredCount = providers.filter((p) => p.configured).length;
 
   return (
-    <PageShell
-      kicker="PROVIDER SETTINGS"
-      title="Model Providers"
-      statusLabel={
-        loaded ? `${configuredCount}/${providers.length} configured` : "loading"
-      }
-      statusTone={configuredCount > 0 ? "active" : "neutral"}
-    >
-      <div className="flex flex-col gap-5">
-        <SectionHeader
-          kicker="ROUTING"
-          title="Bring your own keys"
-          description="HydraSentry routes each role to a provider, falling back to a deterministic local classifier when none is configured. Keys live in the backend environment and surface here only as masked fingerprints."
-        />
-
-        <div className="mono flex items-center gap-2 rounded-lg border border-hairline bg-white/[.03] px-3.5 py-2.5 text-[12px] text-muted">
-          <Shield className="h-3.5 w-3.5 shrink-0" strokeWidth={1.8} />
-          Keys are never sent to the browser. Only a sha256 fingerprint and length
-          are exposed; the raw value stays server-side.
-        </div>
+    <PageShell>
+      <div className="flex flex-col gap-6">
+        {/* ===== ROUTING intro ===== */}
+        <section className="cockpit-card p-6">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+            <div className="min-w-0">
+              <div className="cockpit-eyebrow">Routing</div>
+              <h2 className="mt-3 max-w-2xl text-[1.5rem] font-semibold leading-tight tracking-tight text-ink">
+                Bring your own keys
+              </h2>
+              <p className="mt-3 max-w-xl text-[13px] leading-relaxed text-muted">
+                HydraSentry routes each role to a provider, falling back to a
+                deterministic local classifier when none is configured. Keys live
+                in the backend environment and surface here only as masked
+                fingerprints.
+              </p>
+            </div>
+            <div className="flex shrink-0 items-center gap-2 lg:flex-col lg:items-end">
+              <span className="cockpit-eyebrow">Configured</span>
+              <span className="text-[1.6rem] font-semibold leading-none tracking-tight text-ink tabular-nums">
+                {loaded ? `${configuredCount}/${providers.length}` : "—"}
+              </span>
+            </div>
+          </div>
+          <div className="mono mt-5 flex items-center gap-2 rounded-lg border border-hairline bg-white/[.02] px-3.5 py-2.5 text-[12px] text-muted">
+            <Shield className="h-3.5 w-3.5 shrink-0" strokeWidth={1.8} />
+            Keys are never sent to the browser. Only a sha256 fingerprint and
+            length are exposed; the raw value stays server-side.
+          </div>
+        </section>
 
         {error && <InlineError message={error} />}
 
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+        {/* ===== provider cards ===== */}
+        <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {providers.map((provider) => (
             <ProviderTile
               key={provider.name}
@@ -70,12 +81,12 @@ export default function SettingsPage() {
               onTest={() => handleTest(provider.name)}
             />
           ))}
-        </div>
+        </section>
 
         {loaded && providers.length === 0 && !error && (
-          <GlassPanel className="p-8 text-center text-sm text-muted">
+          <CockpitCard className="p-8 text-center text-sm text-muted">
             No providers reported by the backend.
-          </GlassPanel>
+          </CockpitCard>
         )}
       </div>
     </PageShell>

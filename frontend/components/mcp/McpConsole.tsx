@@ -2,9 +2,12 @@
 
 import { useState } from "react";
 import { Loader2, SendHorizontal, Lock } from "lucide-react";
-import { GlassPanel } from "@/components/noir/GlassPanel";
+import {
+  CockpitCard,
+  CockpitPill,
+  CockpitSectionLabel,
+} from "@/components/shell/CockpitCard";
 import { GlowButton } from "@/components/noir/GlowButton";
-import { StatusPill } from "@/components/noir/StatusPill";
 import {
   mcpScanContext,
   mcpReplayAttack,
@@ -170,11 +173,9 @@ export function McpConsole({
   }
 
   return (
-    <GlassPanel className={cn("flex flex-col gap-4 p-5", className)}>
+    <CockpitCard className={cn("flex flex-col gap-4 p-6", className)}>
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="mono text-[11px] uppercase tracking-[0.16em] text-faint">
-          request / response
-        </div>
+        <CockpitSectionLabel>Request / Response</CockpitSectionLabel>
         {tool.requiresSecret && (
           <span className="mono inline-flex items-center gap-1.5 text-[10.5px] uppercase tracking-[0.14em] text-muted">
             <Lock className="h-3 w-3" strokeWidth={1.9} />
@@ -188,7 +189,7 @@ export function McpConsole({
           value={toolName}
           onChange={(e) => selectTool(e.target.value)}
           aria-label="MCP tool"
-          className="mono rounded-xl border border-hairline-strong bg-white/[.04] px-3 py-2.5 text-[12.5px] text-ink outline-none focus-visible:ring-2 focus-visible:ring-white/60"
+          className="mono rounded-lg border border-hairline bg-white/[.03] px-3 py-2.5 text-[12.5px] text-ink outline-none focus-visible:border-hairline-strong focus-visible:ring-2 focus-visible:ring-white/30"
         >
           {TOOLS.map((t) => (
             <option key={t.name} value={t.name} className="bg-panel">
@@ -201,7 +202,7 @@ export function McpConsole({
           onChange={(e) => setInput(e.target.value)}
           placeholder={tool.placeholder}
           aria-label={tool.inputLabel}
-          className="mono rounded-xl border border-hairline-strong bg-white/[.04] px-3 py-2.5 text-[12.5px] text-ink outline-none placeholder:text-faint focus-visible:ring-2 focus-visible:ring-white/60"
+          className="mono rounded-lg border border-hairline bg-white/[.03] px-3 py-2.5 text-[12.5px] text-ink outline-none placeholder:text-faint focus-visible:border-hairline-strong focus-visible:ring-2 focus-visible:ring-white/30"
         />
       </div>
 
@@ -245,7 +246,7 @@ export function McpConsole({
           tone={last ? (last.ok ? "ok" : "fail") : "idle"}
         />
       </div>
-    </GlassPanel>
+    </CockpitCard>
   );
 }
 
@@ -271,13 +272,11 @@ interface JsonPanelProps {
 
 function JsonPanel({ title, value, tone = "idle" }: JsonPanelProps) {
   return (
-    <div className="overflow-hidden rounded-xl border border-hairline bg-black/40">
+    <div className="overflow-hidden rounded-lg border border-hairline bg-black/40">
       <div className="flex items-center justify-between border-b border-hairline px-3 py-2">
-        <span className="mono text-[10.5px] uppercase tracking-[0.16em] text-faint">
-          {title}
-        </span>
-        {tone === "ok" && <StatusPill tone="active" label="ok" />}
-        {tone === "fail" && <StatusPill tone="critical" label="error" />}
+        <span className="cockpit-eyebrow">{title}</span>
+        {tone === "ok" && <CockpitPill dot label="ok" />}
+        {tone === "fail" && <CockpitPill dot tone="bright" label="error" />}
       </div>
       <pre className="mono max-h-64 overflow-auto p-3 text-[11.5px] leading-relaxed text-ink/85">
         {value === null ? "// no response yet" : JSON.stringify(value, null, 2)}

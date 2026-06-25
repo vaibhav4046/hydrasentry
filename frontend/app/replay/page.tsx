@@ -8,11 +8,12 @@ import { InlineError, EmptyState } from "@/components/shared/StateNotice";
 import { ScenarioPicker } from "@/components/shared/ScenarioPicker";
 import { StageTimeline } from "@/components/shared/StageTimeline";
 import { ReplayCard } from "@/components/replay/ReplayCard";
-import { GlassPanel } from "@/components/noir/GlassPanel";
+import {
+  CockpitCard,
+  CockpitPill,
+  CockpitSectionLabel,
+} from "@/components/shell/CockpitCard";
 import { GlowButton } from "@/components/noir/GlowButton";
-import { StatusPill } from "@/components/noir/StatusPill";
-import { SectionHeader } from "@/components/noir/SectionHeader";
-import { AnimatedRiskBadge } from "@/components/noir/AnimatedRiskBadge";
 import { ArtifactTreeGraph } from "@/components/noir/ArtifactTreeGraph";
 import { MAX_STAGE } from "@/components/noir/artifactTreeData";
 import { runScenario, runJudgeDemo } from "@/lib/api";
@@ -22,11 +23,11 @@ import type { RunArtifact } from "@/lib/types";
 
 const REFUND_SCENARIO = "memory_poisoning_refund";
 
-// Replay Lab. Picks a scenario, runs it, and shows the clean baseline answer
-// beside the poisoned answer with an animated swap. The behavior diff, risk
-// gauge, attack type, confidence and pipeline timeline all read from the live
-// run artifact. The refund scenario routes through the judge demo so the canon
-// VIP-instant-refund attack always lands.
+// Replay. Picks a scenario, runs it, and shows the clean baseline answer beside
+// the poisoned answer with an animated swap. The behavior diff, risk readout,
+// attack type, confidence and pipeline timeline all read from the live run
+// artifact. The refund scenario routes through the judge demo so the canon
+// VIP-instant-refund attack always lands. Reskinned to the flat-cockpit system.
 export default function ReplayPage() {
   const setRun = useDemoStore((s) => s.setRun);
   const storeRun = useDemoStore((s) => s.currentRun);
@@ -56,18 +57,12 @@ export default function ReplayPage() {
   const indicators = artifact?.behavior_diff.indicators ?? [];
 
   return (
-    <PageShell
-      kicker="REPLAY LAB"
-      title="Clean vs Poisoned"
-      statusLabel={isRunning ? "replaying" : artifact ? "replay ready" : "idle"}
-      statusTone={isRunning ? "warn" : artifact ? "active" : "neutral"}
-    >
+    <PageShell>
       <div className="flex flex-col gap-5">
-        <GlassPanel className="flex flex-col gap-4 p-5 sm:flex-row sm:items-end sm:justify-between">
+        {/* ===== scenario picker + run ===== */}
+        <CockpitCard className="flex flex-col gap-4 p-6 sm:flex-row sm:items-end sm:justify-between">
           <label className="flex w-full max-w-md flex-col gap-2">
-            <span className="mono text-[11px] uppercase tracking-[0.16em] text-faint">
-              scenario
-            </span>
+            <span className="cockpit-eyebrow">scenario</span>
             <ScenarioPicker
               value={scenarioId}
               onChange={(id) => setScenarioId(id)}
@@ -87,7 +82,7 @@ export default function ReplayPage() {
           >
             {isRunning ? "Replaying" : "Run replay"}
           </GlowButton>
-        </GlassPanel>
+        </CockpitCard>
 
         {!artifact ? (
           <>
@@ -100,6 +95,7 @@ export default function ReplayPage() {
         ) : (
           <>
             {error && <InlineError message={error} />}
+            {/* baseline vs poisoned */}
             <div className="grid items-stretch gap-4 lg:grid-cols-[1fr_auto_1fr]">
               <AnimatePresence mode="wait">
                 <ReplayCard
@@ -123,27 +119,22 @@ export default function ReplayPage() {
             </div>
 
             <div className="grid gap-4 lg:grid-cols-[auto_1fr]">
-              <GlassPanel className="flex w-full flex-col gap-4 p-6 lg:max-w-sm">
-                <AnimatedRiskBadge
-                  to={artifact.risk.score}
-                  band={`${artifact.risk.band} RISK`}
-                />
+              {/* risk readout — cockpit big number + path tree */}
+              <CockpitCard className="flex w-full flex-col gap-4 p-6 lg:max-w-sm">
+                <div>
+                  <div className="cockpit-eyebrow">Risk Score</div>
+                  <div className="mt-3 text-[2.6rem] font-semibold leading-none tracking-tight text-ink tabular-nums">
+                    {artifact.risk.score}
+                  </div>
+                </div>
                 <div className="flex flex-wrap items-center gap-2">
-                  <StatusPill tone="critical" label={artifact.risk.attack_type} />
-                  <StatusPill
-                    tone="warn"
+                  <CockpitPill dot tone="bright" label={artifact.risk.band} />
+                  <CockpitPill label={artifact.risk.attack_type} />
+                  <CockpitPill
                     label={`conf ${formatPercent(artifact.risk.confidence)}`}
                   />
                 </div>
-                <div className="relative w-full overflow-hidden rounded-xl border border-hairline bg-deep/40 p-1.5">
-                  <div
-                    aria-hidden
-                    className="pointer-events-none absolute inset-0 -z-0"
-                    style={{
-                      background:
-                        "radial-gradient(circle at 50% 40%, rgba(255,255,255,0.06), transparent 70%)",
-                    }}
-                  />
+                <div className="relative w-full overflow-hidden rounded-lg border border-hairline bg-deep/40 p-1.5">
                   <ArtifactTreeGraph
                     stage={MAX_STAGE}
                     graph={artifact.graph}
@@ -154,14 +145,11 @@ export default function ReplayPage() {
                   How the poison reached the agent: tainted memory overrides the
                   refund policy on the white-hot path.
                 </p>
-              </GlassPanel>
+              </CockpitCard>
 
               <div className="grid gap-4 sm:grid-cols-2">
-                <GlassPanel className="flex flex-col gap-3 p-5">
-                  <SectionHeader
-                    kicker="BEHAVIOR DIFF"
-                    title="What changed"
-                  />
+                <CockpitCard className="flex flex-col gap-3 p-5">
+                  <CockpitSectionLabel>Behavior Diff</CockpitSectionLabel>
                   <ul className="flex flex-col gap-2">
                     {indicators.map((indicator, i) => (
                       <li
@@ -173,12 +161,12 @@ export default function ReplayPage() {
                       </li>
                     ))}
                   </ul>
-                </GlassPanel>
+                </CockpitCard>
 
-                <GlassPanel className="flex flex-col gap-3 p-5">
-                  <SectionHeader kicker="PIPELINE" title="Stage timeline" />
+                <CockpitCard className="flex flex-col gap-3 p-5">
+                  <CockpitSectionLabel>Stage Timeline</CockpitSectionLabel>
                   <StageTimeline stages={artifact.stages} />
-                </GlassPanel>
+                </CockpitCard>
               </div>
             </div>
           </>

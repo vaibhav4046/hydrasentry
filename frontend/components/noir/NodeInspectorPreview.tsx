@@ -59,16 +59,14 @@ export function NodeInspectorPreview({
           exit={{ opacity: 0, x: 24 }}
           transition={{ duration: 0.35, ease: EASE_OUT_EXPO }}
           className={cn(
-            "hydra-glass rounded-xl2 flex w-full max-w-xs flex-col gap-4 p-5",
-            node.tainted && "border-white/40 shadow-[0_0_40px_rgba(255,255,255,0.12)]",
+            "cockpit-card flex w-full max-w-xs flex-col gap-4 p-5",
+            node.tainted && "border-white/40",
             className,
           )}
         >
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
-              <div className="mono text-[10.5px] uppercase tracking-[0.16em] text-faint">
-                {node.type}
-              </div>
+              <div className="cockpit-eyebrow">{node.type}</div>
               <div className="mt-1 truncate text-lg font-semibold tracking-tight text-ink">
                 {node.title}
               </div>
@@ -122,9 +120,7 @@ export function NodeInspectorPreview({
               .filter((row) => row.value)
               .map((row) => (
                 <div key={row.label} className="flex flex-col gap-1 py-2.5">
-                  <dt className="mono text-[10.5px] uppercase tracking-[0.14em] text-faint">
-                    {row.label}
-                  </dt>
+                  <dt className="cockpit-eyebrow">{row.label}</dt>
                   <dd className="mono break-words text-[12.5px] text-ink/85">
                     {row.value}
                   </dd>

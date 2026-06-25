@@ -2,8 +2,7 @@
 
 import { m } from "framer-motion";
 import { ShieldCheck, ShieldAlert } from "lucide-react";
-import { GlassPanel } from "@/components/noir/GlassPanel";
-import { StatusPill } from "@/components/noir/StatusPill";
+import { CockpitCard, CockpitPill } from "@/components/shell/CockpitCard";
 import { cn } from "@/lib/cn";
 import type { ReplayResult } from "@/lib/types";
 
@@ -27,10 +26,10 @@ export function ReplayCard({ variant, result, className }: ReplayCardProps) {
       exit={{ opacity: 0, y: -10 }}
       transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
     >
-      <GlassPanel
+      <CockpitCard
         className={cn(
           "flex h-full flex-col gap-4 p-5",
-          compromised ? "border-white/55 bg-white/[.07]" : "border-hairline",
+          compromised && "border-white/45 bg-white/[.05]",
           className,
         )}
       >
@@ -47,16 +46,17 @@ export function ReplayCard({ variant, result, className }: ReplayCardProps) {
               <Icon className="h-4 w-4 text-ink" strokeWidth={1.7} />
             </span>
             <div>
-              <div className="mono text-[10.5px] uppercase tracking-[0.18em] text-faint">
+              <div className="cockpit-eyebrow">
                 {compromised ? "poisoned context" : "clean context"}
               </div>
-              <div className="text-[15px] font-semibold tracking-tight text-ink">
+              <div className="mt-1 text-[15px] font-semibold tracking-tight text-ink">
                 {compromised ? "Poisoned replay" : "Baseline replay"}
               </div>
             </div>
           </div>
-          <StatusPill
-            tone={compromised ? "critical" : "safe"}
+          <CockpitPill
+            dot
+            tone={compromised ? "bright" : "neutral"}
             label={result.verdict}
           />
         </div>
@@ -73,9 +73,7 @@ export function ReplayCard({ variant, result, className }: ReplayCardProps) {
         </p>
 
         <div className="mt-auto">
-          <div className="mono mb-1.5 text-[10.5px] uppercase tracking-[0.16em] text-faint">
-            retrieved chunks
-          </div>
+          <div className="cockpit-eyebrow mb-1.5">retrieved chunks</div>
           <div className="flex flex-wrap gap-1.5">
             {result.retrieved_chunk_ids.map((id) => {
               const poison = id.toLowerCase().includes("poison");
@@ -95,7 +93,7 @@ export function ReplayCard({ variant, result, className }: ReplayCardProps) {
             })}
           </div>
         </div>
-      </GlassPanel>
+      </CockpitCard>
     </m.div>
   );
 }

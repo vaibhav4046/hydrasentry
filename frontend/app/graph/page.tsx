@@ -5,11 +5,12 @@ import { Loader2, Play } from "lucide-react";
 import { PageShell } from "@/components/shared/PageShell";
 import { EmptyState, InlineError } from "@/components/shared/StateNotice";
 import { SegmentedControl } from "@/components/shared/SegmentedControl";
-import { GlassPanel } from "@/components/noir/GlassPanel";
+import {
+  CockpitCard,
+  CockpitSectionLabel,
+} from "@/components/shell/CockpitCard";
 import { GlowButton } from "@/components/noir/GlowButton";
-import { SectionHeader } from "@/components/noir/SectionHeader";
 import { ArtifactTreeGraph } from "@/components/noir/ArtifactTreeGraph";
-import { AnimatedRiskBadge } from "@/components/noir/AnimatedRiskBadge";
 import { GraphKeyframeStrip } from "@/components/noir/GraphKeyframeStrip";
 import {
   NodeInspectorPreview,
@@ -31,15 +32,14 @@ const VIEW_OPTIONS = [
 ];
 
 /**
- * Context Graph — the hero surface. It LEADS with the signature monochrome
+ * Memory Graph — the evidence surface. It LEADS with the signature monochrome
  * ArtifactTreeGraph (full-width, scrubbable through its 8 stages) fed the current
  * run's real graph when present, the demo tree otherwise. A node click opens the
- * shared NodeInspectorPreview; selecting the tainted path lights the poison
- * branch. The same identity is offered two ways via a toggle: the artifact tree
- * and the detailed React Flow map (good for arbitrary real run graphs) — both
- * read as one design language (white/dim edges, white-hot tainted, glass nodes,
- * the same inspector + risk badge + graph_source badge). The raw query_paths
- * triplets sit below as the evidence behind the picture.
+ * shared NodeInspectorPreview (a flat cockpit side panel); selecting the tainted
+ * path lights the poison branch. The same identity is offered two ways via a
+ * toggle: the artifact tree and the detailed React Flow map. The raw query_paths
+ * triplets sit below as the evidence behind the picture. Reskinned to the
+ * flat-cockpit system to match Command — the graph viz stays, the chrome flattens.
  */
 export default function GraphPage() {
   const { run, isRunning, error, trigger } = useRunDemo();
@@ -58,14 +58,10 @@ export default function GraphPage() {
   }, []);
 
   const riskScore = run?.risk.score ?? 87;
-  const riskBand = run ? `${run.risk.band} RISK` : "HIGH RISK";
+  const riskBand = run ? run.risk.band : "HIGH";
 
   return (
     <PageShell
-      kicker="HYDRADB EVIDENCE"
-      title="Context Graph"
-      statusLabel={run ? "graph loaded" : "demo tree"}
-      statusTone={run ? "active" : "neutral"}
       actions={
         <GraphSourceBadge
           source={run?.graph_source ?? "derived_scenario_graph"}
@@ -73,10 +69,21 @@ export default function GraphPage() {
       }
     >
       <div className="flex flex-col gap-5">
-        {/* ===== HERO: artifact tree leads, risk + view toggle on top ===== */}
-        <GlassPanel strong className="flex flex-col gap-5 p-5 sm:p-6">
+        {/* ===== HERO: flat toolbar + hairline graph panel + inspector ===== */}
+        <CockpitCard className="flex flex-col gap-5 p-5 sm:p-6">
+          {/* toolbar */}
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-            <AnimatedRiskBadge to={riskScore} band={riskBand} />
+            <div className="flex items-baseline gap-4">
+              <div>
+                <div className="cockpit-eyebrow">Risk Score</div>
+                <div className="mt-2 text-[2.4rem] font-semibold leading-none tracking-tight text-ink tabular-nums">
+                  {riskScore}
+                  <span className="ml-2 align-middle text-[11px] font-medium uppercase tracking-[0.16em] text-faint">
+                    {riskBand}
+                  </span>
+                </div>
+              </div>
+            </div>
             <div className="flex flex-wrap items-center gap-3">
               <GraphSourceBadge
                 source={run?.graph_source ?? "derived_scenario_graph"}
@@ -93,15 +100,7 @@ export default function GraphPage() {
           <div className="grid gap-5 xl:grid-cols-[1fr_auto]">
             <div className="flex min-w-0 flex-col gap-3">
               {view === "artifact" ? (
-                <div className="relative w-full overflow-hidden rounded-xl2 border border-hairline bg-deep/40 p-2 sm:p-4">
-                  <div
-                    aria-hidden
-                    className="pointer-events-none absolute inset-0 -z-0"
-                    style={{
-                      background:
-                        "radial-gradient(circle at 50% 38%, rgba(255,255,255,0.08), rgba(255,255,255,0.02) 42%, transparent 70%)",
-                    }}
-                  />
+                <div className="relative w-full overflow-hidden rounded-lg border border-hairline bg-deep/40 p-2 sm:p-4">
                   <ArtifactTreeGraph
                     stage={stage}
                     graph={run?.graph ?? null}
@@ -120,10 +119,10 @@ export default function GraphPage() {
                       onNodeSelect={handleFlowSelect}
                     />
                   ) : (
-                    <div className="flex h-full items-center justify-center rounded-xl2 border border-hairline bg-deep/40">
+                    <div className="flex h-full items-center justify-center rounded-lg border border-hairline bg-deep/40">
                       <p className="mono max-w-xs text-center text-[12px] leading-relaxed text-faint">
-                        Detailed graph view renders a real run. Run the judge
-                        demo to populate arbitrary HydraDB query_paths.
+                        Detailed graph view renders a real run. Run the judge demo
+                        to populate arbitrary HydraDB query_paths.
                       </p>
                     </div>
                   )}
@@ -144,14 +143,12 @@ export default function GraphPage() {
                   onQuarantine={() => setInspect(null)}
                 />
               ) : (
-                <GlassPanel className="flex h-full min-h-[200px] flex-col items-center justify-center gap-2 p-6 text-center">
-                  <div className="mono text-[11px] uppercase tracking-[0.18em] text-faint">
-                    node inspector
-                  </div>
+                <CockpitCard className="flex h-full min-h-[200px] flex-col items-center justify-center gap-2 p-6 text-center">
+                  <div className="cockpit-eyebrow">node inspector</div>
                   <p className="text-sm text-muted">
                     Select a node to inspect its provenance.
                   </p>
-                </GlassPanel>
+                </CockpitCard>
               )}
             </div>
           </div>
@@ -164,7 +161,7 @@ export default function GraphPage() {
               className="mx-auto w-full max-w-3xl"
             />
           )}
-        </GlassPanel>
+        </CockpitCard>
 
         {/* ===== cold-load CTA when no run yet ===== */}
         {!run && (
@@ -195,14 +192,19 @@ export default function GraphPage() {
 
         {/* ===== raw query_paths evidence ===== */}
         {run && (
-          <GlassPanel className="flex flex-col gap-4 p-6">
-            <SectionHeader
-              kicker="QUERY_PATHS"
-              title="Tainted memory triplets"
-              description="The raw source -> relation -> target paths returned for this run. Tainted paths originate from the poisoned source chunk."
-            />
+          <CockpitCard className="flex flex-col gap-4 p-6">
+            <div>
+              <CockpitSectionLabel>Query_Paths</CockpitSectionLabel>
+              <h2 className="mt-2 text-[1.3rem] font-semibold tracking-tight text-ink">
+                Tainted memory triplets
+              </h2>
+              <p className="mt-2 max-w-2xl text-[13px] leading-relaxed text-muted">
+                The raw source -&gt; relation -&gt; target paths returned for this
+                run. Tainted paths originate from the poisoned source chunk.
+              </p>
+            </div>
             <TripletList triplets={run.graph.query_paths} />
-          </GlassPanel>
+          </CockpitCard>
         )}
       </div>
     </PageShell>

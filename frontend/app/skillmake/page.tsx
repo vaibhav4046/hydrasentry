@@ -12,12 +12,13 @@ import {
 } from "lucide-react";
 import { PageShell } from "@/components/shared/PageShell";
 import { InlineError } from "@/components/shared/StateNotice";
-import { GlassPanel } from "@/components/noir/GlassPanel";
+import {
+  CockpitCard,
+  CockpitPill,
+  CockpitSectionLabel,
+} from "@/components/shell/CockpitCard";
 import { GlowButton } from "@/components/noir/GlowButton";
-import { StatusPill, type StatusTone } from "@/components/noir/StatusPill";
-import { RiskGauge } from "@/components/noir/RiskGauge";
 import { ReportDrawer } from "@/components/noir/ReportDrawer";
-import { SectionHeader } from "@/components/noir/SectionHeader";
 import { UNSAFE_DEMO_SKILL } from "@/components/skillmake/demoSkill";
 import { scanSkill } from "@/lib/api";
 import { downloadText } from "@/lib/format";
@@ -30,7 +31,7 @@ type Disposition = "approved" | "rejected" | "quarantined" | null;
 // it for unsafe instructions. The scan returns a hash, risk score/band, and
 // per-line findings with category and severity. Operators can approve, reject,
 // or quarantine; the demo skill comes back CRITICAL and quarantine is the
-// hazard action.
+// hazard action. Reskinned to the flat-cockpit system to match Command.
 export default function SkillMakePage() {
   const [content, setContent] = useState("");
   const [scan, setScan] = useState<SkillScan | null>(null);
@@ -61,16 +62,12 @@ export default function SkillMakePage() {
   const reportMarkdown = scan ? buildReport(scan) : "";
 
   return (
-    <PageShell
-      kicker="SKILLMAKE VERIFIER"
-      title="Skill Scanner"
-      statusLabel={scan ? `${scan.band} risk` : "ready"}
-      statusTone={scan ? bandTone(scan.band) : "neutral"}
-    >
+    <PageShell>
       <div className="grid gap-5 lg:grid-cols-[1fr_1fr]">
-        <GlassPanel className="flex flex-col gap-4 p-5">
+        {/* ===== INPUT ===== */}
+        <CockpitCard className="flex flex-col gap-4 p-6">
           <div className="flex items-center justify-between gap-3">
-            <SectionHeader kicker="INPUT" title="SKILL.md" />
+            <CockpitSectionLabel>Input · SKILL.md</CockpitSectionLabel>
             <GlowButton variant="ghost" size="sm" onClick={loadDemo}>
               <FlaskConical className="h-4 w-4" strokeWidth={1.8} />
               Load unsafe demo skill
@@ -82,8 +79,8 @@ export default function SkillMakePage() {
             spellCheck={false}
             placeholder="Paste SKILL.md frontmatter and body here..."
             className={cn(
-              "mono h-[360px] w-full resize-none rounded-xl border border-hairline-strong bg-black/35 p-4 text-[12.5px] leading-relaxed text-ink",
-              "outline-none placeholder:text-faint focus-visible:ring-2 focus-visible:ring-white/60",
+              "mono h-[360px] w-full resize-none rounded-lg border border-hairline bg-black/30 p-4 text-[12.5px] leading-relaxed text-ink",
+              "outline-none placeholder:text-faint focus-visible:border-hairline-strong focus-visible:ring-2 focus-visible:ring-white/30",
             )}
           />
           <div className="flex items-center justify-between gap-3">
@@ -108,51 +105,62 @@ export default function SkillMakePage() {
             )}
           </div>
           {error && <InlineError message={error} />}
-        </GlassPanel>
+        </CockpitCard>
 
-        <div className="flex flex-col gap-4">
+        {/* ===== RESULT ===== */}
+        <div className="flex flex-col gap-5">
           {!scan ? (
-            <GlassPanel className="flex h-full min-h-[300px] flex-col items-center justify-center gap-3 p-8 text-center">
+            <CockpitCard className="flex h-full min-h-[300px] flex-col items-center justify-center gap-3 p-8 text-center">
               <ScanLine className="h-7 w-7 text-faint" strokeWidth={1.5} />
               <p className="max-w-xs text-sm leading-relaxed text-muted">
                 Scan a skill to see its risk score, band, and the exact unsafe
                 instructions with line numbers, category, and severity.
               </p>
-            </GlassPanel>
+            </CockpitCard>
           ) : (
             <>
-              <GlassPanel className="flex flex-col items-center gap-4 p-6 sm:flex-row sm:items-center sm:gap-6">
-                <RiskGauge
-                  score={scan.risk_score}
-                  band={scan.band}
-                  size={170}
-                  label="SKILL RISK"
-                />
-                <div className="flex flex-1 flex-col gap-3">
+              {/* risk readout — cockpit big-number/status */}
+              <div className="grid gap-4 sm:grid-cols-[auto_1fr]">
+                <CockpitCard className="flex flex-col justify-center p-5 sm:min-w-[150px]">
+                  <div className="cockpit-eyebrow">Skill Risk</div>
+                  <div className="mt-3 text-[2.6rem] font-semibold leading-none tracking-tight text-ink tabular-nums">
+                    {scan.risk_score}
+                  </div>
+                  <div className="mt-3">
+                    <CockpitPill
+                      dot
+                      tone={bandBright(scan.band) ? "bright" : "neutral"}
+                      label={scan.band}
+                    />
+                  </div>
+                </CockpitCard>
+                <CockpitCard className="flex flex-col gap-3 p-5">
                   <div className="flex flex-wrap items-center gap-2">
-                    <StatusPill tone={bandTone(scan.band)} label={scan.band} />
-                    <StatusPill tone="neutral" label={`status ${scan.status}`} />
+                    <CockpitPill label={`status ${scan.status}`} />
+                    <CockpitPill
+                      label={`${scan.findings.length} findings`}
+                      tone={scan.findings.length > 0 ? "bright" : "neutral"}
+                    />
                   </div>
                   <div>
-                    <div className="mono text-[10.5px] uppercase tracking-[0.16em] text-faint">
-                      recommended fix
-                    </div>
-                    <p className="mt-1 text-[13px] leading-relaxed text-muted">
+                    <div className="cockpit-eyebrow">recommended fix</div>
+                    <p className="mt-1.5 text-[13px] leading-relaxed text-muted">
                       {scan.recommended_fix}
                     </p>
                   </div>
-                </div>
-              </GlassPanel>
+                </CockpitCard>
+              </div>
 
-              <GlassPanel className="flex flex-col gap-3 p-5">
-                <div className="mono text-[11px] uppercase tracking-[0.16em] text-faint">
-                  unsafe instructions ({scan.findings.length})
-                </div>
+              {/* unsafe instructions — mono lines w/ line numbers */}
+              <CockpitCard className="flex flex-col gap-3 p-5">
+                <CockpitSectionLabel meta={`${scan.findings.length} found`}>
+                  Unsafe Instructions
+                </CockpitSectionLabel>
                 <ul className="flex flex-col gap-2">
                   {scan.findings.map((finding, i) => (
                     <li
                       key={i}
-                      className="flex items-start gap-3 rounded-lg border-l-2 border-l-white/70 bg-white/[.04] px-3 py-2"
+                      className="flex items-start gap-3 rounded-lg border-l-2 border-l-white/70 bg-white/[.03] px-3 py-2"
                     >
                       <span className="mono mt-0.5 shrink-0 rounded border border-hairline px-1.5 py-0.5 text-[10px] text-muted">
                         L{finding.line_no}
@@ -161,8 +169,8 @@ export default function SkillMakePage() {
                         <p className="mono text-[12px] leading-relaxed text-ink/85">
                           {finding.text}
                         </p>
-                        <div className="mt-1 flex flex-wrap gap-1.5">
-                          <span className="mono text-[10px] uppercase tracking-[0.12em] text-faint">
+                        <div className="mt-1 flex flex-wrap gap-2">
+                          <span className="cockpit-eyebrow">
                             {finding.category}
                           </span>
                           <span className="mono text-[10px] uppercase tracking-[0.12em] text-ink">
@@ -173,9 +181,10 @@ export default function SkillMakePage() {
                     </li>
                   ))}
                 </ul>
-              </GlassPanel>
+              </CockpitCard>
 
-              <GlassPanel className="flex flex-wrap items-center gap-3 p-5">
+              {/* dispositions */}
+              <CockpitCard className="flex flex-wrap items-center gap-3 p-5">
                 <GlowButton
                   variant="secondary"
                   size="sm"
@@ -213,7 +222,7 @@ export default function SkillMakePage() {
                     skill {disposition}
                   </span>
                 )}
-              </GlassPanel>
+              </CockpitCard>
             </>
           )}
         </div>
@@ -225,27 +234,25 @@ export default function SkillMakePage() {
         markdown={reportMarkdown}
         title="Skill Scan Report"
         onDownload={() =>
-          downloadText(`skill-scan-${scan?.skill_hash ?? "report"}.md`, reportMarkdown)
+          downloadText(
+            `skill-scan-${scan?.skill_hash ?? "report"}.md`,
+            reportMarkdown,
+          )
         }
       />
     </PageShell>
   );
 }
 
-function bandTone(band: string): StatusTone {
-  if (band === "CRITICAL") return "critical";
-  if (band === "HIGH") return "warn";
-  if (band === "MEDIUM") return "safe";
-  return "neutral";
+/** Whether a band reads as notable/critical (brighter pill). Monochrome. */
+function bandBright(band: string): boolean {
+  return band === "CRITICAL" || band === "HIGH";
 }
 
 // Compose a small markdown report from a skill scan for the drawer + download.
 function buildReport(scan: SkillScan): string {
   const findings = scan.findings
-    .map(
-      (f) =>
-        `- **L${f.line_no}** (${f.category} / ${f.severity}): ${f.text}`,
-    )
+    .map((f) => `- **L${f.line_no}** (${f.category} / ${f.severity}): ${f.text}`)
     .join("\n");
   return [
     `# SkillMake Scan Report`,
