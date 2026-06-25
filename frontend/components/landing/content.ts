@@ -14,6 +14,11 @@ import {
   ServerCog,
   ShieldHalf,
   Repeat,
+  Skull,
+  FileWarning,
+  Building2,
+  TerminalSquare,
+  Wrench,
   type LucideIcon,
 } from "lucide-react";
 
@@ -28,12 +33,11 @@ export const HERO = {
 
 export const NAV_LINKS: { label: string; href: string }[] = [
   { label: "Product", href: "#product" },
-  { label: "Architecture", href: "#architecture" },
+  { label: "Threat Model", href: "#use-cases" },
+  { label: "Pipeline", href: "#pipeline" },
   { label: "Replay Lab", href: "#timeline" },
-  { label: "SkillMake", href: "#features" },
-  { label: "MCP", href: "#features" },
-  { label: "Docs", href: "#architecture" },
-  { label: "GitHub", href: "https://github.com" },
+  { label: "Capabilities", href: "#features" },
+  { label: "Architecture", href: "#architecture" },
 ];
 
 export interface PrimitiveDef {
@@ -107,6 +111,134 @@ export const FEATURES: FeatureDef[] = [
       "Export signed, human-readable incident reports with the risk score, graph, and decision trail attached.",
     Icon: FileText,
   },
+];
+
+/**
+ * Trust marquee row — the primitives HydraSentry speaks natively. Rendered as
+ * an auto-scrolling monochrome strip (the wordmarks/icons of the stack it
+ * secures), Railway-style but noir.
+ */
+export const TRUST_PRIMITIVES: PrimitiveDef[] = PRIMITIVES;
+
+export interface UseCaseDef {
+  title: string;
+  description: string;
+  Icon: LucideIcon;
+  /** Short mono tag shown in the card corner (the attack class). */
+  tag: string;
+  /** Make this the wide hero tile in the bento. */
+  wide?: boolean;
+}
+
+/**
+ * Five context-attack classes HydraSentry catches — adapted from HydraDB's
+ * use-case bento to our security framing. The first tile spans wide.
+ */
+export const USE_CASES: UseCaseDef[] = [
+  {
+    title: "Poisoned Memory",
+    description:
+      "An attacker writes a malicious memory that survives into a later task and steers the agent toward an unsafe action. HydraSentry replays clean vs poisoned context and pins the exact tainted node.",
+    Icon: Skull,
+    tag: "memory_poisoning",
+    wide: true,
+  },
+  {
+    title: "Stale Policy",
+    description:
+      "A revoked rule or expired approval lingers in context and the agent still honors it. The graph diff shows which retired memory drove the decision.",
+    Icon: FileWarning,
+    tag: "stale_policy",
+  },
+  {
+    title: "Cross-Tenant Leak",
+    description:
+      "Context from one tenant bleeds into another's query_paths. HydraSentry proves isolation per run and flags any path that crosses the boundary.",
+    Icon: Building2,
+    tag: "tenant_isolation",
+  },
+  {
+    title: "Unsafe Skills",
+    description:
+      "A SkillMake skill ships an instruction that exfiltrates data or escalates privilege. The verifier scans it line-by-line and scores it before agents load it.",
+    Icon: TerminalSquare,
+    tag: "skill_injection",
+  },
+  {
+    title: "Unsafe Tool Calls",
+    description:
+      "The agent is about to call a tool with poisoned arguments. The MCP firewall allows, warns, blocks, or quarantines the call before it executes.",
+    Icon: Wrench,
+    tag: "tool_call_firewall",
+  },
+];
+
+export interface CompareRow {
+  capability: string;
+  /** What a prompt-level tester gives you. */
+  promptLevel: string;
+  /** What HydraSentry gives you. */
+  hydrasentry: string;
+}
+
+/**
+ * Comparison framing (HydraDB-style): prompt-level eval tools tell you a prompt
+ * failed; HydraSentry shows the graph anatomy of how poisoned context reached
+ * the agent.
+ */
+export const COMPARE_HEADLINE =
+  "Promptfoo tells you a prompt failed. HydraSentry shows the graph anatomy of how poisoned context reached the agent.";
+
+export const COMPARE_ROWS: CompareRow[] = [
+  {
+    capability: "Failure signal",
+    promptLevel: "A prompt scored badly",
+    hydrasentry: "The exact query_paths node that poisoned the run",
+  },
+  {
+    capability: "Unit of test",
+    promptLevel: "Prompt / response pair",
+    hydrasentry: "Clean vs poisoned context replay of the whole task",
+  },
+  {
+    capability: "Memory layer",
+    promptLevel: "Out of scope",
+    hydrasentry: "HydraDB query_paths reconstructed and diffed",
+  },
+  {
+    capability: "Enforcement",
+    promptLevel: "None — reporting only",
+    hydrasentry: "MCP firewall: allow / warn / block / quarantine",
+  },
+  {
+    capability: "Evidence",
+    promptLevel: "A score in a table",
+    hydrasentry: "Signed report with risk, graph, and decision trail",
+  },
+];
+
+export interface PipelineStep {
+  label: string;
+  /** Short mono detail under the label. */
+  detail: string;
+  /** Marks the steps where poison is present / the run is unsafe. */
+  tainted?: boolean;
+}
+
+/**
+ * The deterministic pipeline rendered as an animated monochrome node-flow.
+ * "tainted" steps carry the poison and read brighter / dashed in the diagram.
+ */
+export const PIPELINE: PipelineStep[] = [
+  { label: "Seed clean context", detail: "owned tenant" },
+  { label: "Baseline replay", detail: "LOW · escalates" },
+  { label: "Inject poison", detail: "mem_poison_047", tainted: true },
+  { label: "Poisoned replay", detail: "87 · HIGH", tainted: true },
+  { label: "Extract query_paths", detail: "graph diff", tainted: true },
+  { label: "Score risk", detail: "deterministic" },
+  { label: "MCP firewall", detail: "block" },
+  { label: "Quarantine", detail: "isolate node" },
+  { label: "Report", detail: "signed .md" },
 ];
 
 export interface ArchLayer {

@@ -32,9 +32,9 @@ export function LandingNav() {
       </div>
       <nav
         className={cn(
-          "border-b transition-colors duration-300",
+          "border-b transition-all duration-300",
           scrolled
-            ? "border-hairline bg-base/80 backdrop-blur-xl"
+            ? "border-hairline bg-base/80 shadow-[0_1px_0_rgba(255,255,255,0.06),0_8px_30px_rgba(0,0,0,0.5)] backdrop-blur-xl"
             : "border-transparent bg-transparent",
         )}
       >
@@ -47,9 +47,14 @@ export function LandingNav() {
               <Link
                 key={link.label}
                 href={link.href}
-                className="text-[13px] font-medium text-muted transition-colors hover:text-ink"
+                className="group/navlink relative text-[13px] font-medium text-muted transition-colors hover:text-ink"
               >
                 {link.label}
+                {/* Railway-style hover underline with a soft glow. */}
+                <span
+                  aria-hidden
+                  className="absolute -bottom-1 left-0 h-px w-full origin-left scale-x-0 bg-white/70 shadow-[0_0_8px_rgba(255,255,255,0.5)] transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] group-hover/navlink:scale-x-100"
+                />
               </Link>
             ))}
           </div>

@@ -253,7 +253,13 @@ async function unwrap(
   promise: Promise<{ ok: true; data: McpToolResult } | { ok: false; error: string }>,
 ): Promise<McpToolResult> {
   const result = await promise;
-  if (result.ok) return result.data;
+  // Guard against a success envelope with a missing/malformed payload so the
+  // caller can always read `.ok` off a real object.
+  if (result.ok) {
+    return result.data && typeof result.data === "object"
+      ? result.data
+      : { ok: false, error: "Malformed response from backend" };
+  }
   return { ok: false, error: result.error };
 }
 

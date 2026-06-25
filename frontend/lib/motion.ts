@@ -102,3 +102,46 @@ export const terminalLineReveal: Variants = {
     transition: { duration: 0.45, ease: EASE_OUT_EXPO },
   },
 };
+
+/**
+ * Seamless horizontal marquee. The track holds two identical halves; this
+ * translates the whole track by exactly -50% so the loop is invisible. Drive
+ * with `animate="run"` on a track whose width is 2x its content. Reduced-motion
+ * callers should simply not apply this (render a static, centered row instead).
+ */
+export const marqueeTrack: Variants = {
+  run: {
+    x: ["0%", "-50%"],
+    transition: { duration: 32, ease: "linear", repeat: Infinity },
+  },
+};
+
+/**
+ * Larger lift + glow for premium feature cards. Pair with the
+ * `.hydra-border-sweep` CSS utility so the silver border-sweep runs while the
+ * card rises. GPU-only (transform), border handled in CSS.
+ */
+export const cardLift: Variants = {
+  rest: { y: 0 },
+  hover: { y: -6, transition: { duration: 0.4, ease: EASE_OUT_EXPO } },
+};
+
+/**
+ * Pipeline node pop-in. Sequence nodes left-to-right by putting
+ * `staggerContainer` (or a wider-gap container) on the parent SVG/flex wrapper.
+ */
+export const nodePopIn: Variants = {
+  hidden: { opacity: 0, scale: 0.9, filter: "blur(4px)" },
+  show: {
+    opacity: 1,
+    scale: 1,
+    filter: "blur(0px)",
+    transition: { duration: 0.5, ease: EASE_OUT_EXPO },
+  },
+};
+
+/** Wider-gap stagger for diagram/bento sequences that should feel deliberate. */
+export const staggerWide: Variants = {
+  hidden: {},
+  show: { transition: { staggerChildren: 0.12, delayChildren: 0.06 } },
+};

@@ -84,6 +84,50 @@ async function request<T>(
   }
 }
 
+/**
+ * MCP tool endpoints return the tool envelope at the TOP LEVEL
+ * ({ ok, tool, result, ... }) rather than the standard { ok, data } wrapper.
+ * This variant returns the whole parsed body as the data so callers receive a
+ * complete McpToolResult. On transport/parse failure it still yields a
+ * well-formed { ok:false } result so the UI never reads `.ok` off undefined.
+ */
+async function requestMcp(
+  path: string,
+  options: RequestOptions = {},
+): Promise<ApiResult<McpToolResult>> {
+  const { method = "POST", body, headers = {}, signal } = options;
+  try {
+    const res = await fetch(`${BACKEND_URL}${path}`, {
+      method,
+      headers: {
+        Accept: "application/json",
+        ...(body !== undefined ? { "Content-Type": "application/json" } : {}),
+        ...headers,
+      },
+      body: body !== undefined ? JSON.stringify(body) : undefined,
+      signal,
+      cache: "no-store",
+    });
+
+    let payload: McpToolResult | null = null;
+    try {
+      payload = (await res.json()) as McpToolResult;
+    } catch {
+      payload = null;
+    }
+
+    if (payload && typeof payload === "object" && "ok" in payload) {
+      return { ok: true, data: payload };
+    }
+    if (!res.ok) {
+      return { ok: false, error: `Request failed (${res.status})` };
+    }
+    return { ok: false, error: "Malformed response from backend" };
+  } catch (error: unknown) {
+    return { ok: false, error: errorMessage(error) };
+  }
+}
+
 async function requestText(
   path: string,
   options: RequestOptions = {},
@@ -202,7 +246,7 @@ function mcpHeaders(secret?: string): Record<string, string> {
 export function mcpScanContext(
   scenarioId: string,
 ): Promise<ApiResult<McpToolResult>> {
-  return request<McpToolResult>("/mcp/scan_context", {
+  return requestMcp("/mcp/scan_context", {
     method: "POST",
     body: { scenario_id: scenarioId },
   });
@@ -212,7 +256,7 @@ export function mcpReplayAttack(
   scenarioId: string,
   secret?: string,
 ): Promise<ApiResult<McpToolResult>> {
-  return request<McpToolResult>("/mcp/replay_attack", {
+  return requestMcp("/mcp/replay_attack", {
     method: "POST",
     body: { scenario_id: scenarioId },
     headers: mcpHeaders(secret),
@@ -224,7 +268,7 @@ export function mcpVerifySkill(
   name?: string,
   secret?: string,
 ): Promise<ApiResult<McpToolResult>> {
-  return request<McpToolResult>("/mcp/verify_skill", {
+  return requestMcp("/mcp/verify_skill", {
     method: "POST",
     body: { content, name },
     headers: mcpHeaders(secret),
@@ -237,7 +281,7 @@ export function mcpQuarantineMemory(
   subTenantId?: string,
   secret?: string,
 ): Promise<ApiResult<McpToolResult>> {
-  return request<McpToolResult>("/mcp/quarantine_memory", {
+  return requestMcp("/mcp/quarantine_memory", {
     method: "POST",
     body: {
       chunk_id: chunkId,
@@ -252,7 +296,7 @@ export function mcpGenerateReport(
   runId: string,
   secret?: string,
 ): Promise<ApiResult<McpToolResult>> {
-  return request<McpToolResult>("/mcp/generate_report", {
+  return requestMcp("/mcp/generate_report", {
     method: "POST",
     body: { run_id: runId },
     headers: mcpHeaders(secret),
@@ -263,7 +307,7 @@ export function mcpScheduleScan(
   name: string,
   secret?: string,
 ): Promise<ApiResult<McpToolResult>> {
-  return request<McpToolResult>("/mcp/schedule_scan", {
+  return requestMcp("/mcp/schedule_scan", {
     method: "POST",
     body: { name },
     headers: mcpHeaders(secret),
