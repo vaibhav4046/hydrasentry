@@ -1,0 +1,18 @@
+# Secrets never ship to the deployment bundle — they live only as Vercel env vars.
+.env
+.env.*
+!.env.example
+
+# Local sqlite DB and WAL sidecars (the serverless DB lives in /tmp).
+*.db
+*.db-wal
+*.db-shm
+hydrasentry.db
+
+# Python caches and test artifacts.
+__pycache__/
+*.pyc
+tests/
+pytest.ini
+.pytest_cache/
+.coverage

@@ -62,18 +62,37 @@ def _now() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
+# Per-process latch so the schema is ensured once per cold start, not on every
+# query. On Vercel each cold container starts with an empty /tmp DB and the ASGI
+# lifespan startup is not a reliable guarantee, so every connection lazily
+# ensures the schema. Locally this is a cheap no-op (tables already exist).
+_schema_ready = False
+
+
+def _ensure_schema(conn: sqlite3.Connection) -> None:
+    global _schema_ready
+    if _schema_ready:
+        return
+    conn.executescript(_SCHEMA)
+    conn.commit()
+    _schema_ready = True
+
+
 def _connect() -> sqlite3.Connection:
     db_path = settings.db_path()
     db_path.parent.mkdir(parents=True, exist_ok=True)
     conn = sqlite3.connect(str(db_path))
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA journal_mode=WAL;")
+    _ensure_schema(conn)
     return conn
 
 
 def init_db() -> None:
     """Create all tables if they do not exist. Idempotent."""
     RUNS_DIR.mkdir(parents=True, exist_ok=True)
+    # _connect() already ensures the schema; this also forces it eagerly so a
+    # startup call still validates write access.
     conn = _connect()
     try:
         conn.executescript(_SCHEMA)

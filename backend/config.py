@@ -22,7 +22,12 @@ except Exception:  # pragma: no cover - dotenv always present in requirements
 BACKEND_DIR = Path(__file__).resolve().parent
 REPO_ROOT = BACKEND_DIR.parent
 ENV_PATH = BACKEND_DIR / ".env"
-RUNS_DIR = REPO_ROOT / "runs"
+
+# On Vercel the bundle filesystem is read-only except /tmp, so run artifacts and
+# the sqlite DB must live under /tmp. Locally (VERCEL unset) nothing changes:
+# runs/ stays at the repo root and the DB resolves next to the backend.
+IS_SERVERLESS = bool(os.getenv("VERCEL"))
+RUNS_DIR = Path("/tmp/runs") if IS_SERVERLESS else REPO_ROOT / "runs"
 
 # Load backend/.env if present. Never fails if absent (e.g. CI).
 load_dotenv(dotenv_path=ENV_PATH, override=False)
@@ -189,15 +194,24 @@ class Settings:
         return PROVIDERS.get(name)
 
     def db_path(self) -> Path:
-        """Resolve the sqlite file path from DATABASE_URL (sqlite:///...)."""
+        """Resolve the sqlite file path from DATABASE_URL (sqlite:///...).
+
+        On Vercel the backend dir is read-only, so a relative sqlite path is
+        rebased under /tmp instead of next to the backend. An absolute
+        DATABASE_URL is always honoured as-is.
+        """
         url = self.database_url
         prefix = "sqlite:///"
         if url.startswith(prefix):
             raw = url[len(prefix):]
             p = Path(raw)
             if not p.is_absolute():
+                if IS_SERVERLESS:
+                    return Path("/tmp") / p.name
                 p = (BACKEND_DIR / raw).resolve()
             return p
+        if IS_SERVERLESS:
+            return Path("/tmp/hydrasentry.db")
         return (BACKEND_DIR / "hydrasentry.db").resolve()
 
 

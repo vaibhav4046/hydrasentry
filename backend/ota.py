@@ -8,12 +8,20 @@ from __future__ import annotations
 
 import json
 import logging
+import os
+import shutil
 from pathlib import Path
 from typing import Any
 
 logger = logging.getLogger("hydrasentry.ota")
 
-OTA_DIR = Path(__file__).resolve().parent / "ota_packs"
+# Packs ship next to this file (read-only on Vercel). On serverless we keep a
+# writable working copy under /tmp seeded from the shipped packs, so bump_pack
+# (which persists a version bump) does not hit the read-only deployment bundle.
+# Locally (VERCEL unset) OTA_DIR is the shipped dir and behaviour is unchanged.
+_BUNDLED_OTA_DIR = Path(__file__).resolve().parent / "ota_packs"
+_IS_SERVERLESS = bool(os.getenv("VERCEL"))
+OTA_DIR = Path("/tmp/ota_packs") if _IS_SERVERLESS else _BUNDLED_OTA_DIR
 
 # Fixed seed date keeps last_update deterministic in tests.
 _SEED_DATE = "2026-06-24T00:00:00+00:00"
@@ -23,13 +31,27 @@ def _read(path: Path) -> dict[str, Any]:
     return json.loads(path.read_text(encoding="utf-8-sig"))
 
 
+def _ensure_writable_dir() -> None:
+    """On serverless, seed the /tmp working copy from the shipped packs once."""
+    if not _IS_SERVERLESS:
+        return
+    OTA_DIR.mkdir(parents=True, exist_ok=True)
+    if _BUNDLED_OTA_DIR.exists():
+        for src in _BUNDLED_OTA_DIR.glob("*.json"):
+            dst = OTA_DIR / src.name
+            if not dst.exists():
+                shutil.copyfile(src, dst)
+
+
 def list_packs() -> list[dict[str, Any]]:
+    _ensure_writable_dir()
     if not OTA_DIR.exists():
         return []
     return [_read(p) for p in sorted(OTA_DIR.glob("*.json"))]
 
 
 def get_pack(name: str) -> dict[str, Any] | None:
+    _ensure_writable_dir()
     path = OTA_DIR / f"{name}.json"
     if not path.exists():
         return None
