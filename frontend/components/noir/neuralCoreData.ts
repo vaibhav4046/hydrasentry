@@ -1,7 +1,7 @@
 /**
  * Deterministic geometry for the NeuralMemoryCore hero.
  *
- * HydraSentry guards an agent's MEMORY. We render that memory as a luminous
+ * Constellan guards an agent's MEMORY. We render that memory as a luminous
  * neural CORE: a glowing center with elegant CURVED synaptic connections
  * radiating out to the context nodes, light pulses travelling the connections
  * like thoughts. Everything is computed from FIXED data or a SEEDED PRNG

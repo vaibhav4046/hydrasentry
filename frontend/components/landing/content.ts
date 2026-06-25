@@ -25,7 +25,7 @@ export const HERO = {
   kicker: "HYDRADB NATIVE · CONTEXT INTEGRITY · MCP SECURITY",
   headline: "Secure the memory layer before your agent acts.",
   subcopy:
-    "HydraSentry replays agent tasks against clean and poisoned HydraDB context, visualizes the exact graph path that caused failure, blocks unsafe memory through MCP, and exports evidence reports.",
+    "Constellan replays agent tasks against clean and poisoned HydraDB context, visualizes the exact graph path that caused failure, blocks unsafe memory through MCP, and exports evidence reports.",
   primaryCta: "Run Judge Demo",
   secondaryCta: "View Architecture",
 } as const;
@@ -107,7 +107,7 @@ export const FEATURES: FeatureDef[] = [
 ];
 
 /**
- * Trust marquee row — the primitives HydraSentry speaks natively. Rendered as
+ * Trust marquee row — the primitives Constellan speaks natively. Rendered as
  * an auto-scrolling monochrome strip (the wordmarks/icons of the stack it
  * secures), Railway-style but noir.
  */
@@ -124,14 +124,14 @@ export interface UseCaseDef {
 }
 
 /**
- * Five context-attack classes HydraSentry catches — adapted from HydraDB's
+ * Five context-attack classes Constellan catches — adapted from HydraDB's
  * use-case bento to our security framing. The first tile spans wide.
  */
 export const USE_CASES: UseCaseDef[] = [
   {
     title: "Poisoned Memory",
     description:
-      "An attacker writes a malicious memory that survives into a later task and steers the agent toward an unsafe action. HydraSentry replays clean vs poisoned context and pins the exact tainted node.",
+      "An attacker writes a malicious memory that survives into a later task and steers the agent toward an unsafe action. Constellan replays clean vs poisoned context and pins the exact tainted node.",
     Icon: Skull,
     tag: "memory_poisoning",
     wide: true,
@@ -146,7 +146,7 @@ export const USE_CASES: UseCaseDef[] = [
   {
     title: "Cross-Tenant Leak",
     description:
-      "Context from one tenant bleeds into another's query_paths. HydraSentry proves isolation per run and flags any path that crosses the boundary.",
+      "Context from one tenant bleeds into another's query_paths. Constellan proves isolation per run and flags any path that crosses the boundary.",
     Icon: Building2,
     tag: "tenant_isolation",
   },

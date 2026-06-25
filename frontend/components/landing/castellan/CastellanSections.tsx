@@ -83,7 +83,7 @@ export function CastellanSections() {
               color: "#9BA3AF",
             }}
           >
-            Promptfoo tells you a prompt failed. HydraSentry shows the graph
+            Promptfoo tells you a prompt failed. Constellan shows the graph
             anatomy of how poisoned context reached the agent — and stops it.
           </p>
         </div>

@@ -7,7 +7,7 @@ import { usePauseOffscreen } from "@/hooks/usePauseOffscreen";
 
 /**
  * Auto-scrolling monochrome trust strip (Railway-style logo marquee, noir).
- * Shows the HydraDB-native primitives HydraSentry speaks. The track holds two
+ * Shows the HydraDB-native primitives Constellan speaks. The track holds two
  * identical halves and slides -50% via a pure-CSS keyframe for a seamless loop;
  * it pauses on hover (animation-play-state). Under prefers-reduced-motion it
  * renders a single static, wrapped, centered row.

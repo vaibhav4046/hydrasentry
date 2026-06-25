@@ -24,7 +24,7 @@ import { MAX_STAGE } from "./artifactTreeData";
 const KICKER = "HYDRADB NATIVE · CONTEXT INTEGRITY · MCP SECURITY";
 const HEADLINE = "Secure the memory layer before your agent acts.";
 const SUBCOPY =
-  "HydraSentry poisons HydraDB context, replays agent tasks, visualizes the exact graph path that caused failure, blocks unsafe memory through MCP, and exports evidence reports.";
+  "Constellan poisons HydraDB context, replays agent tasks, visualizes the exact graph path that caused failure, blocks unsafe memory through MCP, and exports evidence reports.";
 
 const PRIMITIVE_ROW = [
   "HydraDB query_paths",
@@ -56,7 +56,7 @@ const QUERY_PATHS: QueryPathRow[] = [
 const DEMO_STAGE_MS = 520;
 
 /**
- * The signature HydraSentry hero. Cinematic split layout: copy + CTAs on the
+ * The signature Constellan hero. Cinematic split layout: copy + CTAs on the
  * left, the dominant ArtifactTreeGraph on the right/center (partially behind the
  * text but readable thanks to a legibility vignette), an interactive Query-Paths
  * preview card, the live AnimatedRiskBadge (12 -> 87), a graph_source badge, the

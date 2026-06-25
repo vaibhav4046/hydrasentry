@@ -25,7 +25,7 @@ export function DemoDataPill({ className, variant = "inline" }: DemoDataPillProp
   return (
     <span
       role="status"
-      title="No backend is reachable, so HydraSentry is showing bundled demo data captured from a demo-mode run. Connect a backend for live runs."
+      title="No backend is reachable, so Constellan is showing bundled demo data captured from a demo-mode run. Connect a backend for live runs."
       className={cn(
         "mono inline-flex items-center gap-1.5 rounded-full border border-hairline-strong bg-white/[.04] px-2.5 py-1 text-[10px] uppercase tracking-[0.14em] text-muted backdrop-blur-md",
         variant === "fixed" &&

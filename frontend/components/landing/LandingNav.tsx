@@ -26,7 +26,7 @@ export function LandingNav() {
     <div className="sticky top-0 z-30">
       <div className="border-b border-hairline bg-deep/80 backdrop-blur-xl">
         <p className="mono mx-auto max-w-7xl px-6 py-2 text-center text-[11px] tracking-[0.08em] text-muted">
-          HydraSentry scans HydraDB query_paths, SkillMake skills, and MCP
+          Constellan scans HydraDB query_paths, SkillMake skills, and MCP
           context before agents act.
         </p>
       </div>
@@ -39,7 +39,7 @@ export function LandingNav() {
         )}
       >
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-6 px-6 py-3">
-          <Link href="/" aria-label="HydraSentry home" className="shrink-0">
+          <Link href="/" aria-label="Constellan home" className="shrink-0">
             <MonochromeLogo variant="wordmark" height={30} />
           </Link>
           <div className="hidden items-center gap-7 lg:flex">

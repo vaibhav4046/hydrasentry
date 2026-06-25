@@ -1,5 +1,5 @@
 /**
- * Shared Framer Motion variants for HydraSentry.
+ * Shared Framer Motion variants for Constellan.
  *
  * House style: slow, cinematic, never bouncy. Durations 0.45–0.8s,
  * ease [0.22, 1, 0.36, 1]. Reveal motion leans on opacity + small y +

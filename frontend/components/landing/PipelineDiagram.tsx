@@ -8,7 +8,7 @@ import { fadeUp, nodePopIn, staggerWide } from "@/lib/motion";
 import { cn } from "@/lib/cn";
 
 /**
- * The deterministic HydraSentry pipeline rendered as an animated monochrome
+ * The deterministic Constellan pipeline rendered as an animated monochrome
  * node-flow. Nodes pop in left-to-right on scroll; connectors are hairline with
  * a chevron. "tainted" steps (poison present) read brighter with a dashed ring
  * and a traveling-dash underline — danger via white intensity + motion, never

@@ -1,5 +1,5 @@
 /**
- * Barrel export for the HydraSentry noir component library. The dashboard
+ * Barrel export for the Constellan noir component library. The dashboard
  * agent can import any primitive from "@/components/noir". Types for variant
  * props are re-exported alongside their components.
  */

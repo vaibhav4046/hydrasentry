@@ -84,7 +84,7 @@ export function SiteFooter() {
 
         <div className="mt-12 flex flex-col items-start justify-between gap-3 border-t border-hairline pt-6 sm:flex-row sm:items-center">
           <p className="mono text-[11px] text-faint">
-            HydraSentry · Context Integrity Platform · HydraDB Build Blitz
+            Constellan · Context Integrity Platform · HydraDB Build Blitz
           </p>
           <Link
             href="/results"

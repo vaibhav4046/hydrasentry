@@ -69,7 +69,7 @@ export const COCKPIT_NAV: CockpitNavGroup[] = [
 
 /**
  * Flat route -> { title, crumb } lookup for the top bar. Titles and breadcrumbs
- * are the source's titleMap / crumbMap with CASTELLAN rebranded to HYDRASENTRY.
+ * are the source's titleMap / crumbMap with CASTELLAN rebranded to CONSTELLAN.
  */
 export const ROUTE_META: Record<
   string,
@@ -78,41 +78,41 @@ export const ROUTE_META: Record<
   "/mission": {
     title: "Command",
     section: "Operations",
-    crumb: "HYDRASENTRY / OPERATIONS",
+    crumb: "CONSTELLAN / OPERATIONS",
   },
   "/replay": {
     title: "Replay",
     section: "Operations",
-    crumb: "HYDRASENTRY / REPLAY",
+    crumb: "CONSTELLAN / REPLAY",
   },
   "/graph": {
     title: "Memory Graph",
     section: "Operations",
-    crumb: "HYDRASENTRY / EVIDENCE",
+    crumb: "CONSTELLAN / EVIDENCE",
   },
   "/skillmake": {
     title: "SkillMake Verifier",
     section: "Security",
-    crumb: "HYDRASENTRY / SKILLS",
+    crumb: "CONSTELLAN / SKILLS",
   },
   "/mcp": {
     title: "MCP Gateway",
     section: "Security",
-    crumb: "HYDRASENTRY / GATEWAY",
+    crumb: "CONSTELLAN / GATEWAY",
   },
   "/scheduled": {
     title: "Scheduled Agents",
     section: "Automation",
-    crumb: "HYDRASENTRY / AUTOMATION",
+    crumb: "CONSTELLAN / AUTOMATION",
   },
   "/results": {
     title: "Findings",
     section: "Automation",
-    crumb: "HYDRASENTRY / RESULTS",
+    crumb: "CONSTELLAN / RESULTS",
   },
   "/settings": {
     title: "Configuration",
     section: "Workspace",
-    crumb: "HYDRASENTRY / CONFIG",
+    crumb: "CONSTELLAN / CONFIG",
   },
 };

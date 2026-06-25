@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 /* ============================================================
-   HydraSentry design tokens — Castellan Cockpit cool silver-blue noir.
+   Constellan design tokens — Castellan Cockpit cool silver-blue noir.
    Color law: backgrounds are near-black; all "color" is white/silver
    at varying opacity. Danger/safe communicated via brightness, border,
    icon, label, and motion — never hue. Values ported 1:1 from the

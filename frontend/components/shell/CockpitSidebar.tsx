@@ -18,7 +18,7 @@ const MONO = "var(--font-geist-mono), 'JetBrains Mono', monospace";
 
 /**
  * The Castellan left command rail (248px), ported 1:1 from the source: the
- * HYDRASENTRY wordmark + glowing dot, a Refund Agent workspace selector card,
+ * CONSTELLAN wordmark + glowing dot, a Refund Agent workspace selector card,
  * grouped icon nav with a left-edge active tick + count badges, and a
  * systems-nominal footer with mono meta lines. Sticky, hairline right border,
  * layered dark glass, blur(10px). Monochrome throughout.
@@ -58,7 +58,7 @@ export function CockpitSidebar({ onNavigate, engaged }: CockpitSidebarProps) {
         }}
       >
         <span style={{ fontWeight: 400, letterSpacing: "0.32em", color: C.accentDim }}>
-          HYDRASENTRY
+          CONSTELLAN
         </span>
         <span
           style={{

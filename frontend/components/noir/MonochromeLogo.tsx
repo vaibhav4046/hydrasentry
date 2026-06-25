@@ -3,7 +3,7 @@ import { cn } from "@/lib/cn";
 /**
  * Public variant API. `full`/`compact` are the canonical names; the legacy
  * `wordmark`/`mark` aliases are kept so existing call sites keep working.
- *   full | wordmark  -> the complete "HYDRASENTRY" logotype
+ *   full | wordmark  -> the complete "CONSTELLAN" logotype
  *   compact | mark   -> the "HS" monogram lockup (icon rail / tight spots)
  */
 type LogoVariant = "full" | "compact" | "wordmark" | "mark";
@@ -28,7 +28,7 @@ const FULL = { vw: 232, vh: 32, aspect: 232 / 32 };
 const COMPACT = { vw: 60, vh: 32, aspect: 60 / 32 };
 
 /**
- * HydraSentry brand logotype — a sleek, intentional monochrome wordmark.
+ * Constellan brand logotype — a sleek, intentional monochrome wordmark.
  *
  * Treatment: all-caps, tight optical tracking, two-tone weight — "HYDRA" set in
  * silver at a lighter weight, "SENTRY" in white at a heavier weight, so the eye
@@ -52,7 +52,7 @@ export function MonochromeLogo({
       width={width}
       height={height}
       role="img"
-      aria-label="HydraSentry"
+      aria-label="Constellan"
       className={cn("block select-none overflow-visible", className)}
       shapeRendering="geometricPrecision"
       style={{

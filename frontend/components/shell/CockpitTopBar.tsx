@@ -7,7 +7,7 @@ import { deriveCockpit, C } from "@/lib/cockpit/derive";
 interface CockpitTopBarProps {
   /** Page title, e.g. "Command". */
   title: string;
-  /** Mono breadcrumb, e.g. "HYDRASENTRY / OPERATIONS". */
+  /** Mono breadcrumb, e.g. "CONSTELLAN / OPERATIONS". */
   crumb: string;
   /** Optional extra page actions (rendered before the Run Demo button). */
   actions?: ReactNode;

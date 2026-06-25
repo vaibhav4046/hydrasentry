@@ -1,5 +1,5 @@
 /**
- * Typed client for the HydraSentry backend, with an offline-safe demo fallback.
+ * Typed client for the Constellan backend, with an offline-safe demo fallback.
  *
  * Every function is a client-side fetch and returns a normalized ApiResult<T>
  * (never throws) so UI code branches on .ok instead of try/catch. The backend

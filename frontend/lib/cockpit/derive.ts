@@ -2,7 +2,7 @@
  * Castellan Cockpit data deriver.
  *
  * Ports the data model from the Castellan standalone source's renderVals(), but
- * fed by the REAL HydraSentry run artifact + live backend posture instead of the
+ * fed by the REAL Constellan run artifact + live backend posture instead of the
  * source's hard-coded mock values. The single source of "posture" is whether a
  * run is present and compromised: a live judge-demo run flips the cockpit into
  * the poisoned / CRITICAL state, with the risk score, agent statuses, activity

@@ -8,7 +8,7 @@ import { CastellanFooter } from "@/components/landing/castellan/CastellanFooter"
 
 /**
  * Landing page (/), a same-to-same port of the standalone Castellan landing
- * design (docs/castellan_import/HydraSentry.dc.html), rebranded HydraSentry.
+ * design (docs/castellan_import/Constellan.dc.html), rebranded Constellan.
  *
  * Layered like the source: a fixed noir background (CastellanBackground, z-0:
  * radial glows + masked grid + conic radar + drifting particles) sits behind a

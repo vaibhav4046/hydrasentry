@@ -7,7 +7,7 @@ import { fadeUp, staggerWide } from "@/lib/motion";
 import { cn } from "@/lib/cn";
 
 /**
- * Use-case bento: the five context-attack classes HydraSentry catches. Adapted
+ * Use-case bento: the five context-attack classes Constellan catches. Adapted
  * from HydraDB's use-case bento to our security framing. The first tile spans
  * two columns as the hero of the grid. Each tile has the animated silver
  * border-sweep (.hydra-border-sweep) on hover/focus and lifts on hover.

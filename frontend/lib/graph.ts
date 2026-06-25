@@ -1,7 +1,7 @@
 /**
  * Graph layout + classification for the Context Graph hero.
  *
- * The live HydraSentry engine emits generic nodes (type "entity") plus tainted
+ * The live Constellan engine emits generic nodes (type "entity") plus tainted
  * query_paths. This module maps each node to one of the visual roles the UI
  * renders (user_task, clean_policy, poisoned_memory, query_path, policy_conflict,
  * unsafe_tool_action, mcp_firewall, report), computes a deterministic left to
