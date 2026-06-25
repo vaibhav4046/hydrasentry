@@ -1,5 +1,6 @@
 "use client";
 
+import type { CSSProperties } from "react";
 import { useEffect, useMemo, useState } from "react";
 import { m, useReducedMotion } from "framer-motion";
 import { cn } from "@/lib/cn";
@@ -125,11 +126,20 @@ export function ArtifactTreeGraph({
 
   // Stable filter ids (component can mount more than once).
   const ids = useMemo(
-    () => ({ glow: "atg-glow", taintGlow: "atg-taint-glow", spot: "atg-spot" }),
+    () => ({
+      glow: "atg-glow",
+      taintGlow: "atg-taint-glow",
+      spot: "atg-spot",
+      softBlur: "atg-soft",
+    }),
     [],
   );
 
   // ---- shared SVG defs ------------------------------------------------------
+  // Glow is a SEPARATE pre-blurred halo layer rendered BENEATH the crisp
+  // strokes — never a blur smeared over the linework (that's what made the tree
+  // fuzzy). `softBlur` blurs a duplicate of the strokes for the halo; the real
+  // strokes paint on top at full crispness with shape-rendering=geometricPrecision.
   const defs = (
     <defs>
       <radialGradient id={ids.spot} cx="50%" cy="42%" r="62%">
@@ -137,15 +147,27 @@ export function ArtifactTreeGraph({
         <stop offset="46%" stopColor="#FFFFFF" stopOpacity="0.035" />
         <stop offset="100%" stopColor="#FFFFFF" stopOpacity="0" />
       </radialGradient>
-      <filter id={ids.glow} x="-60%" y="-60%" width="220%" height="220%">
-        <feGaussianBlur stdDeviation="1.4" result="b" />
-        <feMerge>
-          <feMergeNode in="b" />
-          <feMergeNode in="SourceGraphic" />
-        </feMerge>
+      {/* pure blur for the underneath halo pass (no source-merge => no smear on top) */}
+      <filter
+        id={ids.softBlur}
+        x="-40%"
+        y="-40%"
+        width="180%"
+        height="180%"
+        colorInterpolationFilters="sRGB"
+      >
+        <feGaussianBlur stdDeviation="2.2" />
       </filter>
-      <filter id={ids.taintGlow} x="-120%" y="-120%" width="340%" height="340%">
-        <feGaussianBlur stdDeviation="3" result="b" />
+      {/* crisp taint glow: tight blur, merged under the source so the hot edge stays sharp */}
+      <filter
+        id={ids.taintGlow}
+        x="-80%"
+        y="-80%"
+        width="260%"
+        height="260%"
+        colorInterpolationFilters="sRGB"
+      >
+        <feGaussianBlur stdDeviation="2.4" result="b" />
         <feMerge>
           <feMergeNode in="b" />
           <feMergeNode in="SourceGraphic" />
@@ -161,9 +183,10 @@ export function ArtifactTreeGraph({
     >
       <svg
         viewBox={`0 0 ${VB_W} ${VB_H}`}
-        className="block h-auto w-full overflow-visible"
+        className="block h-auto w-full overflow-visible [transform:translateZ(0)]"
         fill="none"
         preserveAspectRatio="xMidYMid meet"
+        shapeRendering="geometricPrecision"
         role="presentation"
       >
         {defs}
@@ -253,6 +276,9 @@ function Rings({ isAnimated }: { isAnimated: boolean }) {
 }
 
 // ---- INIT: glowing node-dots, breathing forever -----------------------------
+// Breathing is driven by ONE CSS keyframe (.atg-ember), staggered per-dot via
+// custom properties — not ~90 framer motion values. This is the single biggest
+// jank win: the twinkle runs on the compositor with near-zero main-thread cost.
 function Particles({
   isAnimated,
   activeStage,
@@ -260,38 +286,38 @@ function Particles({
   isAnimated: boolean;
   activeStage: number;
 }) {
-  // Dots near the trunk show from INIT; outer embers fade in as the tree seeds.
   return (
-    <g>
+    <g style={{ willChange: "opacity", transform: "translateZ(0)" }}>
       {PARTICLES.map((p, i) => {
         const shown = activeStage >= (p.bright > 0.55 ? 0 : 1);
-        const baseOpacity = shown ? 0.25 + p.bright * 0.6 : 0;
+        const baseOpacity = 0.25 + p.bright * 0.6;
+        if (!shown) return null;
+        if (!isAnimated) {
+          return (
+            <circle
+              key={`p-${i}`}
+              cx={p.x}
+              cy={p.y}
+              r={p.r}
+              fill="#FFFFFF"
+              opacity={baseOpacity}
+            />
+          );
+        }
         return (
-          <m.circle
+          <circle
             key={`p-${i}`}
             cx={p.x}
             cy={p.y}
             r={p.r}
             fill="#FFFFFF"
-            initial={isAnimated ? { opacity: 0 } : false}
-            animate={
-              isAnimated
-                ? {
-                    opacity: shown
-                      ? [baseOpacity * 0.6, baseOpacity, baseOpacity * 0.6]
-                      : 0,
-                  }
-                : { opacity: baseOpacity }
-            }
-            transition={
-              isAnimated
-                ? {
-                    duration: 3 + p.phase * 2,
-                    ease: "easeInOut",
-                    repeat: Infinity,
-                    delay: p.phase * 1.5,
-                  }
-                : undefined
+            className="atg-ember"
+            style={
+              {
+                "--atg-bright": baseOpacity.toFixed(3),
+                "--atg-dur": `${(3 + p.phase * 2).toFixed(2)}s`,
+                "--atg-delay": `${(p.phase * 1.5).toFixed(2)}s`,
+              } as CSSProperties
             }
           />
         );
@@ -301,6 +327,10 @@ function Particles({
 }
 
 // ---- SEED: branch strokes draw in -------------------------------------------
+// Two passes for razor-sharp luminosity:
+//   1) a soft, low-opacity HALO underneath (pre-blurred, thicker) — the glow
+//   2) the CRISP white strokes on top (no filter) — the actual linework
+// This keeps every limb pixel-sharp at 4K while still reading as luminous.
 function Branches({
   activeStage,
   isAnimated,
@@ -308,41 +338,60 @@ function Branches({
 }: {
   activeStage: number;
   isAnimated: boolean;
-  ids: { glow: string };
+  ids: { softBlur: string };
 }) {
   const drawn = activeStage >= 1;
+
+  const drawProps = (b: (typeof BRANCHES)[number]) => ({
+    initial: isAnimated ? ({ pathLength: 0, opacity: 0 } as const) : false,
+    animate: isAnimated
+      ? { pathLength: drawn ? 1 : 0, opacity: drawn ? 1 : 0 }
+      : { pathLength: 1, opacity: 1 },
+    transition: isAnimated
+      ? {
+          pathLength: {
+            duration: 0.7,
+            ease: [0.22, 1, 0.36, 1] as [number, number, number, number],
+            delay: drawn ? b.order * 0.16 : 0,
+          },
+          opacity: { duration: 0.3, delay: drawn ? b.order * 0.16 : 0 },
+        }
+      : undefined,
+  });
+
   return (
-    <g style={{ filter: `url(#${ids.glow})` }}>
-      {BRANCHES.map((b, i) => (
-        <m.path
-          key={`b-${i}`}
-          d={b.d}
-          stroke="#FFFFFF"
-          strokeOpacity={0.18 + b.bright * 0.6}
-          strokeWidth={b.width}
-          strokeLinecap="round"
-          fill="none"
-          initial={isAnimated ? { pathLength: 0, opacity: 0 } : false}
-          animate={
-            isAnimated
-              ? { pathLength: drawn ? 1 : 0, opacity: drawn ? 1 : 0 }
-              : { pathLength: 1, opacity: 1 }
-          }
-          transition={
-            isAnimated
-              ? {
-                  pathLength: {
-                    duration: 0.7,
-                    ease: [0.22, 1, 0.36, 1],
-                    delay: drawn ? b.order * 0.18 : 0,
-                  },
-                  opacity: { duration: 0.3, delay: drawn ? b.order * 0.18 : 0 },
-                }
-              : undefined
-          }
-        />
-      ))}
-    </g>
+    <>
+      {/* 1) blurred halo pass (the glow) — beneath, never smeared over strokes */}
+      <g style={{ filter: `url(#${ids.softBlur})`, willChange: "opacity" }}>
+        {BRANCHES.map((b, i) => (
+          <m.path
+            key={`bh-${i}`}
+            d={b.d}
+            stroke="#FFFFFF"
+            strokeOpacity={(0.1 + b.bright * 0.28).toFixed(3)}
+            strokeWidth={b.width + 1.6}
+            strokeLinecap="round"
+            fill="none"
+            {...drawProps(b)}
+          />
+        ))}
+      </g>
+      {/* 2) crisp linework pass — no filter, geometricPrecision from the root svg */}
+      <g>
+        {BRANCHES.map((b, i) => (
+          <m.path
+            key={`bc-${i}`}
+            d={b.d}
+            stroke="#FFFFFF"
+            strokeOpacity={(0.34 + b.bright * 0.62).toFixed(3)}
+            strokeWidth={b.width}
+            strokeLinecap="round"
+            fill="none"
+            {...drawProps(b)}
+          />
+        ))}
+      </g>
+    </>
   );
 }
 
@@ -354,31 +403,44 @@ function QueryPath({
 }: {
   activeStage: number;
   isAnimated: boolean;
-  ids: { glow: string };
+  ids: { softBlur: string };
 }) {
   const shown = activeStage >= 3;
   if (!shown) return null;
+  const reveal = isAnimated
+    ? { pathLength: 1, opacity: [0, 0.78, 0.5] }
+    : { pathLength: 1, opacity: 0.55 };
+  const trans = isAnimated
+    ? { pathLength: { duration: 1, ease: [0.22, 1, 0.36, 1] as [number, number, number, number] }, opacity: { duration: 1 } }
+    : undefined;
   return (
-    <m.path
-      d={QUERY_PATH_D}
-      stroke="#FFFFFF"
-      strokeOpacity={0.55}
-      strokeWidth={2}
-      strokeLinecap="round"
-      fill="none"
-      style={{ filter: `url(#${ids.glow})` }}
-      initial={isAnimated ? { pathLength: 0, opacity: 0 } : false}
-      animate={
-        isAnimated
-          ? { pathLength: 1, opacity: [0, 0.7, 0.45] }
-          : { pathLength: 1, opacity: 0.5 }
-      }
-      transition={
-        isAnimated
-          ? { pathLength: { duration: 1, ease: [0.22, 1, 0.36, 1] }, opacity: { duration: 1 } }
-          : undefined
-      }
-    />
+    <>
+      {/* soft halo beneath */}
+      <m.path
+        d={QUERY_PATH_D}
+        stroke="#FFFFFF"
+        strokeOpacity={0.22}
+        strokeWidth={4}
+        strokeLinecap="round"
+        fill="none"
+        style={{ filter: `url(#${ids.softBlur})` }}
+        initial={isAnimated ? { pathLength: 0, opacity: 0 } : false}
+        animate={reveal}
+        transition={trans}
+      />
+      {/* crisp accent on top */}
+      <m.path
+        d={QUERY_PATH_D}
+        stroke="#FFFFFF"
+        strokeOpacity={0.7}
+        strokeWidth={1.8}
+        strokeLinecap="round"
+        fill="none"
+        initial={isAnimated ? { pathLength: 0, opacity: 0 } : false}
+        animate={reveal}
+        transition={trans}
+      />
+    </>
   );
 }
 
@@ -416,16 +478,15 @@ function NodeEdges({
               x2={b.x}
               y2={b.y}
               stroke="#FFFFFF"
-              strokeOpacity={hot ? 0.96 : e.tainted ? 0.6 : 0.2}
-              strokeWidth={hot ? 2.4 : e.tainted ? 1.6 : 1}
+              strokeOpacity={hot ? 0.96 : e.tainted ? 0.66 : 0.32}
+              strokeWidth={hot ? 2.4 : e.tainted ? 1.6 : 1.1}
               strokeDasharray={e.tainted ? "5 4" : "3 5"}
-              style={hot ? { filter: `url(#${ids.taintGlow})` } : undefined}
+              style={{
+                filter: hot ? `url(#${ids.taintGlow})` : undefined,
+                transition: "stroke-opacity 0.4s ease, stroke-width 0.4s ease",
+              }}
               initial={isAnimated ? { pathLength: 0, opacity: 0 } : false}
-              animate={
-                isAnimated
-                  ? { pathLength: 1, opacity: 1 }
-                  : { pathLength: 1, opacity: 1 }
-              }
+              animate={{ pathLength: 1, opacity: 1 }}
               transition={
                 isAnimated
                   ? {
@@ -435,9 +496,9 @@ function NodeEdges({
                   : undefined
               }
             />
-            {/* traveling dash on hot tainted edges */}
+            {/* traveling dash on hot tainted edges — CSS keyframe, GPU-cheap */}
             {isAnimated && hot && (
-              <m.line
+              <line
                 x1={a.x}
                 y1={a.y}
                 x2={b.x}
@@ -447,14 +508,8 @@ function NodeEdges({
                 strokeWidth={2.4}
                 strokeLinecap="round"
                 strokeDasharray="10 200"
+                className="atg-travel"
                 style={{ filter: `url(#${ids.taintGlow})` }}
-                initial={{ strokeDashoffset: 210 }}
-                animate={{ strokeDashoffset: [210, -10] }}
-                transition={{
-                  duration: 1.8,
-                  ease: "linear",
-                  repeat: Infinity,
-                }}
               />
             )}
           </g>
@@ -502,10 +557,13 @@ function RealEdges({
               x2={b.x}
               y2={b.y}
               stroke="#FFFFFF"
-              strokeOpacity={hot ? 0.96 : e.tainted ? 0.6 : 0.22}
-              strokeWidth={hot ? 2.4 : e.tainted ? 1.6 : 1}
+              strokeOpacity={hot ? 0.96 : e.tainted ? 0.66 : 0.32}
+              strokeWidth={hot ? 2.4 : e.tainted ? 1.6 : 1.1}
               strokeDasharray={e.tainted ? "5 4" : "3 5"}
-              style={hot ? { filter: `url(#${ids.taintGlow})` } : undefined}
+              style={{
+                filter: hot ? `url(#${ids.taintGlow})` : undefined,
+                transition: "stroke-opacity 0.4s ease, stroke-width 0.4s ease",
+              }}
               initial={isAnimated ? { pathLength: 0, opacity: 0 } : false}
               animate={{ pathLength: 1, opacity: 1 }}
               transition={
@@ -515,7 +573,7 @@ function RealEdges({
               }
             />
             {isAnimated && hot && (
-              <m.line
+              <line
                 x1={a.x}
                 y1={a.y}
                 x2={b.x}
@@ -524,10 +582,8 @@ function RealEdges({
                 strokeWidth={2.4}
                 strokeLinecap="round"
                 strokeDasharray="10 200"
+                className="atg-travel"
                 style={{ filter: `url(#${ids.taintGlow})` }}
-                initial={{ strokeDashoffset: 210 }}
-                animate={{ strokeDashoffset: [210, -10] }}
-                transition={{ duration: 1.8, ease: "linear", repeat: Infinity }}
               />
             )}
           </g>

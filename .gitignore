@@ -26,3 +26,4 @@ runs/*.json
 !runs/.gitkeep
 .vercel/
 remotion/build/
+docs/qa/

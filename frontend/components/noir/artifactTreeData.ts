@@ -63,29 +63,39 @@ export interface Branch {
 
 export const BRANCHES: Branch[] = [
   // trunk (thick, bright), bottom-center rising to the canopy core
-  { d: "M500 690 C 498 600, 502 470, 500 360", width: 3.4, bright: 1, order: 0 },
+  { d: "M500 690 C 498 600, 502 470, 500 360", width: 3.6, bright: 1, order: 0 },
   // primary fork — left
-  { d: "M500 410 C 470 360, 420 330, 372 300", width: 2.4, bright: 0.85, order: 1 },
+  { d: "M500 410 C 470 360, 420 330, 372 300", width: 2.6, bright: 0.96, order: 1 },
   // primary fork — right
-  { d: "M500 410 C 532 358, 584 330, 632 300", width: 2.4, bright: 0.85, order: 1 },
+  { d: "M500 410 C 532 358, 584 330, 632 300", width: 2.6, bright: 0.96, order: 1 },
   // primary fork — up-left
-  { d: "M500 380 C 484 320, 452 280, 430 232", width: 2.1, bright: 0.78, order: 1 },
+  { d: "M500 380 C 484 320, 452 280, 430 232", width: 2.3, bright: 0.9, order: 1 },
   // primary fork — up-right
-  { d: "M500 380 C 518 320, 552 282, 576 234", width: 2.1, bright: 0.78, order: 1 },
+  { d: "M500 380 C 518 320, 552 282, 576 234", width: 2.3, bright: 0.9, order: 1 },
   // secondary — left canopy
-  { d: "M372 300 C 332 276, 300 250, 276 214", width: 1.5, bright: 0.6, order: 2 },
-  { d: "M372 300 C 360 256, 348 224, 342 188", width: 1.4, bright: 0.56, order: 2 },
-  { d: "M430 232 C 410 196, 396 168, 392 138", width: 1.3, bright: 0.54, order: 2 },
+  { d: "M372 300 C 332 276, 300 250, 276 214", width: 1.7, bright: 0.74, order: 2 },
+  { d: "M372 300 C 360 256, 348 224, 342 188", width: 1.6, bright: 0.7, order: 2 },
+  { d: "M430 232 C 410 196, 396 168, 392 138", width: 1.5, bright: 0.68, order: 2 },
   // secondary — right canopy
-  { d: "M632 300 C 672 276, 706 252, 730 216", width: 1.5, bright: 0.6, order: 2 },
-  { d: "M632 300 C 644 258, 658 226, 666 190", width: 1.4, bright: 0.56, order: 2 },
-  { d: "M576 234 C 596 198, 612 170, 618 140", width: 1.3, bright: 0.54, order: 2 },
+  { d: "M632 300 C 672 276, 706 252, 730 216", width: 1.7, bright: 0.74, order: 2 },
+  { d: "M632 300 C 644 258, 658 226, 666 190", width: 1.6, bright: 0.7, order: 2 },
+  { d: "M576 234 C 596 198, 612 170, 618 140", width: 1.5, bright: 0.68, order: 2 },
+  { d: "M500 360 C 496 320, 500 296, 500 268", width: 1.4, bright: 0.82, order: 2 },
+  // tertiary sub-twigs off the secondaries — richer canopy (left)
+  { d: "M300 250 C 286 232, 278 220, 268 206", width: 1.0, bright: 0.52, order: 3 },
+  { d: "M348 224 C 336 208, 330 198, 320 184", width: 1.0, bright: 0.52, order: 3 },
+  { d: "M396 168 C 384 152, 378 142, 370 130", width: 0.95, bright: 0.5, order: 3 },
+  // tertiary sub-twigs (right)
+  { d: "M706 252 C 720 234, 728 222, 738 208", width: 1.0, bright: 0.52, order: 3 },
+  { d: "M658 226 C 670 210, 676 200, 686 186", width: 1.0, bright: 0.52, order: 3 },
+  { d: "M612 170 C 624 154, 630 144, 638 132", width: 0.95, bright: 0.5, order: 3 },
   // fine twigs (sparse embers at the tips)
-  { d: "M276 214 C 256 190, 244 174, 236 150", width: 0.9, bright: 0.4, order: 3 },
-  { d: "M342 188 C 332 164, 326 148, 324 126", width: 0.9, bright: 0.4, order: 3 },
-  { d: "M730 216 C 750 192, 762 176, 770 152", width: 0.9, bright: 0.4, order: 3 },
-  { d: "M666 190 C 676 166, 682 150, 684 128", width: 0.9, bright: 0.4, order: 3 },
-  { d: "M500 360 C 496 320, 500 296, 500 268", width: 1.2, bright: 0.7, order: 2 },
+  { d: "M276 214 C 256 190, 244 174, 236 150", width: 0.85, bright: 0.46, order: 4 },
+  { d: "M342 188 C 332 164, 326 148, 324 126", width: 0.85, bright: 0.46, order: 4 },
+  { d: "M730 216 C 750 192, 762 176, 770 152", width: 0.85, bright: 0.46, order: 4 },
+  { d: "M666 190 C 676 166, 682 150, 684 128", width: 0.85, bright: 0.46, order: 4 },
+  { d: "M392 138 C 384 120, 380 110, 378 96", width: 0.75, bright: 0.4, order: 4 },
+  { d: "M618 140 C 626 122, 630 112, 632 98", width: 0.75, bright: 0.4, order: 4 },
 ];
 
 // A clean "query path" that glows through the safe branches at stage >= 3.
@@ -113,7 +123,8 @@ function buildParticles(): Particle[] {
   for (const b of BRANCHES) {
     const pts = parsePathPoints(b.d);
     if (!pts) continue;
-    const density = b.order === 0 ? 14 : b.order === 1 ? 9 : b.order === 2 ? 6 : 3;
+    const density =
+      b.order === 0 ? 16 : b.order === 1 ? 10 : b.order === 2 ? 7 : b.order === 3 ? 4 : 2;
     for (let i = 0; i < density; i++) {
       const t = (i + 0.5) / density;
       const p = cubicAt(pts, t);

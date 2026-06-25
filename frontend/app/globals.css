@@ -223,6 +223,41 @@
   }
 }
 
+/* Traveling-dash along the tainted edges — a single GPU-cheap CSS keyframe on
+   stroke-dashoffset (no per-frame JS). Pair with .atg-travel on a <line>/<path>
+   that sets stroke-dasharray. Compositor-friendly: only dashoffset animates. */
+@keyframes atg-dash-travel {
+  from {
+    stroke-dashoffset: 210;
+  }
+  to {
+    stroke-dashoffset: -10;
+  }
+}
+.atg-travel {
+  animation: atg-dash-travel 1.8s linear infinite;
+  will-change: stroke-dashoffset;
+}
+
+/* Ember "breathing" for the scattered node-dots — one CSS keyframe, staggered
+   per-dot via inline animation-delay/duration. Replaces ~90 per-dot JS tweens
+   so the canopy twinkles at 60fps with near-zero main-thread cost. The dot's
+   peak opacity is set per-element via the --atg-bright custom property. */
+@keyframes atg-ember {
+  0%,
+  100% {
+    opacity: calc(var(--atg-bright, 0.6) * 0.55);
+  }
+  50% {
+    opacity: var(--atg-bright, 0.6);
+  }
+}
+.atg-ember {
+  animation: atg-ember var(--atg-dur, 4s) ease-in-out infinite;
+  animation-delay: var(--atg-delay, 0s);
+  will-change: opacity;
+}
+
 /* Honor reduced-motion: kill transitions/animations and scroll smoothing. */
 @media (prefers-reduced-motion: reduce) {
   html {
