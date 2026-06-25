@@ -67,8 +67,8 @@ export function CastellanEmblem({
             letterSpacing: "-0.01em",
           }}
         >
-          <span style={{ fontWeight: 500, color: "#AEB6C2" }}>Hydra</span>
-          <span style={{ fontWeight: 700, color: "#fff" }}>Sentry</span>
+          <span style={{ fontWeight: 500, color: "#AEB6C2" }}>Con</span>
+          <span style={{ fontWeight: 700, color: "#fff" }}>stellan</span>
         </span>
       )}
     </span>
