@@ -362,6 +362,19 @@
   will-change: opacity;
 }
 
+/* WebGL hero (WebGLMemoryField) cinematic overlays. The GPU canvas draws the
+   additive particle field; these two CSS layers sit ABOVE it so they cost zero
+   GL fill-rate and nothing per frame. Vignette deepens the corners to black for
+   the Skyfall-noir frame; grain is a static tiled SVG-noise layer at very low
+   opacity (monochrome) for filmic texture. */
+.hydra-webgl-vignette {
+  background: radial-gradient(
+    120% 100% at 50% 44%,
+    transparent 30%,
+    rgba(2, 3, 5, 0.42) 78%,
+    rgba(2, 3, 5, 0.72) 100%
+  );
+}
 /* Honor reduced-motion: kill transitions/animations and scroll smoothing. */
 @media (prefers-reduced-motion: reduce) {
   html {

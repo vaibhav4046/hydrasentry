@@ -11,6 +11,7 @@ import { runJudgeDemo } from "@/lib/api";
 import { useDemoStore } from "@/store/useDemoStore";
 import { GlowButton } from "./GlowButton";
 import { ArtifactTreeGraph } from "./ArtifactTreeGraph";
+import { HeroMemoryField } from "./HeroMemoryField";
 import { AnimatedRiskBadge } from "./AnimatedRiskBadge";
 import { GraphKeyframeStrip } from "./GraphKeyframeStrip";
 import {
@@ -263,6 +264,16 @@ export function ArtifactTreeHero() {
             selectedPathId={selectedBadgeId}
             onNodeClick={setInspectNode}
             onPathSelect={handleSelectPath}
+            // LANDING hero only: replace the 2D core with the WebGL2 GPU field.
+            // It receives the resolved stage + hovered node so branches light by
+            // stage (Launch Demo) and a hovered badge brightens its filament.
+            renderField={({ stage: fieldStage, hoveredNodeId }) => (
+              <HeroMemoryField
+                stage={treeAutoplay ? undefined : fieldStage}
+                hoveredNodeId={hoveredNodeId}
+                isRunning={isRunning}
+              />
+            )}
             className="mx-auto max-w-[680px] lg:max-w-none"
           />
 

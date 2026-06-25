@@ -18,6 +18,8 @@ export { ContextGraphPreview } from "./ContextGraphPreview";
 export { MemoryTree } from "./MemoryTree";
 export { ArtifactTreeGraph } from "./ArtifactTreeGraph";
 export { ArtifactTreeHero } from "./ArtifactTreeHero";
+export { HeroMemoryField } from "./HeroMemoryField";
+export { WebGLMemoryFieldPoster } from "./WebGLMemoryFieldPoster";
 export { GraphNodeLabel } from "./GraphNodeLabel";
 export { AnimatedRiskBadge } from "./AnimatedRiskBadge";
 export { NodeInspectorPreview } from "./NodeInspectorPreview";

@@ -1,5 +1,6 @@
 "use client";
 
+import type React from "react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useReducedMotion } from "framer-motion";
 import { cn } from "@/lib/cn";
@@ -40,6 +41,13 @@ interface ArtifactTreeGraphProps {
   onNodeClick?: (node: InspectorNode) => void;
   onNodeHover?: (node: InspectorNode | null) => void;
   onPathSelect?: (id: string) => void;
+  /**
+   * Optional override for the visual FIELD layer behind the badges. Defaults to
+   * the lightweight 2D NeuralMemoryCore (used by /graph, /results, /replay). The
+   * LANDING hero injects the WebGL2 GPU field here instead. Receives the resolved
+   * stage + currently-hovered node id so it can light branches by stage/hover.
+   */
+  renderField?: (args: { stage: number; hoveredNodeId: string | null }) => React.ReactNode;
   className?: string;
 }
 
@@ -69,6 +77,7 @@ export function ArtifactTreeGraph({
   onNodeClick,
   onNodeHover,
   onPathSelect,
+  renderField,
   className,
 }: ArtifactTreeGraphProps) {
   const prefersReduced = useReducedMotion();
@@ -173,15 +182,22 @@ export function ArtifactTreeGraph({
       className={cn("relative w-full select-none", className)}
       aria-hidden="true"
     >
-      {/* The particle-field canvas draws its own volumetric core light, vignette
-          and grain, so no CSS spotlight layers are needed here anymore. */}
-      <NeuralMemoryCore
-        connections={connections}
-        stage={activeStage}
-        staticFrame={!isAnimated}
-        pointer={pointerField}
-        hoveredNodeId={hoveredId}
-      />
+      {/* The FIELD layer. By default the lightweight 2D NeuralMemoryCore (used by
+          /graph, /results, /replay). The landing hero injects the WebGL2 GPU
+          field via renderField — it owns its own pointer/pause hooks, so this
+          host's pointerField simply goes unused in that case. Both draw their own
+          volumetric core light + vignette + grain, so no CSS spotlight layers. */}
+      {renderField ? (
+        renderField({ stage: activeStage, hoveredNodeId: hoveredId })
+      ) : (
+        <NeuralMemoryCore
+          connections={connections}
+          stage={activeStage}
+          staticFrame={!isAnimated}
+          pointer={pointerField}
+          hoveredNodeId={hoveredId}
+        />
+      )}
 
       {/* node badges as HTML overlay (real lucide icons + hover/click) */}
       <div className="pointer-events-none absolute inset-0">
