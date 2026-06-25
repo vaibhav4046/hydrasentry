@@ -4,6 +4,7 @@ import type { CSSProperties } from "react";
 import { useEffect, useMemo, useState } from "react";
 import { m, useReducedMotion } from "framer-motion";
 import { cn } from "@/lib/cn";
+import { usePauseOffscreen } from "@/hooks/usePauseOffscreen";
 import { GraphNodeLabel } from "./GraphNodeLabel";
 import type { InspectorNode } from "./NodeInspectorPreview";
 import type { Graph, GraphNode } from "@/lib/types";
@@ -73,6 +74,9 @@ export function ArtifactTreeGraph({
   className,
 }: ArtifactTreeGraphProps) {
   const prefersReduced = useReducedMotion();
+  // Pause the perpetual ember twinkle + traveling dash when the tree is
+  // scrolled out of view or the tab is hidden (CSS animation-play-state).
+  const hostRef = usePauseOffscreen<HTMLDivElement>("200px 0px");
 
   // ---- resolve the active stage ---------------------------------------------
   const controlled = stage != null;
@@ -178,6 +182,7 @@ export function ArtifactTreeGraph({
 
   return (
     <div
+      ref={hostRef}
       className={cn("relative w-full select-none", className)}
       aria-hidden="true"
     >

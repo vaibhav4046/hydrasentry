@@ -3,6 +3,7 @@
 import { useReducedMotion } from "framer-motion";
 import type { HTMLAttributes } from "react";
 import { TRUST_PRIMITIVES } from "./content";
+import { usePauseOffscreen } from "@/hooks/usePauseOffscreen";
 
 /**
  * Auto-scrolling monochrome trust strip (Railway-style logo marquee, noir).
@@ -14,6 +15,8 @@ import { TRUST_PRIMITIVES } from "./content";
 export function TrustMarquee() {
   const reduce = useReducedMotion();
   const items = TRUST_PRIMITIVES;
+  // Pause the infinite marquee transform when the strip is scrolled past / tab hidden.
+  const hostRef = usePauseOffscreen<HTMLElement>();
 
   if (reduce) {
     return (
@@ -29,6 +32,7 @@ export function TrustMarquee() {
 
   return (
     <section
+      ref={hostRef}
       aria-label="HydraDB-native primitives"
       className="group/marquee relative overflow-hidden border-y border-hairline bg-deep/40 py-6"
     >

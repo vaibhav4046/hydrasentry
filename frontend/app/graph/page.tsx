@@ -16,7 +16,7 @@ import {
   type InspectorNode,
 } from "@/components/noir/NodeInspectorPreview";
 import { MAX_STAGE } from "@/components/noir/artifactTreeData";
-import { GraphCanvas } from "@/components/graph/GraphCanvas";
+import { LazyGraphCanvas } from "@/components/graph/LazyGraphCanvas";
 import { GraphSourceBadge } from "@/components/graph/GraphSourceBadge";
 import { TripletList } from "@/components/graph/TripletList";
 import { useRunDemo } from "@/hooks/useRunDemo";
@@ -114,7 +114,7 @@ export default function GraphPage() {
               ) : (
                 <div className="h-[420px] w-full sm:h-[560px]">
                   {run ? (
-                    <GraphCanvas
+                    <LazyGraphCanvas
                       graph={run.graph}
                       firewall={run.firewall}
                       onNodeSelect={handleFlowSelect}

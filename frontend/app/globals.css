@@ -117,14 +117,20 @@
   .hydra-glass {
     position: relative;
     overflow: hidden;
+    /* Slightly more opaque fill compensates for the cheaper blur below so the
+       panel still reads as frosted glass. */
     background: linear-gradient(
       180deg,
-      rgba(255, 255, 255, 0.075),
-      rgba(255, 255, 255, 0.035)
+      rgba(255, 255, 255, 0.085),
+      rgba(255, 255, 255, 0.045)
     );
     border: 1px solid var(--hs-border);
-    backdrop-filter: blur(22px);
-    -webkit-backdrop-filter: blur(22px);
+    /* backdrop-filter is the #1 scroll-jank source: the compositor re-samples
+       the blurred backdrop every frame, and cost scales with radius x area.
+       12px composites far cheaper than 22px and is visually near-identical at
+       this opacity. */
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
     box-shadow: var(--hs-shadow-soft), inset 0 1px 0 rgba(255, 255, 255, 0.08);
   }
   .hydra-glass::before {
@@ -289,6 +295,16 @@
   will-change: transform;
 }
 .group\/marquee:hover .hydra-marquee-track {
+  animation-play-state: paused;
+}
+
+/* Pause perpetual animations when their host is scrolled out of view. A small
+   IntersectionObserver toggles [data-anim="off"] on the wrapper; the compositor
+   then stops doing per-frame work (marquee transform, ember opacity) for content
+   nobody can see. This is the cheapest possible state for off-screen motion. */
+[data-anim="off"] .hydra-marquee-track,
+[data-anim="off"] .atg-ember,
+[data-anim="off"] .atg-travel {
   animation-play-state: paused;
 }
 

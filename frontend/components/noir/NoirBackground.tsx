@@ -3,13 +3,14 @@
 /**
  * Cinematic noir backdrop. Layers, bottom -> top:
  *   1. base void (#050608)
- *   2. the asset-pack memory-graph wallpaper (/bg/hero-noir-graph-4k.png),
- *      dimmed and radially masked so it is strongest behind the hero and
- *      fades to black toward the edges/bottom — this is the "wallpaper".
+ *   2. the asset-pack memory-graph wallpaper (/bg/hero-noir-graph.webp — a
+ *      downscaled 1600px WebP recompressed from the original 4K PNG; the layer
+ *      is dimmed to 0.32 + radially masked + drifts, so 4K detail was wasted),
+ *      strongest behind the hero and fading to black toward the edges/bottom.
  *   3. a very slow GPU-only drift on that wallpaper layer (transform/opacity
  *      only, will-change: transform) for subtle life.
  *   4. a soft radial spotlight glow behind the upper-center hero.
- *   5. film grain (/bg/noir-noise.png), tiled, soft-light, very low opacity.
+ *   5. film grain (/bg/noir-noise.webp), tiled, soft-light, very low opacity.
  *   6. a faint grid + a bottom->top vignette so foreground text and glass
  *      cards keep strong contrast on every page.
  *
@@ -18,10 +19,24 @@
  * the single moving part and is disabled under prefers-reduced-motion.
  * Mount once in the root layout behind everything.
  */
+import { useEffect, useState } from "react";
 import { m, useReducedMotion } from "framer-motion";
 
 export function NoirBackground() {
   const reduceMotion = useReducedMotion();
+
+  // Stop the perpetual wallpaper drift while the tab is hidden — there's no
+  // reason to keep compositing a full-bleed transform loop nobody can see, and
+  // it lets the browser idle the rAF/compositor when the page is backgrounded.
+  const [tabHidden, setTabHidden] = useState(false);
+  useEffect(() => {
+    const onVis = () => setTabHidden(document.hidden);
+    onVis();
+    document.addEventListener("visibilitychange", onVis);
+    return () => document.removeEventListener("visibilitychange", onVis);
+  }, []);
+
+  const animateDrift = !reduceMotion && !tabHidden;
 
   // Radial mask: wallpaper strongest behind the upper-center hero, gone by the
   // edges/bottom so it never washes out foreground text on any page.
@@ -37,7 +52,7 @@ export function NoirBackground() {
       <m.div
         className="absolute inset-0 bg-cover bg-center bg-no-repeat"
         style={{
-          backgroundImage: "url(/bg/hero-noir-graph-4k.png)",
+          backgroundImage: "url(/bg/hero-noir-graph.webp)",
           opacity: 0.32,
           maskImage: wallpaperMask,
           WebkitMaskImage: wallpaperMask,
@@ -45,15 +60,15 @@ export function NoirBackground() {
         }}
         initial={false}
         animate={
-          reduceMotion
-            ? undefined
-            : {
+          animateDrift
+            ? {
                 transform: [
                   "translate3d(-1.2%, -0.8%, 0) scale(1.06)",
                   "translate3d(1.2%, 0.8%, 0) scale(1.1)",
                   "translate3d(-1.2%, -0.8%, 0) scale(1.06)",
                 ],
               }
+            : undefined
         }
         transition={{
           duration: 52,
@@ -91,7 +106,7 @@ export function NoirBackground() {
       <div
         className="absolute inset-0 opacity-[0.06] [mix-blend-mode:soft-light]"
         style={{
-          backgroundImage: "url(/bg/noir-noise.png)",
+          backgroundImage: "url(/bg/noir-noise.webp)",
           backgroundRepeat: "repeat",
           backgroundSize: "256px 256px",
         }}
