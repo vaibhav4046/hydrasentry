@@ -3,64 +3,76 @@
 import { useEffect, useMemo, useRef } from "react";
 import { useReducedMotion } from "framer-motion";
 import { cn } from "@/lib/cn";
+import type { PointerField } from "@/hooks/usePointerField";
 import {
   CORE,
   CORE_RADIUS,
   DEMO_CONNECTIONS,
-  DRIFT_PARTICLES,
   VB_W,
   VB_H,
   quadAt,
+  buildHeroField,
+  buildEdgeParticles,
+  chordNormal,
   type Connection,
-} from "./neuralCoreData";
+  type Pt,
+} from "./heroField";
+import { makeHeroSprites, makeGrainTexture } from "./heroSprites";
 
 interface NeuralMemoryCoreProps {
   /** Connection web to draw (demo by default; real-graph web when passed). */
   connections?: Connection[];
-  /**
-   * Active demo stage 0..MAX_STAGE. Gates which connections / pulses are live so
-   * a controlled stage progressively lights the composition with NO per-frame
-   * React work. Undefined => everything eligible (idle / autoplay hero).
-   */
+  /** Active demo stage 0..MAX_STAGE; gates which edges/particles are live. */
   stage?: number;
   /** Force a composed STATIC frame (reduced-motion / settled real runs). */
   staticFrame?: boolean;
+  /** Smoothed pointer field from usePointerField (parallax + attraction). */
+  pointer?: PointerField | null;
+  /** id of a hovered node (lifts + illuminates its edges). */
+  hoveredNodeId?: string | null;
+  /** Map node id -> its centre in viewBox space (for hover edge matching). */
   className?: string;
 }
 
 // ---- timing + look constants (named, no magic numbers in the loop) ----------
-const CORE_BREATH_MS = 5200; // slow core scale/opacity breathe
-const PULSE_TRAVEL_MS = 2600; // a safe pulse traverses a connection in this
-const PULSE_TRAVEL_FAST_MS = 1500; // tainted pulses move faster (hotter)
-const DRIFT_OPACITY = 0.9;
+const CORE_BREATH_MS = 5600; // slow core scale/opacity breathe
+const EDGE_TRAVEL_MS = 4200; // a safe particle traverses an edge in this
+const EDGE_TRAVEL_FAST_MS = 2400; // tainted particles move faster (hotter)
 const TWO_PI = Math.PI * 2;
-// Sprite atlas sizes (device px) for the pre-rendered radial glows.
-const SPRITE_CORE = 512;
-const SPRITE_PULSE = 64;
 const DPR_CAP = 2.5;
+// Parallax: how far (vb units) each depth layer shifts at full pointer offset.
+const PARALLAX_NEAR = 26; // near layer (depth=1) travel
+const PARALLAX_FAR = 6; // far layer (depth=0) travel
+// Pointer attraction radius (vb units) and max pull/illumination.
+const ATTRACT_RADIUS = 230;
+const ATTRACT_PULL = 16;
+const GRAIN_ALPHA = 0.035;
 
 /**
- * The signature monochrome hero: a luminous neural MEMORY CORE with elegant
- * curved synaptic connections radiating to the context nodes and light pulses
- * travelling them like thoughts. Hyper-realistic + fast:
+ * The signature monochrome hero — a "guarded MEMORY GRAPH" rendered as a living
+ * PARTICLE FIELD, peer-grade with HydraDB's voxel-tree but in strict monochrome.
  *
- *  - HTML5 <canvas>, backing store sized clientW*dpr x clientH*dpr (dpr capped
- *    2.5) with ctx.scale(dpr) so curves are anti-aliased and razor-crisp at 4K —
- *    NOT pixelated.
- *  - Bloom is additive: pre-rendered radial-gradient SPRITES drawn with
- *    globalCompositeOperation="lighter" (no per-particle shadowBlur — too slow).
- *  - ONE requestAnimationFrame loop, parked when offscreen / tab-hidden via the
- *    host's data-anim attribute (set by usePauseOffscreen). No per-frame React
- *    state; stage/static live in refs.
- *  - Deterministic geometry (seeded, SSR-safe). reduced-motion => static frame.
- *
- * STRICT MONOCHROME — danger is brighter white + faster/brighter pulses + glow,
- * never hue.
+ *  - A dense breathing CORE cluster (the agent's memory) of silver motes.
+ *  - Synaptic EDGES built from streams of particles FLOWING core -> node like
+ *    memories being recalled. Tainted edges are denser/faster/brighter (danger
+ *    = intensity, never hue). The tainted chain burns hottest.
+ *  - INTERACTIVE: a spring-smoothed pointer drives layered PARALLAX (near motes
+ *    move more than far — real depth) and local ATTRACTION + illumination
+ *    (particles near the cursor brighten and drift toward it). Hovering a node
+ *    lifts + lights its edges. Touch → a gentle drift, no sticky follow.
+ *  - DEPTH-OF-FIELD: far particles are smaller/dimmer/softer, near ones sharp +
+ *    bright. Volumetric core halo, vignette, fine film grain.
+ *  - Bloom is additive pre-rendered SPRITES drawn with "lighter" (no per-mote
+ *    shadowBlur). ONE rAF loop, parked offscreen/hidden via the host's
+ *    data-anim attribute. No per-frame React state. Seeded geometry → SSR-safe.
+ *    reduced-motion => composed static frame.
  */
 export function NeuralMemoryCore({
   connections = DEMO_CONNECTIONS,
   stage,
   staticFrame = false,
+  pointer = null,
+  hoveredNodeId = null,
   className,
 }: NeuralMemoryCoreProps) {
   const prefersReduced = useReducedMotion();
@@ -68,15 +80,27 @@ export function NeuralMemoryCore({
   const wrapRef = useRef<HTMLDivElement | null>(null);
   const armRef = useRef<(() => void) | null>(null);
 
-  // Pre-flatten pulses across connections once (id, host connection, t-offset).
-  const pulses = useMemo(() => buildPulses(connections), [connections]);
+  // Immutable field + per-edge particle streams (seeded, SSR-safe). Memoised so
+  // the rAF loop never reallocates; edge streams rebuild only if edges change.
+  const field = useMemo(() => buildHeroField(), []);
+  const edgeParticles = useMemo(
+    () => buildEdgeParticles(connections),
+    [connections],
+  );
+  // Per-connection chord normals (for lateral particle scatter), precomputed.
+  const normals = useMemo(() => connections.map(chordNormal), [connections]);
 
-  // Latest stage / mode in refs so the rAF loop reads them without re-subscribing.
+  // Latest stage / mode / pointer / hover in refs so the loop reads them without
+  // re-subscribing the effect.
   const stageRef = useRef(stage);
   const staticRef = useRef(staticFrame || prefersReduced);
+  const pointerRef = useRef(pointer);
+  const hoverRef = useRef(hoveredNodeId);
   useEffect(() => {
     stageRef.current = stage;
     staticRef.current = staticFrame || prefersReduced;
+    pointerRef.current = pointer;
+    hoverRef.current = hoveredNodeId;
   });
 
   useEffect(() => {
@@ -86,30 +110,9 @@ export function NeuralMemoryCore({
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    // Pre-render the glow sprite atlases ONCE (device-independent; reused every
-    // frame via drawImage + "lighter"). This is what keeps bloom cheap.
-    // Core glow: a soft luminous body with a GRADUAL falloff (no hard white
-    // disc) so it reads as a deep, dimensional "mind" rather than a flat orb.
-    const coreSprite = makeRadialSprite(SPRITE_CORE, [
-      [0.0, "rgba(255,255,255,0.95)"],
-      [0.08, "rgba(255,255,255,0.7)"],
-      [0.22, "rgba(226,232,240,0.42)"],
-      [0.45, "rgba(170,180,196,0.18)"],
-      [0.72, "rgba(120,130,148,0.06)"],
-      [1.0, "rgba(0,0,0,0)"],
-    ]);
-    // A small, brighter kernel sprite for the dense hot center (kept tight).
-    const kernelSprite = makeRadialSprite(256, [
-      [0.0, "rgba(255,255,255,1)"],
-      [0.18, "rgba(255,255,255,0.75)"],
-      [0.5, "rgba(230,236,244,0.22)"],
-      [1.0, "rgba(255,255,255,0)"],
-    ]);
-    const pulseSprite = makeRadialSprite(SPRITE_PULSE, [
-      [0.0, "rgba(255,255,255,1)"],
-      [0.35, "rgba(255,255,255,0.7)"],
-      [1.0, "rgba(255,255,255,0)"],
-    ]);
+    const sprites = makeHeroSprites();
+    const grain = makeGrainTexture();
+    const grainPattern = ctx.createPattern(grain, "repeat");
 
     // Device-pixel state, recomputed on resize.
     let dpr = 1;
@@ -132,137 +135,291 @@ export function NeuralMemoryCore({
       canvas.style.height = `${cssH}px`;
     };
 
-    // Map a viewBox point to device px (we draw in device space, no ctx.scale,
-    // so sprite sizes stay integer-crisp; curves are still AA via the rasterizer).
+    // viewBox -> device px (draw in device space; integer-crisp sprites, AA curves)
     const DX = (x: number) => x * sx * dpr;
     const DY = (y: number) => y * sy * dpr;
-    const DS = (v: number) => v * ((sx + sy) / 2) * dpr; // scalar (radius/width)
+    const DS = (v: number) => v * ((sx + sy) / 2) * dpr;
+
+    // ---- pointer-derived per-frame values -----------------------------------
+    // parallax offset (vb units) for a given depth 0..1; plus the pointer's
+    // position in vb space (for local attraction) and presence 0..1.
+    const px = { x: 0, y: 0 }; // pointer in vb space
+    let presence = 0;
+    let offX = 0; // normalised -1..1 pointer offset (smoothed)
+    let offY = 0;
+    const readPointer = () => {
+      const p = pointerRef.current;
+      if (!p || staticRef.current) {
+        offX = 0;
+        offY = 0;
+        presence = 0;
+        return;
+      }
+      offX = p.x;
+      offY = p.y;
+      presence = p.active;
+      px.x = p.ex * VB_W;
+      px.y = p.ey * VB_H;
+    };
+    // shift for a depth layer: nearer layers travel further (negative so the
+    // field leans INTO the cursor — content drifts opposite the pointer like
+    // looking through a window). Returns {dx,dy} in vb units.
+    const parallax = (depth: number) => {
+      const amt = PARALLAX_FAR + (PARALLAX_NEAR - PARALLAX_FAR) * depth;
+      return { dx: -offX * amt, dy: -offY * amt };
+    };
+    // local attraction: pull + brighten particles near the pointer. Returns a
+    // {dx,dy,glow} for a vb-space point. Cheap: one hypot guarded by bbox.
+    const attract = (x: number, y: number) => {
+      if (presence <= 0.02) return { dx: 0, dy: 0, glow: 0 };
+      const ddx = px.x - x;
+      const ddy = px.y - y;
+      if (Math.abs(ddx) > ATTRACT_RADIUS || Math.abs(ddy) > ATTRACT_RADIUS)
+        return { dx: 0, dy: 0, glow: 0 };
+      const d = Math.hypot(ddx, ddy);
+      if (d > ATTRACT_RADIUS) return { dx: 0, dy: 0, glow: 0 };
+      const t = 1 - d / ATTRACT_RADIUS; // 1 at cursor -> 0 at radius
+      const e = t * t * presence;
+      const inv = d > 0.001 ? 1 / d : 0;
+      return {
+        dx: ddx * inv * ATTRACT_PULL * e,
+        dy: ddy * inv * ATTRACT_PULL * e,
+        glow: e,
+      };
+    };
 
     const eligible = (c: Connection): boolean => {
       const s = stageRef.current;
       if (s == null) return true;
       return c.stage <= s;
     };
-    const coreLit = (): boolean => {
+    // is this connection touched by the hovered node? -> lift + illuminate.
+    const hoverHit = (c: Connection): number => {
+      const h = hoverRef.current;
+      if (!h) return 0;
+      return c.from === h || c.to === h ? 1 : 0;
+    };
+
+    // ---- core cluster (breathing nebula of memory) --------------------------
+    const drawCore = (now: number, breath: number) => {
       const s = stageRef.current;
-      return s == null || s >= 0; // core is the very first thing to light
-    };
+      if (s != null && s < 0) return;
+      const { dx, dy } = parallax(0.9); // core sits near-front
+      const cx0 = CORE.x + dx;
+      const cy0 = CORE.y + dy;
+      const scale = 0.92 + 0.16 * breath;
 
-    // ---- draw a single synaptic connection (curve + soft glow underlay) -----
-    const drawConnection = (c: Connection, breath: number) => {
-      if (!eligible(c)) return;
-      const base = c.tainted ? 0.62 : 0.26 + c.depth * 0.28;
-      const alpha = base * (c.tainted ? 0.85 + 0.15 * breath : 1);
-      // Soft wide glow pass (additive) so lines read luminous, then a crisp core.
-      ctx.lineCap = "round";
-      ctx.lineJoin = "round";
-
-      // glow underlay (lighter)
+      // 1) volumetric halo (soft body) + a SMALL hot kernel. Kept restrained on
+      //    purpose: the discrete cluster motes (below) must read as structure —
+      //    a giant kernel disc would wash them into a featureless blob.
       ctx.globalCompositeOperation = "lighter";
-      ctx.strokeStyle = `rgba(255,255,255,${c.tainted ? 0.3 : 0.11 + c.depth * 0.05})`;
-      ctx.lineWidth = DS(c.tainted ? 5.5 : 2.6 + c.depth * 1.4);
-      strokeCurve(ctx, c, DX, DY);
+      const halo = DS(CORE_RADIUS) * 1.9 * scale;
+      ctx.globalAlpha = 0.32 + 0.1 * breath;
+      ctx.drawImage(sprites.halo, DX(cx0) - halo, DY(cy0) - halo, halo * 2, halo * 2);
+      const kern = DS(CORE_RADIUS) * 0.34 * scale;
+      ctx.globalAlpha = 0.55 + 0.16 * breath;
+      ctx.drawImage(sprites.kernel, DX(cx0) - kern, DY(cy0) - kern, kern * 2, kern * 2);
 
-      // crisp core line (source-over for clean edge)
-      ctx.globalCompositeOperation = "source-over";
-      ctx.strokeStyle = `rgba(${c.tainted ? "255,255,255" : "214,220,228"},${alpha})`;
-      ctx.lineWidth = DS(c.tainted ? 1.9 : 0.8 + c.depth * 0.9);
-      strokeCurve(ctx, c, DX, DY);
-    };
-
-    // ---- draw the breathing luminous core -----------------------------------
-    const drawCore = (breath: number) => {
-      if (!coreLit()) return;
-      const cx = DX(CORE.x);
-      const cy = DY(CORE.y);
-      // breathing scale 0.94..1.06
-      const scale = 0.94 + 0.12 * breath;
-      // wide outer volumetric halo
-      const rad = DS(CORE_RADIUS) * 2.2 * scale;
-      ctx.globalCompositeOperation = "lighter";
-      ctx.globalAlpha = 0.7 + 0.12 * breath;
-      ctx.drawImage(coreSprite, cx - rad, cy - rad, rad * 2, rad * 2);
-      // a tight, bright kernel for the dense hot center (much smaller now)
-      const inner = DS(CORE_RADIUS) * 0.62 * scale;
-      ctx.globalAlpha = 0.85 + 0.15 * breath;
-      ctx.drawImage(kernelSprite, cx - inner, cy - inner, inner * 2, inner * 2);
-      ctx.globalAlpha = 1;
-
-      // a few elegant internal filaments (neurons/folds) — thin curved strands.
-      ctx.globalCompositeOperation = "lighter";
-      drawCoreFilaments(ctx, cx, cy, DS(CORE_RADIUS) * scale, breath);
-      ctx.globalCompositeOperation = "source-over";
-    };
-
-    // ---- draw travelling pulses (additive sprites) --------------------------
-    const drawPulses = (now: number) => {
-      ctx.globalCompositeOperation = "lighter";
-      for (const p of pulses) {
-        const c = p.conn;
-        if (!eligible(c)) continue;
-        const period = c.tainted ? PULSE_TRAVEL_FAST_MS : PULSE_TRAVEL_MS;
-        const t = ((now / period + p.offset) % 1 + 1) % 1;
-        const pos = quadAt(c, t);
-        // fade in/out at the ends so pulses are born at the core, die at the node
-        const envelope = Math.sin(t * Math.PI);
-        const a = (c.tainted ? 0.95 : 0.6) * envelope;
+      // 2) the cluster motes — slow swirl + twinkle, parallaxed by their depth,
+      //    pulled/brightened near the cursor.
+      const secs = now / 1000;
+      for (const m of field.coreParticles) {
+        const ang = m.ang + (staticRef.current ? 0 : m.spin * secs);
+        const r = m.rad * CORE_RADIUS * scale;
+        let x = CORE.x + Math.cos(ang) * r;
+        let y = CORE.y + Math.sin(ang) * r * 0.92; // slight vertical squash
+        const pl = parallax(m.depth);
+        x += pl.dx;
+        y += pl.dy;
+        const at = attract(x, y);
+        x += at.dx;
+        y += at.dy;
+        const tw = staticRef.current
+          ? 0.9
+          : 0.72 + 0.28 * Math.sin((secs + m.twinkle * 9) * 1.6);
+        const a = Math.min(1, m.bright * tw * (0.92 + 0.45 * breath) + at.glow * 0.5);
         if (a <= 0.02) continue;
-        const size = DS(c.tainted ? 9 : 6) * (0.6 + envelope * 0.6);
-        const px = DX(pos.x);
-        const py = DY(pos.y);
+        const size = DS(m.size) * (0.7 + m.depth * 0.85) * (1 + at.glow * 0.8);
         ctx.globalAlpha = a;
-        ctx.drawImage(pulseSprite, px - size, py - size, size * 2, size * 2);
+        ctx.drawImage(sprites.dot, DX(x) - size, DY(y) - size, size * 2, size * 2);
       }
       ctx.globalAlpha = 1;
       ctx.globalCompositeOperation = "source-over";
     };
 
-    // ---- drifting atmosphere particles --------------------------------------
-    const drawDrift = (now: number) => {
+    // ---- edge particle streams (memories flowing core -> node) --------------
+    const drawEdges = (now: number, breath: number) => {
+      ctx.globalCompositeOperation = "lighter";
+      for (const p of edgeParticles) {
+        const c = connections[p.connIndex];
+        if (!c || !eligible(c)) continue;
+        const period = c.tainted ? EDGE_TRAVEL_FAST_MS : EDGE_TRAVEL_MS;
+        const t = (((now / (period * p.speed)) + p.offset) % 1 + 1) % 1;
+        const pos = quadAt(c, t);
+        const n = normals[p.connIndex];
+        let x = pos.x + n.x * p.jitter;
+        let y = pos.y + n.y * p.jitter;
+        // depth from the connection (near edges sharper); parallax + attraction
+        const pl = parallax(c.depth);
+        x += pl.dx;
+        y += pl.dy;
+        const at = attract(x, y);
+        x += at.dx;
+        y += at.dy;
+        // born at core, die at node: sine envelope keeps the stream luminous
+        // mid-run. Floor keeps the stream visible end-to-end (memories flowing,
+        // not blinking on/off) — the signature "energy travelling the edge".
+        const envelope = 0.32 + 0.68 * Math.sin(t * Math.PI);
+        const hov = hoverHit(c);
+        const baseA =
+          (c.tainted ? 0.92 : 0.45 + p.bright * 0.55) *
+          envelope *
+          (c.tainted ? 0.85 + 0.15 * breath : 1);
+        const a = Math.min(1, baseA + at.glow * 0.6 + hov * 0.5);
+        if (a <= 0.02) continue;
+        const size =
+          DS(p.size) *
+          (0.7 + c.depth * 0.9) *
+          (0.8 + envelope * 0.5) *
+          (1 + at.glow * 0.7 + hov * 0.55);
+        ctx.globalAlpha = a;
+        ctx.drawImage(sprites.dot, DX(x) - size, DY(y) - size, size * 2, size * 2);
+      }
+      ctx.globalAlpha = 1;
+      ctx.globalCompositeOperation = "source-over";
+    };
+
+    // ---- faint connective filament under each edge (gives line continuity) --
+    const drawEdgeFilaments = (breath: number) => {
+      ctx.lineCap = "round";
+      for (let i = 0; i < connections.length; i++) {
+        const c = connections[i];
+        if (!eligible(c)) continue;
+        const hov = hoverHit(c);
+        const pl = parallax(c.depth);
+        const a =
+          (c.tainted ? 0.22 + 0.08 * breath : 0.08 + c.depth * 0.08) + hov * 0.22;
+        ctx.globalCompositeOperation = "lighter";
+        ctx.strokeStyle = `rgba(${c.tainted ? "255,255,255" : "208,216,228"},${a})`;
+        ctx.lineWidth = DS(c.tainted ? 1.5 + hov : 0.6 + c.depth * 0.6 + hov);
+        ctx.beginPath();
+        ctx.moveTo(DX(c.p0.x + pl.dx), DY(c.p0.y + pl.dy));
+        ctx.quadraticCurveTo(
+          DX(c.ctrl.x + pl.dx),
+          DY(c.ctrl.y + pl.dy),
+          DX(c.p1.x + pl.dx),
+          DY(c.p1.y + pl.dy),
+        );
+        ctx.stroke();
+      }
+      ctx.globalCompositeOperation = "source-over";
+    };
+
+    // ---- atmosphere dust (parallaxed, drifting) -----------------------------
+    const drawDust = (now: number) => {
       ctx.globalCompositeOperation = "lighter";
       const secs = now / 1000;
-      for (const d of DRIFT_PARTICLES) {
-        // wrap within the board so the field never empties
-        const x = mod(d.x + d.vx * secs, VB_W);
-        const y = mod(d.y + d.vy * secs, VB_H);
-        const tw = 0.6 + 0.4 * Math.sin((secs + d.phase * 8) * 1.2);
-        const a = d.bright * tw * DRIFT_OPACITY;
+      for (const d of field.dust) {
+        let x = mod(d.x + (staticRef.current ? 0 : d.vx * secs), VB_W);
+        let y = mod(d.y + (staticRef.current ? 0 : d.vy * secs), VB_H);
+        const pl = parallax(d.depth);
+        x += pl.dx;
+        y += pl.dy;
+        const at = attract(x, y);
+        x += at.dx * 0.5;
+        y += at.dy * 0.5;
+        const tw = staticRef.current
+          ? 0.7
+          : 0.55 + 0.45 * Math.sin((secs + d.twinkle * 8) * 1.1);
+        const a = Math.min(1, d.bright * tw + at.glow * 0.3);
         if (a <= 0.02) continue;
-        const size = DS(d.r) * 3;
+        const size = DS(d.size) * (0.5 + d.depth) * 1.6;
         ctx.globalAlpha = a;
-        ctx.drawImage(pulseSprite, DX(x) - size, DY(y) - size, size * 2, size * 2);
+        ctx.drawImage(sprites.dot, DX(x) - size, DY(y) - size, size * 2, size * 2);
       }
       ctx.globalAlpha = 1;
       ctx.globalCompositeOperation = "source-over";
+    };
+
+    // ---- cinematic overlays: vignette + grain -------------------------------
+    const drawOverlays = () => {
+      // vignette (deepen corners to black) — drawn in device space, cheap radial
+      const g = ctx.createRadialGradient(
+        canvas.width * 0.5,
+        canvas.height * 0.46,
+        Math.min(canvas.width, canvas.height) * 0.28,
+        canvas.width * 0.5,
+        canvas.height * 0.46,
+        Math.max(canvas.width, canvas.height) * 0.72,
+      );
+      g.addColorStop(0, "rgba(0,0,0,0)");
+      g.addColorStop(1, "rgba(2,3,5,0.62)");
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      // fine film grain (tiled pattern, very low alpha, overlay-ish via lighter)
+      if (grainPattern) {
+        ctx.globalAlpha = GRAIN_ALPHA;
+        ctx.globalCompositeOperation = "overlay";
+        ctx.fillStyle = grainPattern;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.globalAlpha = 1;
+        ctx.globalCompositeOperation = "source-over";
+      }
     };
 
     const render = (now: number) => {
+      // Optional dev-only frame-cost meter: set window.__heroPerf = {n:0,sum:0}
+      // before timing, read its rolling average (ms/frame, GPU-independent).
+      const perf =
+        typeof window !== "undefined"
+          ? (window as unknown as { __heroPerf?: { n: number; sum: number; max: number } }).__heroPerf
+          : undefined;
+      const t0 = perf ? performance.now() : 0;
+
       const tBreath = staticRef.current
         ? 0.5
         : 0.5 + 0.5 * Math.sin((now / CORE_BREATH_MS) * TWO_PI);
+      readPointer();
       ctx.setTransform(1, 0, 0, 1, 0, 0);
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-      // 1) atmosphere behind everything (skip when static for a calmer frame)
-      if (!staticRef.current) drawDrift(now);
-      // 2) connections (glow + crisp)
-      for (const c of connections) drawConnection(c, tBreath);
-      // 3) the core on top of the spokes' origins
-      drawCore(tBreath);
-      // 4) pulses ride above the connections
-      if (!staticRef.current) drawPulses(now);
+      drawDust(now);
+      drawEdgeFilaments(tBreath);
+      drawEdges(now, tBreath);
+      drawCore(now, tBreath);
+      drawOverlays();
+
       ctx.globalCompositeOperation = "source-over";
       ctx.globalAlpha = 1;
+
+      if (perf) {
+        const dtMs = performance.now() - t0;
+        perf.n += 1;
+        perf.sum += dtMs;
+        if (dtMs > perf.max) perf.max = dtMs;
+      }
     };
 
     resize();
 
     let raf = 0; // 0 = parked
+    let lastT = performance.now();
     let lastStage = stageRef.current;
     const isPaused = () => wrap.dataset.anim === "off";
-    // Keep animating while there is motion (not static, on-screen). When static
-    // or offscreen, render one settled frame then PARK for ~0 main-thread cost.
-    const wantsFrame = () => !staticRef.current && !isPaused();
+    // Animate while there is motion (not static, on-screen) OR while the pointer
+    // spring is still settling (so parallax coasts to rest after the mouse stops
+    // and after pointerleave), then PARK at ~0 main-thread cost.
+    const springSettling = () => {
+      const p = pointerRef.current;
+      if (!p) return false;
+      const moving =
+        Math.abs(p.x - p.tx) > 0.001 ||
+        Math.abs(p.y - p.ty) > 0.001 ||
+        Math.abs(p.active - p.tactive) > 0.001;
+      return moving;
+    };
+    const wantsFrame = () =>
+      !isPaused() && (!staticRef.current || springSettling());
 
     const arm = () => {
       if (raf === 0) raf = requestAnimationFrame(loop);
@@ -270,26 +427,28 @@ export function NeuralMemoryCore({
 
     function loop(now: number) {
       raf = 0;
-      // A controlled stage change while parked: redraw once even if static.
+      const dt = Math.max(0, (now - lastT) / 1000);
+      lastT = now;
+      // advance the pointer spring even when otherwise static (lets parallax
+      // glide while the core/edges hold still under reduced-motion).
+      pointerRef.current?.step(dt);
+
       const stageChanged = stageRef.current !== lastStage;
       if (stageChanged) lastStage = stageRef.current;
 
       render(now);
 
-      if (wantsFrame()) {
-        arm();
-      }
-      // else parked; resumed by the data-anim observer, the stage effect, or resize.
+      if (wantsFrame()) arm();
+      // else parked; resumed by data-anim observer, the stage effect, pointer, or resize.
     }
 
     arm();
     armRef.current = arm;
 
-    // Resume when the host flips back on-screen (usePauseOffscreen toggles
-    // data-anim). Also redraw a fresh settled frame on resume so re-entry never
-    // shows a stale paused frame.
+    // Resume on re-entry (usePauseOffscreen toggles data-anim) with a fresh frame.
     const animWatch = new MutationObserver(() => {
-      render(performance.now());
+      lastT = performance.now();
+      render(lastT);
       arm();
     });
     animWatch.observe(wrap, { attributes: true, attributeFilter: ["data-anim"] });
@@ -312,12 +471,12 @@ export function NeuralMemoryCore({
       animWatch.disconnect();
       armRef.current = null;
     };
-  }, [connections, pulses]);
+  }, [connections, edgeParticles, normals, field]);
 
-  // Re-arm / redraw when a controlled stage or static flag changes while parked.
+  // Re-arm when a controlled stage / static / hover changes while parked.
   useEffect(() => {
     armRef.current?.();
-  }, [stage, staticFrame, prefersReduced]);
+  }, [stage, staticFrame, prefersReduced, hoveredNodeId]);
 
   return (
     <div
@@ -331,91 +490,9 @@ export function NeuralMemoryCore({
   );
 }
 
-// ---- pulse flattening -------------------------------------------------------
-interface PulseRef {
-  conn: Connection;
-  offset: number;
-}
-function buildPulses(connections: Connection[]): PulseRef[] {
-  const out: PulseRef[] = [];
-  for (const c of connections) {
-    for (let i = 0; i < c.pulses; i++) {
-      // stagger multiple pulses on the same line evenly + by the line's phase
-      out.push({ conn: c, offset: (c.phase + i / Math.max(1, c.pulses)) % 1 });
-    }
-  }
-  return out;
-}
-
-// ---- curve stroking ---------------------------------------------------------
-function strokeCurve(
-  ctx: CanvasRenderingContext2D,
-  c: Connection,
-  DX: (x: number) => number,
-  DY: (y: number) => number,
-) {
-  ctx.beginPath();
-  ctx.moveTo(DX(c.p0.x), DY(c.p0.y));
-  ctx.quadraticCurveTo(DX(c.ctrl.x), DY(c.ctrl.y), DX(c.p1.x), DY(c.p1.y));
-  ctx.stroke();
-}
-
-// ---- core internal filaments (elegant curved strands) -----------------------
-function drawCoreFilaments(
-  ctx: CanvasRenderingContext2D,
-  cx: number,
-  cy: number,
-  r: number,
-  breath: number,
-) {
-  // 5 fixed strands sweeping across the kernel — deterministic angles.
-  const STRANDS = 5;
-  ctx.lineCap = "round";
-  for (let i = 0; i < STRANDS; i++) {
-    const ang = (i / STRANDS) * Math.PI + breath * 0.25;
-    const a = { x: cx + Math.cos(ang) * r * 0.85, y: cy + Math.sin(ang) * r * 0.85 };
-    const b = {
-      x: cx + Math.cos(ang + Math.PI) * r * 0.85,
-      y: cy + Math.sin(ang + Math.PI) * r * 0.85,
-    };
-    const ctrl = {
-      x: cx + Math.cos(ang + Math.PI / 2) * r * (0.35 + 0.12 * i),
-      y: cy + Math.sin(ang + Math.PI / 2) * r * (0.35 + 0.12 * i),
-    };
-    ctx.strokeStyle = `rgba(255,255,255,${0.05 + 0.04 * Math.sin(breath * 6.28 + i)})`;
-    ctx.lineWidth = Math.max(1, r * 0.03);
-    ctx.beginPath();
-    ctx.moveTo(a.x, a.y);
-    ctx.quadraticCurveTo(ctrl.x, ctrl.y, b.x, b.y);
-    ctx.stroke();
-  }
-}
-
-// ---- pre-rendered radial glow sprite ----------------------------------------
-function makeRadialSprite(
-  size: number,
-  stops: Array<[number, string]>,
-): HTMLCanvasElement {
-  const c = document.createElement("canvas");
-  c.width = size;
-  c.height = size;
-  const g = c.getContext("2d");
-  if (g) {
-    const grad = g.createRadialGradient(
-      size / 2,
-      size / 2,
-      0,
-      size / 2,
-      size / 2,
-      size / 2,
-    );
-    for (const [stop, color] of stops) grad.addColorStop(stop, color);
-    g.fillStyle = grad;
-    g.fillRect(0, 0, size, size);
-  }
-  return c;
-}
-
 function mod(v: number, m: number): number {
   return ((v % m) + m) % m;
 }
+
+// expose so ArtifactTreeGraph can position overlays consistently
+export { CORE, CORE_RADIUS, type Pt };

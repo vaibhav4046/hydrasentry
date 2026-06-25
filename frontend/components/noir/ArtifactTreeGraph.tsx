@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useReducedMotion } from "framer-motion";
 import { cn } from "@/lib/cn";
 import { usePauseOffscreen } from "@/hooks/usePauseOffscreen";
+import { usePointerField } from "@/hooks/usePointerField";
 import { GraphNodeLabel } from "./GraphNodeLabel";
 import type { InspectorNode } from "./NodeInspectorPreview";
 import type { Graph, GraphNode } from "@/lib/types";
@@ -71,9 +72,31 @@ export function ArtifactTreeGraph({
   className,
 }: ArtifactTreeGraphProps) {
   const prefersReduced = useReducedMotion();
-  // Pause the perpetual tainted pulse when the tree is offscreen or the tab is
-  // hidden (the canvas reads the host's data-anim attribute set here).
-  const hostRef = usePauseOffscreen<HTMLDivElement>("200px 0px");
+  // Pause the rAF loop when the tree is offscreen or the tab is hidden (the
+  // canvas reads the host's data-anim attribute set here).
+  const pauseRef = usePauseOffscreen<HTMLDivElement>("200px 0px");
+  // Spring-smoothed pointer field driving canvas parallax + attraction.
+  const { hostRef: pointerHostRef, field: pointerField } =
+    usePointerField<HTMLDivElement>();
+  // Attach BOTH behaviours to the one host div via a merged callback ref.
+  const setHostRef = useCallback(
+    (el: HTMLDivElement | null) => {
+      pauseRef.current = el;
+      pointerHostRef.current = el;
+    },
+    [pauseRef, pointerHostRef],
+  );
+
+  // Which node is hovered (lifts + illuminates its canvas edges). Forwarded to
+  // any external onNodeHover too so /graph etc. keep their inspector behaviour.
+  const [hoveredId, setHoveredId] = useState<string | null>(null);
+  const handleHover = useCallback(
+    (node: InspectorNode | null) => {
+      setHoveredId(node?.id ?? null);
+      onNodeHover?.(node);
+    },
+    [onNodeHover],
+  );
 
   // ---- resolve the active stage ---------------------------------------------
   const controlled = stage != null;
@@ -146,35 +169,18 @@ export function ArtifactTreeGraph({
 
   return (
     <div
-      ref={hostRef}
+      ref={setHostRef}
       className={cn("relative w-full select-none", className)}
       aria-hidden="true"
     >
-      {/* volumetric spotlight behind the core (~50% x, 46% y in the 1000x720
-          viewBox) — the soft luminous wash that makes the core read as the focal
-          point. GPU-free CSS radial, monochrome. */}
-      <div
-        aria-hidden
-        className="pointer-events-none absolute left-1/2 top-[46%] -z-10 h-[78%] w-[78%] -translate-x-1/2 -translate-y-1/2 rounded-full"
-        style={{
-          background:
-            "radial-gradient(circle, rgba(226,232,240,0.14), rgba(255,255,255,0.04) 38%, transparent 68%)",
-        }}
-      />
-      {/* cinematic vignette: deepens the corners to black for Skyfall-noir depth */}
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-0 -z-10"
-        style={{
-          background:
-            "radial-gradient(120% 100% at 50% 46%, transparent 52%, rgba(2,3,5,0.55) 100%)",
-        }}
-      />
-
+      {/* The particle-field canvas draws its own volumetric core light, vignette
+          and grain, so no CSS spotlight layers are needed here anymore. */}
       <NeuralMemoryCore
         connections={connections}
         stage={activeStage}
         staticFrame={!isAnimated}
+        pointer={pointerField}
+        hoveredNodeId={hoveredId}
       />
 
       {/* node badges as HTML overlay (real lucide icons + hover/click) */}
@@ -187,7 +193,7 @@ export function ArtifactTreeGraph({
             isAnimated={isAnimated}
             selectedPathId={selectedPathId}
             onNodeClick={onNodeClick}
-            onNodeHover={onNodeHover}
+            onNodeHover={handleHover}
             onPathSelect={onPathSelect}
           />
         ))}
