@@ -37,14 +37,22 @@ export function AnimatedRiskBadge({
   const inView = useInView(ref, { once: true, margin: "-40px" });
   const prefersReduced = useReducedMotion();
   const isAnimated = shouldAnimate && !prefersReduced;
-  const [value, setValue] = useState<number>(isAnimated ? from : to);
+  // Initialize deterministically to `from` so the server and the first client
+  // paint render the SAME number regardless of reduced-motion (which is null on
+  // the server and resolved on the client). Resolving the real target in an
+  // effect avoids a hydration text mismatch (React #418).
+  const [value, setValue] = useState<number>(from);
 
   useEffect(() => {
-    // Only animate once visible; otherwise the initial value already holds the
-    // correct number (final when not animated, `from` until in view).
-    if (!isAnimated || !inView) return;
+    // Reduced motion / animation off: settle on the final value instantly.
+    // Animated but not yet in view: hold `from` (the initial value) — nothing to
+    // do. Animated and in view: count up. State is only ever updated via the
+    // tween's onUpdate callback (not a direct setState in the effect body), which
+    // keeps the deterministic `from` initial render and avoids a hydration
+    // mismatch (React #418).
+    if (isAnimated && !inView) return;
     const controls = animate(from, to, {
-      duration: 1.4,
+      duration: isAnimated ? 1.4 : 0,
       ease: EASE_OUT_EXPO,
       onUpdate: (v) => setValue(v),
     });

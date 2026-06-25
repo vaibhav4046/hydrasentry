@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { NoirBackground } from "@/components/noir/NoirBackground";
 import { MotionProvider } from "@/components/noir/MotionProvider";
+import { DemoDataPill } from "@/components/shared/DemoDataPill";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -42,6 +43,7 @@ export default function RootLayout({
       <body className="min-h-full">
         <NoirBackground />
         <MotionProvider>{children}</MotionProvider>
+        <DemoDataPill variant="fixed" />
       </body>
     </html>
   );

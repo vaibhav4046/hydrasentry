@@ -29,15 +29,22 @@ export function DeferMount({
   className,
 }: DeferMountProps) {
   const ref = useRef<HTMLDivElement | null>(null);
-  // If IntersectionObserver is unavailable (SSR / very old browsers) render
-  // immediately — computed in the initializer so we never call setState
-  // synchronously inside the effect.
-  const [show, setShow] = useState(
-    () => typeof IntersectionObserver === "undefined",
-  );
+  // Start hidden on BOTH the server and the first client paint so the hydrated
+  // markup matches exactly (no React #418). The placeholder reserves height to
+  // keep CLS at 0. After mount we either reveal immediately (no
+  // IntersectionObserver support) or observe and reveal on approach — both run
+  // post-hydration so they never diverge from the server render.
+  const [show, setShow] = useState(false);
 
   useEffect(() => {
     if (show) return;
+    // No IntersectionObserver (old browsers / test envs): reveal on the next
+    // tick. Scheduling via a timer keeps the reveal out of the effect's
+    // synchronous body and still runs entirely post-hydration.
+    if (typeof IntersectionObserver === "undefined") {
+      const id = setTimeout(() => setShow(true), 0);
+      return () => clearTimeout(id);
+    }
     const el = ref.current;
     if (!el) return;
     const io = new IntersectionObserver(
