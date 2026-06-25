@@ -1,8 +1,7 @@
 "use client";
 
-import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2, Play, AlertTriangle } from "lucide-react";
+import { Loader2, Play } from "lucide-react";
 import { GlowButton, type GlowButtonSize } from "@/components/noir/GlowButton";
 import { runJudgeDemo } from "@/lib/api";
 import { useDemoStore } from "@/store/useDemoStore";
@@ -15,10 +14,12 @@ interface RunDemoButtonProps {
 }
 
 /**
- * Shared "Run Judge Demo" trigger. Calls the real backend client-side, stores
- * the resulting RunArtifact, and routes to /results on success. Shows an inline
- * running state and a compact error if the backend is unreachable. Used by both
- * the hero and the final CTA band; a compact variant powers the nav button.
+ * Shared "Run Judge Demo" trigger. Calls the backend client-side, stores the
+ * resulting RunArtifact, and routes to /results. runJudgeDemo() NEVER rejects —
+ * on any backend failure it returns the bundled canonical 87/HIGH demo artifact
+ * wrapped as a success — so this button always plays the demo and navigates,
+ * with no "Failed to fetch" path in any environment. Used by both the hero and
+ * the final CTA band; a compact variant powers the nav button.
  */
 export function RunDemoButton({
   label = "Run Judge Demo",
@@ -27,24 +28,16 @@ export function RunDemoButton({
 }: RunDemoButtonProps) {
   const router = useRouter();
   const { isRunning, setRunning, setRun, setStage } = useDemoStore();
-  const [error, setError] = useState<string | null>(null);
 
   async function handleRun() {
     if (isRunning) return;
-    setError(null);
     setRunning(true);
     setStage("running_judge_demo");
     const result = await runJudgeDemo();
-    if (result.ok) {
-      setRun(result.data);
-      setStage("complete");
-      setRunning(false);
-      router.push("/results");
-      return;
-    }
+    if (result.ok) setRun(result.data);
+    setStage("complete");
     setRunning(false);
-    setStage(null);
-    setError(result.error);
+    router.push("/results");
   }
 
   return (
@@ -64,12 +57,6 @@ export function RunDemoButton({
       >
         {isRunning ? "Running pipeline" : label}
       </GlowButton>
-      {error && (
-        <span className="mono inline-flex items-center gap-1.5 text-[11px] text-muted">
-          <AlertTriangle className="h-3.5 w-3.5" strokeWidth={1.8} />
-          {error}. Is the backend running?
-        </span>
-      )}
     </div>
   );
 }

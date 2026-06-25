@@ -1,6 +1,6 @@
 {
   "name": "attack-pack",
-  "version": "1.4.49",
+  "version": "1.4.50",
   "last_update": "2026-06-24T00:00:00+00:00",
   "patterns_added": [
     "memory_poisoning_refund_override",

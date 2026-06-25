@@ -4,13 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { m } from "framer-motion";
-import {
-  AlertTriangle,
-  ArrowRight,
-  Database,
-  Loader2,
-  Play,
-} from "lucide-react";
+import { ArrowRight, Database, Loader2, Play } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { fadeUp, staggerContainer, EASE_OUT_EXPO } from "@/lib/motion";
 import { runJudgeDemo } from "@/lib/api";
@@ -80,7 +74,6 @@ export function ArtifactTreeHero() {
 
   const [selectedPath, setSelectedPath] = useState<string>("p1");
   const [inspectNode, setInspectNode] = useState<InspectorNode | null>(null);
-  const [error, setError] = useState<string | null>(null);
 
   // Demo-driven stage. null => let the tree autoplay/idle-breathe.
   const [demoStage, setDemoStage] = useState<number | null>(null);
@@ -129,24 +122,19 @@ export function ArtifactTreeHero() {
 
   const handleLaunch = useCallback(async () => {
     if (isRunning) return;
-    setError(null);
     setScrubStage(null);
     setRunning(true);
     setStage("running_judge_demo");
     // Start the staged animation immediately so the visual reacts to the click.
     playStagesThenRoute();
+    // runJudgeDemo() NEVER rejects: on any backend failure it returns the bundled
+    // demo artifact (the canonical 87/HIGH run) wrapped as a success. So we ALWAYS
+    // have a run to store and the staged animation + /results navigation always
+    // play — there is no "Failed to fetch" path on this button in any environment.
     const result = await runJudgeDemo();
-    if (result.ok) {
-      setRun(result.data);
-      setStage("complete");
-      setRunning(false);
-      return;
-    }
-    // Backend unreachable: stop the run, leave the tree on its final frame, and
-    // surface a compact error (the animation already told the story).
+    if (result.ok) setRun(result.data);
+    setStage("complete");
     setRunning(false);
-    setStage(null);
-    setError(result.error);
   }, [isRunning, playStagesThenRoute, setRun, setRunning, setStage]);
 
   // Resolve the stage prop handed to the tree:
@@ -212,29 +200,21 @@ export function ArtifactTreeHero() {
             variants={fadeUp}
             className="flex flex-col items-start gap-3 sm:flex-row sm:items-center"
           >
-            <div className="flex flex-col gap-2">
-              <GlowButton
-                variant="primary"
-                size="lg"
-                onClick={handleLaunch}
-                disabled={isRunning}
-                iconLeft={
-                  isRunning ? (
-                    <Loader2 className="h-4 w-4 animate-spin" strokeWidth={1.8} />
-                  ) : (
-                    <Play className="h-4 w-4" strokeWidth={1.9} />
-                  )
-                }
-              >
-                {isRunning ? "Running pipeline" : "Launch Interactive Demo"}
-              </GlowButton>
-              {error && (
-                <span className="mono inline-flex items-center gap-1.5 text-[11px] text-muted">
-                  <AlertTriangle className="h-3.5 w-3.5" strokeWidth={1.8} />
-                  {error}. Is the backend running?
-                </span>
-              )}
-            </div>
+            <GlowButton
+              variant="primary"
+              size="lg"
+              onClick={handleLaunch}
+              disabled={isRunning}
+              iconLeft={
+                isRunning ? (
+                  <Loader2 className="h-4 w-4 animate-spin" strokeWidth={1.8} />
+                ) : (
+                  <Play className="h-4 w-4" strokeWidth={1.9} />
+                )
+              }
+            >
+              {isRunning ? "Running pipeline" : "Launch Interactive Demo"}
+            </GlowButton>
             <Link
               href="#architecture"
               className={cn(

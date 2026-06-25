@@ -7,9 +7,8 @@ import { usePauseOffscreen } from "@/hooks/usePauseOffscreen";
 import { GraphNodeLabel } from "./GraphNodeLabel";
 import type { InspectorNode } from "./NodeInspectorPreview";
 import type { Graph, GraphNode } from "@/lib/types";
-import { VoxelTreeCanvas } from "./VoxelTreeCanvas";
+import { NeuralMemoryCore } from "./NeuralMemoryCore";
 import {
-  CANOPY,
   DEMO_BADGES,
   DEMO_TAINTED_PATH,
   MAX_STAGE,
@@ -18,7 +17,13 @@ import {
   VB_W,
   type DemoBadge,
 } from "./artifactTreeData";
-import { DEMO_VOXELS, buildRealVoxels, type Voxel } from "./voxelTreeData";
+import {
+  CORE,
+  DEMO_CONNECTIONS,
+  buildRealConnections,
+  type Connection,
+  type Pt,
+} from "./neuralCoreData";
 
 interface ArtifactTreeGraphProps {
   /** Drive a specific stage 0..7 (overrides autoplay). */
@@ -42,17 +47,17 @@ const STAGE_HOLD_MS = 1150;
 const IDLE_HOLD_MS = 3400;
 
 /**
- * The signature monochrome "artifact tree graph" — now a DPR-scaled VOXEL canvas
- * (dense white squares forming the trunk + branches + a white-hot TAINTED PATH)
- * ringed by labelled context-node badges. The canvas replaces the old
- * framer-motion SVG strokes: geometry is precomputed once (seeded, SSR-safe), a
- * bounded rAF build-in reveals cells base->up then HOLDS a static frame, and the
- * only perpetual motion is a cheap pulse on the few tainted cells (paused
- * offscreen / when hidden). No per-frame React state.
+ * The signature monochrome hero — now a DPR-scaled NEURAL MEMORY CORE canvas: a
+ * luminous breathing core with elegant curved synaptic connections radiating to
+ * the labelled context-node badges, light pulses travelling them like memories.
+ * Geometry is precomputed once (seeded, SSR-safe); the canvas runs ONE rAF loop
+ * with additive-bloom sprites, parked offscreen / when hidden. No per-frame React
+ * state. The tainted path (memory -> conflict -> risk -> firewall) burns brighter
+ * and pulses hotter/faster — danger is intensity, never hue.
  *
  * Public props are unchanged so /graph, /results and /replay keep working. When
- * a real `graph` is passed, its edges are rasterised into the same voxel grid
- * and its nodes drive the badge overlay (same visual language as the demo).
+ * a real `graph` is passed, its edges become the core-and-spokes web and its
+ * nodes drive the badge overlay (same visual language as the demo).
  */
 export function ArtifactTreeGraph({
   stage,
@@ -125,15 +130,16 @@ export function ArtifactTreeGraph({
     [useReal, graph],
   );
 
-  // Voxel field: demo by default; rasterise the real graph's edges when present.
-  const voxels: Voxel[] = useMemo(() => {
+  // Synaptic web: demo by default; build the real graph's core-and-spokes web
+  // when present (its edges + a core hub spoke to every node).
+  const connections: Connection[] = useMemo(() => {
     if (useReal && realModel) {
-      const centers = new Map<string, { x: number; y: number }>();
-      centers.set("canopy", CANOPY);
+      const centers = new Map<string, Pt>();
+      centers.set("core", CORE);
       for (const b of realModel.badges) centers.set(b.id, { x: b.x, y: b.y });
-      return buildRealVoxels(graph as Graph, centers);
+      return buildRealConnections(graph as Graph, centers);
     }
-    return DEMO_VOXELS;
+    return DEMO_CONNECTIONS;
   }, [useReal, realModel, graph]);
 
   const badges = useReal && realModel ? realModel.badges : DEMO_BADGES;
@@ -144,19 +150,29 @@ export function ArtifactTreeGraph({
       className={cn("relative w-full select-none", className)}
       aria-hidden="true"
     >
-      {/* single soft radial halo behind the canvas (replaces SVG feGaussianBlur
-          glow layers) — the luminous focal wash, GPU-free. */}
+      {/* volumetric spotlight behind the core (~50% x, 46% y in the 1000x720
+          viewBox) — the soft luminous wash that makes the core read as the focal
+          point. GPU-free CSS radial, monochrome. */}
       <div
         aria-hidden
-        className="pointer-events-none absolute left-1/2 top-[38%] -z-10 h-[70%] w-[70%] -translate-x-1/2 -translate-y-1/2 rounded-full"
+        className="pointer-events-none absolute left-1/2 top-[46%] -z-10 h-[78%] w-[78%] -translate-x-1/2 -translate-y-1/2 rounded-full"
         style={{
           background:
-            "radial-gradient(circle, rgba(255,255,255,0.10), rgba(255,255,255,0.03) 45%, transparent 70%)",
+            "radial-gradient(circle, rgba(226,232,240,0.14), rgba(255,255,255,0.04) 38%, transparent 68%)",
+        }}
+      />
+      {/* cinematic vignette: deepens the corners to black for Skyfall-noir depth */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 -z-10"
+        style={{
+          background:
+            "radial-gradient(120% 100% at 50% 46%, transparent 52%, rgba(2,3,5,0.55) 100%)",
         }}
       />
 
-      <VoxelTreeCanvas
-        voxels={voxels}
+      <NeuralMemoryCore
+        connections={connections}
         stage={activeStage}
         staticFrame={!isAnimated}
       />
