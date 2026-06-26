@@ -64,11 +64,8 @@ export default function GraphPage() {
   // Reset any stale selection when the underlying model changes (cold ↔ run ↔
   // captured) so the inspector never points at a star from a different posture.
   const [selId, setSelId] = useState<string | null>(null);
-  const selectableModel = model;
   const activeId =
-    selId && selectableModel.stars.some((s) => s.id === selId)
-      ? selId
-      : defaultId;
+    selId && model.stars.some((s) => s.id === selId) ? selId : defaultId;
   const selected =
     model.stars.find((s) => s.id === activeId) ?? model.stars[0];
   const insp: NodeProvenance | undefined = selected?.insp;
