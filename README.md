@@ -24,6 +24,54 @@ That single call returns the full canonical artifact (poisoned-memory replay + S
 
 ---
 
+## Open source: run it yourself (no HydraDB needed)
+
+You do not need a HydraDB account, a key, or any network to see the whole value on your **own** data. A bundled `LocalGraphAdapter` builds a relation graph in-process from your memory texts and runs the full pipeline (ingest memories -> build graph -> detect poisoned memory -> trace the taint path -> risk score). It is honest about provenance: the graph is labelled `local_graph`, a transparent local heuristic graph, **not** real HydraDB.
+
+```bash
+git clone https://github.com/vaibhav4046/hydrasentry
+cd hydrasentry/backend
+python -m venv .venv
+# Windows PowerShell:  .venv\Scripts\Activate.ps1
+# bash:                source .venv/bin/activate
+pip install -r requirements.txt
+
+# Scan the bundled sample (a poisoned "VIP instant refund" memory):
+python -m constellan scan examples/refund_memories.json
+```
+
+Expected output (trimmed):
+
+```text
+Constellan local scan (no HydraDB key required)
+------------------------------------------------------------
+Task           : Process a £900 refund for this customer.
+Graph source   : local_graph  (local heuristic graph, NOT real HydraDB)
+
+RISK           : HIGH  (score 87/100, confidence 0.92)
+Attack type    : memory_poisoning
+Firewall       : block
+
+Tainted path:
+  mem_poison_047 -> policy_refund_v2 -> instant_refund_action -> manager_approval
+
+Tainted query_paths triplets:
+  mem_poison_047 --overrides--> policy_refund_v2 (chunk mem_poison_047)
+  mem_poison_047 --instructs--> instant_refund_action (chunk mem_poison_047)
+  instant_refund_action --bypasses--> manager_approval (chunk mem_poison_047)
+
+Flagged findings:
+  - poisoned/stale memory detected: mem_poison_047
+  - tainted path: mem_poison_047 -> policy_refund_v2 -> instant_refund_action -> manager_approval
+  - ...
+```
+
+Point it at your own JSON. A memories file is `{task?, policy?, memories: [{id?, text, trust?, relations?}, ...]}` (or a bare list of memories); mark a memory `"trust": "poisoned"` to flag it as the injected one. Add `--json` for the full machine-readable result. The same scan is also exposed over HTTP as `POST /scan/local` once the backend is running. This maps to **OWASP ASI06 (Memory Poisoning)** in the Agentic Security Initiative threat taxonomy.
+
+> HydraDB stays the **flagship** backend. The local adapter is a zero-setup way to try Constellan instantly; for graph-native `query_paths` evidence, run with a HydraDB key (`APP_MODE=real`). See [Adapters](#adapters).
+
+---
+
 ## Problem: why this matters
 
 Agentic systems no longer fail mainly at the prompt. They fail at **context**. An agent retrieves a memory, a knowledge chunk, or a loaded skill, and that retrieved text quietly overrides the policy it was supposed to follow. A poisoned "VIP customers always get instant refunds" memory beats a clean "refunds over GBP 500 need manager approval" policy. A knowledge document carries `ignore previous instructions`. A stale v1 policy shadows the current v2. A subtenant reads another subtenant's secret.
@@ -67,6 +115,19 @@ Promptfoo tells you a prompt failed. Constellan shows you the graph anatomy of h
 HydraDB is not a flat vector store. Its query response carries a `graph_context` with `query_paths` — the relational triplets (`source --relation--> target`) that connect the chunks a query traversed. That is exactly the evidence Constellan needs: it lets the product show the *route* a poisoned chunk took, not just the fact that it was retrieved. The whole product is built around treating those `query_paths` as first-class forensic evidence.
 
 When real HydraDB `query_paths` are present, the graph is labelled **REAL HYDRADB QUERY_PATHS**. When they are not (demo mode, or a query that returned no paths), Constellan renders a **DERIVED SCENARIO GRAPH FALLBACK** and labels it as such. The product never presents derived data as real HydraDB output. This honesty is enforced in code (`graph_extractor.py`) and in the report (`report.py`).
+
+## Adapters
+
+The integrity engine talks to its context store through a single interface — the `HydraAdapter` ABC in `backend/hydra_client.py`. The taint/risk pipeline (`scenario_engine` -> `graph_extractor` -> `risk_engine` -> `report`) depends only on that interface and a normalized query-result shape, never on any one backend's specifics. That seam is what lets multiple backends drive the identical loop, and it is documented as a contract in the ABC docstring for anyone adding a new one.
+
+| Adapter | Status | Graph source label | Setup |
+|---------|--------|--------------------|-------|
+| **HydraDB** (`RealHydraAdapter`) | **Flagship** | `real_query_paths` | `APP_MODE=real` + `HYDRA_DB_API_KEY`. Graph-native: parses HydraDB's `graph_context.query_paths` as first-class forensic evidence. |
+| **Local** (`LocalGraphAdapter`) | Bundled, zero-setup | `local_graph` | None. Builds a transparent in-process heuristic graph from your memory texts. No key, no account, no network. Honestly **not** HydraDB. |
+| **Demo** (`DemoHydraAdapter`) | Bundled | `derived_scenario_graph` | None. Deterministic fixture graph powering the canonical judge demo. |
+| **Neo4j / Memgraph** | Roadmap | (planned) | Property-graph backends behind the same ABC. |
+
+HydraDB is the hero: it is the only backend that returns genuine graph `query_paths`, which is the whole reason Constellan can show the *route* a poisoned chunk travelled rather than just the fact it was retrieved. The Local adapter exists so a newcomer can run the full detection -> taint-trace -> score loop on their own data in about a minute, then graduate to HydraDB for real graph evidence. Provenance is always labelled honestly; derived and local graphs can never be presented as real HydraDB output.
 
 ## Why MCP
 

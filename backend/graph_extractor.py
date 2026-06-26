@@ -1,10 +1,13 @@
 ﻿"""Build a context graph from a HydraDB query result or a scenario fallback.
 
 If the query result carries non-empty real ``query_paths``, the graph is built
-from those triplets and labelled source="real_query_paths". Otherwise a
-canonical 8-node graph is derived from the scenario fixture and labelled
-source="derived_scenario_graph" so the UI can never mistake derived data for
-real HydraDB evidence.
+from those triplets and labelled source="real_query_paths". A zero-setup local
+adapter can instead supply triplets mined in-process from the memory texts; that
+graph is labelled source="local_graph" (a transparent local heuristic graph, NOT
+real HydraDB). Otherwise a canonical 8-node graph is derived from the scenario
+fixture and labelled source="derived_scenario_graph". The three labels keep the
+UI and report honest about provenance: derived/local data can never be mistaken
+for real HydraDB evidence.
 """
 from __future__ import annotations
 
@@ -15,6 +18,9 @@ logger = logging.getLogger("hydrasentry.graph_extractor")
 
 REAL = "real_query_paths"
 DERIVED = "derived_scenario_graph"
+# Third honest provenance: triplets mined in-process by the zero-setup
+# LocalGraphAdapter from user memory texts. A local heuristic graph, not HydraDB.
+LOCAL = "local_graph"
 
 # The canonical derived graph node ids, in flow order.
 CANONICAL_NODES = [
@@ -208,6 +214,8 @@ def build_graph(query_result: Optional[dict[str, Any]], scenario: dict[str, Any]
     """Build a graph from query_paths when present, labelled by provenance.
 
     - Genuine HydraDB result with paths -> source="real_query_paths".
+    - Local-adapter result with paths -> source="local_graph" (transparent
+      in-process heuristic graph; honestly NOT real HydraDB).
     - Demo-adapter result with derived paths -> source="derived_scenario_graph"
       (rich triplet graph, but honestly labelled as derived).
     - No paths at all -> canonical 8-node derived fallback.
@@ -215,8 +223,27 @@ def build_graph(query_result: Optional[dict[str, Any]], scenario: dict[str, Any]
     if query_result:
         graph_ctx = query_result.get("graph_context") or {}
         raw_paths = graph_ctx.get("query_paths") or query_result.get("query_paths") or []
+        is_real = bool(query_result.get("real")) and not query_result.get("demo")
+        # A local-adapter result is explicitly marked ``local`` and is never
+        # ``real``; it is labelled local_graph, distinct from REAL/DERIVED.
+        is_local = bool(query_result.get("local")) and not is_real
         if raw_paths:
-            is_real = bool(query_result.get("real")) and not query_result.get("demo")
-            source_label = REAL if is_real else DERIVED
+            if is_local:
+                source_label = LOCAL
+            else:
+                source_label = REAL if is_real else DERIVED
             return _build_from_triplets(query_result, scenario, source_label)
+        # A local result with no triplets must stay honestly labelled
+        # ``local_graph`` (empty), NOT fall through to the canonical derived
+        # 8-node graph (which would invent a taint path the input lacks).
+        if is_local:
+            return _empty_local_graph()
     return _build_derived_graph(scenario)
+
+
+def _empty_local_graph() -> dict[str, Any]:
+    """Honest empty local graph: zero triplets, no taint. Used when the local
+    adapter is queried over memories that produced no relations."""
+    logger.info("graph source=%s nodes=0 edges=0 (empty local input)", LOCAL)
+    return {"source": LOCAL, "nodes": [], "edges": [], "query_paths": [],
+            "tainted_path": []}

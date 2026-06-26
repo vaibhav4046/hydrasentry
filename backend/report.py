@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from graph_extractor import REAL
+from graph_extractor import LOCAL, REAL
 
 LEGAL_STATEMENT = (
     "All tests were executed only against tenants, subtenants, memories, and "
@@ -48,7 +48,17 @@ def _bullets(items: list[str]) -> str:
 def _graph_label(source: str) -> str:
     if source == REAL:
         return "REAL HYDRADB QUERY_PATHS"
+    if source == LOCAL:
+        return "LOCAL HEURISTIC GRAPH (NO HYDRADB)"
     return "DERIVED SCENARIO GRAPH FALLBACK"
+
+
+def _adapter_label(source: str) -> str:
+    if source == REAL:
+        return "real HydraDB"
+    if source == LOCAL:
+        return "local heuristic graph (no HydraDB)"
+    return "deterministic demo"
 
 
 def generate_report(artifact: dict[str, Any]) -> str:
@@ -113,7 +123,7 @@ def generate_report(artifact: dict[str, Any]) -> str:
     lines.append("")
     lines.append(SECTIONS[5])
     lines.append(f"- Tenant: `{baseline.get('tenant_id','hydrasentry-owned-test')}`")
-    lines.append(f"- Adapter: {'real HydraDB' if graph_source == REAL else 'deterministic demo'}")
+    lines.append(f"- Adapter: {_adapter_label(graph_source)}")
     lines.append(f"- Graph evidence: {graph_label}")
     lines.append("")
     lines.append(SECTIONS[6])

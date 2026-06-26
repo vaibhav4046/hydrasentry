@@ -43,7 +43,42 @@ _TERMINAL_BAD = {"errored", "failed"}
 
 
 class HydraAdapter(abc.ABC):
-    """Abstract HydraDB adapter. All methods are scoped to owned tenants only."""
+    """Abstract context-store adapter. The ONLY coupling point between the
+    integrity engine and any backend.
+
+    The taint/integrity/risk pipeline (scenario_engine -> graph_extractor ->
+    risk_engine -> report) depends only on this interface and the normalized
+    shapes below, never on HydraDB specifics (httpx, the HydraDB wire envelope,
+    settings.hydra). All of those live in ``RealHydraAdapter`` alone. That is
+    what lets ``DemoHydraAdapter`` and the zero-setup ``LocalGraphAdapter``
+    drive the exact same loop.
+
+    Contract a NEW adapter must satisfy (see RealHydraAdapter for the flagship
+    HydraDB implementation, DemoHydraAdapter for the deterministic fixture, and
+    ``adapters.LocalGraphAdapter`` for the in-process heuristic graph):
+
+    * ``is_real`` (class attr): True ONLY for a genuine HydraDB-backed adapter.
+      The engine's real-only query-retry keys off this; demo/local keep it False.
+    * ``ensure_tenant`` / ``ingest_knowledge`` / ``ingest_memory``: accept the
+      scenario chunk shape (``{chunk_id, kind, trust, text, relations?}``) and
+      store it under the owned ``tenant:sub`` scope. Return ``{ok: bool, ...}``.
+    * ``wait_ready`` / ``wait_indexed``: block until the store is queryable, then
+      return ``{ok: bool, ...}``. Synchronous backends return immediately.
+    * ``query`` -> a normalized result dict the engine consumes:
+        - ``query_paths``: list of flat triplets
+          ``{source, relation, target, source_chunk_id, tainted?}`` (also
+          mirrored under ``graph_context.query_paths``).
+        - exactly one honest provenance flag drives the graph label in
+          ``graph_extractor.build_graph``: ``real=True`` (and not ``demo``) ->
+          ``real_query_paths``; ``local=True`` (and not ``real``) ->
+          ``local_graph``; ``demo=True`` -> ``derived_scenario_graph``. Never
+          set ``real`` for non-HydraDB data.
+        - ``chunks``, ``chunk_relations``, ``chunk_id_to_group_ids`` are passed
+          through for context; ``raw`` preserves the backend's raw payload.
+    * ``quarantine_memory``: mark a chunk quarantined in an owned tenant.
+
+    All methods are scoped to owned tenants only.
+    """
 
     is_real: bool = False
 

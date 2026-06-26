@@ -105,6 +105,24 @@ class McpScheduleBody(BaseModel):
     name: str
 
 
+class LocalMemory(BaseModel):
+    text: str
+    id: Optional[str] = None
+    trust: Optional[str] = None
+    kind: Optional[str] = None
+    relations: Optional[list[dict[str, Any]]] = None
+
+
+class LocalScanBody(BaseModel):
+    """Payload for the zero-setup local scan (no HydraDB key required)."""
+    memories: list[LocalMemory]
+    task: Optional[str] = None
+    policy: Optional[str] = None
+    attack_type: Optional[str] = None
+    forbidden_markers: Optional[list[str]] = None
+    safe_markers: Optional[list[str]] = None
+
+
 # --- Core endpoints ---------------------------------------------------------
 
 @app.get("/health")
@@ -277,6 +295,20 @@ async def skillmake_examples() -> JSONResponse:
 @app.get("/results/summary")
 async def results_summary() -> JSONResponse:
     return ok(storage.results_summary())
+
+
+@app.post("/scan/local")
+async def scan_local(body: LocalScanBody) -> JSONResponse:
+    """Zero-setup local scan: run the full pipeline on caller-supplied memories
+    with NO HydraDB key, account, or network. The graph is a transparent local
+    heuristic graph (``local_graph``), never presented as real HydraDB. Additive
+    and isolated from the canonical demo and the Real/Demo adapters.
+    """
+    from adapters.local_scan import run_local_scan
+
+    payload = body.model_dump(exclude_none=True)
+    result = await asyncio.to_thread(run_local_scan, payload)
+    return ok(result)
 
 
 @app.get("/settings/providers")
