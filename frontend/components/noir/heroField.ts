@@ -1,5 +1,5 @@
 /**
- * Deterministic particle-field model for the Constellan hero — a monochrome
+ * Deterministic particle-field model for the Constellan hero, a monochrome
  * "guarded memory graph". HydraDB renders its graph as a luminous voxel tree of
  * thousands of heat-mapped dots that grow and shimmer; Constellan renders the
  * same DNA in STRICT MONOCHROME: a dense breathing CORE cluster with synaptic
@@ -7,7 +7,7 @@
  * memories. Danger is intensity (brighter / faster / denser white), never hue.
  *
  * Everything here is a pure function of FIXED data or a SEEDED PRNG (mulberry32)
- * — no Math.random / Date at module scope — so SSR and client render
+ *, no Math.random / Date at module scope, so SSR and client render
  * byte-identical (no hydration drift). Coordinate space reuses the 1000 x 720
  * viewBox so the HTML node-badge overlay + inspector line up unchanged.
  */
@@ -31,7 +31,7 @@ import {
 export { VB_W, VB_H, CORE, CORE_RADIUS, quadAt };
 export type { Pt, Connection };
 
-// ---- deterministic PRNG (mulberry32) — matches the rest of the codebase ------
+// ---- deterministic PRNG (mulberry32), matches the rest of the codebase ------
 function mulberry32(seed: number): () => number {
   let a = seed >>> 0;
   return () => {
@@ -44,7 +44,7 @@ function mulberry32(seed: number): () => number {
 }
 
 /**
- * One particle riding an EDGE. We don't store a live position — only the
+ * One particle riding an EDGE. We don't store a live position, only the
  * immutable spawn parameters; the renderer evaluates position from `now` so
  * there is zero per-frame allocation and the field is fully deterministic.
  */
@@ -63,7 +63,7 @@ export interface EdgeParticle {
 }
 
 /**
- * One particle in the CORE cluster — a dense breathing nebula of memory. Stored
+ * One particle in the CORE cluster, a dense breathing nebula of memory. Stored
  * in polar form around the core so the breathe scale is a single multiply.
  */
 export interface CoreParticle {
@@ -71,7 +71,7 @@ export interface CoreParticle {
   rad: number; // radius fraction 0..1 of CORE_RADIUS
   size: number;
   bright: number;
-  /** orbit angular velocity (rad/sec, signed) — slow swirl. */
+  /** orbit angular velocity (rad/sec, signed), slow swirl. */
   spin: number;
   /** twinkle phase. */
   twinkle: number;
@@ -88,7 +88,7 @@ export interface DustParticle {
   vx: number;
   vy: number;
   twinkle: number;
-  /** depth 0..1 (near=1) — parallax + DoF strength. */
+  /** depth 0..1 (near=1), parallax + DoF strength. */
   depth: number;
 }
 
@@ -99,7 +99,7 @@ export interface HeroField {
 
 // ---- tuning (named, no magic numbers in the hot loop) ------------------------
 // We have huge frame-budget headroom (~0.6ms/frame), so the field is DENSE for
-// HydraDB-grade voxel richness — thousands of discrete motes, not a sparse glow.
+// HydraDB-grade voxel richness, thousands of discrete motes, not a sparse glow.
 const CORE_PARTICLE_COUNT = 460; // dense nebula cluster (reads as structure)
 const HALO_PARTICLE_COUNT = 140; // looser motes orbiting beyond the core body
 const DUST_COUNT = 150;
@@ -112,7 +112,7 @@ export function buildHeroField(): HeroField {
   // luminous mind of discrete motes, not a flat ring), PLUS a looser corona of
   // motes that extends past the core body so the cluster has structure + reach
   // instead of one tight blob. Brightness rises toward the centre; the centre is
-  // densest, the corona sparser — the eye reads a real particle nebula.
+  // densest, the corona sparser, the eye reads a real particle nebula.
   const coreParticles: CoreParticle[] = [];
   for (let i = 0; i < CORE_PARTICLE_COUNT; i++) {
     const ang = rng() * Math.PI * 2;

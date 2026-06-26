@@ -6,9 +6,9 @@ import { SectionMarker } from "./SectionMarker";
 import { sectionContainer, mastheadLine, EASE_OUT_EXPO } from "@/lib/motion";
 
 /**
- * Observation log — the attack flow as a transit timeline. As the section
+ * Observation log, the attack flow as a transit timeline. As the section
  * enters, the heading block reveals, then a hairline draws DOWN the left edge of
- * the log (a vertical rule that scales from the top via transform — GPU only),
+ * the log (a vertical rule that scales from the top via transform, GPU only),
  * and each recorded observation row fades/rises in sequence behind it. The
  * progressive hairline is the "timeline drawing itself" the brief calls for.
  */
@@ -57,7 +57,7 @@ export function ObservationLog() {
           style={{ maxWidth: "40ch", fontSize: "13.5px", lineHeight: 1.62, color: "#8B94A1" }}
         >
           Promptfoo tells you a prompt failed. Constellan charts the graph anatomy
-          of how poisoned context reached the agent — nine recorded observations,
+          of how poisoned context reached the agent, nine recorded observations,
           one severed star.
         </m.p>
       </div>

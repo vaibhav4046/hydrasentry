@@ -6,7 +6,7 @@
  * renders (user_task, clean_policy, poisoned_memory, query_path, policy_conflict,
  * unsafe_tool_action, mcp_firewall, report), computes a deterministic left to
  * right layered layout (the backend graph carries no x/y), synthesizes stable
- * edge ids, and — when the firewall blocked — injects a firewall + report node
+ * edge ids, and, when the firewall blocked, injects a firewall + report node
  * so the hero tells the full "blocked the unsafe action" story. Whether the
  * underlying graph is real or derived is surfaced verbatim via graph_source; the
  * injected firewall/report nodes are clearly part of the derived narrative.

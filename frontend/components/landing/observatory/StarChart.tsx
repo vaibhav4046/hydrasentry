@@ -17,12 +17,12 @@ import {
 } from "./firstLight";
 
 /**
- * The Memory Observatory star chart — the homepage centerpiece. A precise,
+ * The Memory Observatory star chart, the homepage centerpiece. A precise,
  * cartographic canvas (the antithesis of a glowing neural-network blob): an
  * azimuth ring with RA/Dec ticks, a sparse field of faint stars that twinkle
  * subtly, the "Memoria" constellation drawn as a thin silver figure with named
  * stars of varying magnitude, the tainted memory collapsing into a dark
- * crossed-out node, and a single slow sweep line — the sentinel watching the
+ * crossed-out node, and a single slow sweep line, the sentinel watching the
  * chart.
  *
  * On first paint it plays a cinematic "First Light" boot sequence (firstLight.ts
@@ -36,7 +36,7 @@ import {
  *  - Canvas is DPR-scaled (cap 3) for razor-crisp hairlines at retina/4K/8K;
  *    redrawn on resize via ResizeObserver.
  *  - Geometry is 100% deterministic (atlasData); only opacities, the boot
- *    timeline, and two slow angles animate — all on the compositor-free 2D
+ *    timeline, and two slow angles animate, all on the compositor-free 2D
  *    context, no per-frame React state.
  *  - rAF is paused when the chart scrolls off-screen or the tab is hidden, and
  *    under prefers-reduced-motion the final settled frame is drawn once (no loop).
@@ -224,7 +224,7 @@ export function StarChart() {
 
         if (s.tainted) {
           // Collapsed star: a dark void disc, a thin broken ring, and a faint
-          // cross — the memory going dark. Its appearance is gated on collapse.
+          // cross, the memory going dark. Its appearance is gated on collapse.
           const cv = p.collapse;
           if (cv <= 0) continue;
           const pulse = reduce ? 0.6 : 0.5 + 0.5 * Math.sin(t * 1.3);

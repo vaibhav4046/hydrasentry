@@ -1,14 +1,14 @@
 /**
- * Constellan — Memory Observatory star-atlas data.
+ * Constellan, Memory Observatory star-atlas data.
  *
  * The homepage centerpiece is a precision celestial chart (not a glowing neural
  * blob): the agent's memory rendered as a sparse constellation. Each star is a
  * memory node / pipeline concept; thin constellation lines connect them into one
- * deliberate figure ("the Memoria constellation"). One star — the tainted
- * memory — collapses and goes dark (the threat the sentinel watches for).
+ * deliberate figure ("the Memoria constellation"). One star, the tainted
+ * memory, collapses and goes dark (the threat the sentinel watches for).
  *
  * Coordinates live in a normalized chart space (x,y in [0,1], origin top-left)
- * and are FIXED — the chart is fully deterministic so it renders identically on
+ * and are FIXED, the chart is fully deterministic so it renders identically on
  * server and client (no hydration drift) and reads like a real engraved atlas.
  * `mag` is stellar magnitude shorthand: lower = brighter/larger (as in real
  * astronomy). Labels are cartographic and map to the product's concepts.
@@ -24,16 +24,16 @@ export interface AtlasStar {
   mag: number;
   /** Catalogue label (mono) shown beside primary stars. */
   label: string;
-  /** Designation under the name — the product concept it maps to. */
+  /** Designation under the name, the product concept it maps to. */
   des: string;
-  /** The tainted memory — rendered collapsing/dark, the constellation's threat. */
+  /** The tainted memory, rendered collapsing/dark, the constellation's threat. */
   tainted?: boolean;
   /** Anchor side for the label so text never collides with the figure. */
   side: "left" | "right";
 }
 
 /**
- * The "Memoria" constellation — the named, labelled stars that form the figure.
+ * The "Memoria" constellation, the named, labelled stars that form the figure.
  * Hand-placed into a deliberate, sparse shape that reads as an intentional
  * star-sign, not a random scatter. The tainted node (mem_poison_047) sits off
  * the main spine, where the firewall severs it.
@@ -50,7 +50,7 @@ export const CONSTELLATION: AtlasStar[] = [
 ];
 
 /**
- * Constellation lines — the thin figure connecting the named stars. The tainted
+ * Constellation lines, the thin figure connecting the named stars. The tainted
  * star's link to the spine (`taint -> query`) is the path the firewall severs;
  * it is drawn dashed and dimmed (the collapsing limb). All others are the solid
  * silver figure.
@@ -72,7 +72,7 @@ export const CONSTELLATION_LINES: {
 
 /**
  * Deterministic field of faint background stars (the void's depth). Generated
- * from a tiny seeded PRNG so it is identical every render — no Math.random, no
+ * from a tiny seeded PRNG so it is identical every render, no Math.random, no
  * hydration mismatch. Kept sparse and dim; the figure above must dominate.
  */
 export interface FieldStar {
@@ -109,7 +109,7 @@ export function buildFieldStars(count = 90): FieldStar[] {
 }
 
 /**
- * Ignition order for the "First Light" boot sequence — the order in which the
+ * Ignition order for the "First Light" boot sequence, the order in which the
  * named stars light up. The core ignites first (the agent memory waking), then
  * the figure fills out from brightest to faintest, and the tainted star ignites
  * LAST so its collapse reads as the climax of the reveal. Returns the star's

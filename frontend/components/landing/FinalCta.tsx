@@ -6,7 +6,7 @@ import { GlassPanel } from "@/components/noir/GlassPanel";
 import { blurReveal } from "@/lib/motion";
 
 // Compact proof folded into the closing CTA (the standalone metrics band was
-// removed to cut a competing focal point — the references end on one confident
+// removed to cut a competing focal point, the references end on one confident
 // call to action, not a wall of stats).
 const CTA_STATS: { value: string; label: string }[] = [
   { value: "87 / HIGH", label: "canonical run" },
@@ -37,7 +37,7 @@ export function FinalCta() {
           </p>
           <RunDemoButton label="Run Judge Demo" size="lg" />
 
-          {/* hairline-divided proof row — the metrics, restated quietly */}
+          {/* hairline-divided proof row, the metrics, restated quietly */}
           <ul className="mt-2 flex flex-wrap items-center justify-center gap-x-10 gap-y-4 border-t border-hairline pt-8">
             {CTA_STATS.map((s) => (
               <li key={s.label} className="flex flex-col items-center gap-1">

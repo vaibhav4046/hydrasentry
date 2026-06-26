@@ -1,6 +1,6 @@
 /**
  * Ground-truth landing content, ported 1:1 from the Castellan design source
- * (docs/castellan_import/Constellan.dc.html — the renderVals() data block).
+ * (docs/castellan_import/Constellan.dc.html, the renderVals() data block).
  * The brand reads "Constellan" (the reference renders show the Constellan
  * wordmark over the Castellan layout); every other string is verbatim from the
  * source so the homepage stays same-to-same. Used by the homepage sections.
@@ -146,7 +146,7 @@ export const FEATURES: FeatureDef[] = [
   {
     icon: "SK",
     title: "SkillMake verifier",
-    desc: "Hidden injection, secret access, shell, network calls, and description mismatch — all caught.",
+    desc: "Hidden injection, secret access, shell, network calls, and description mismatch, all caught.",
   },
   {
     icon: "SC",

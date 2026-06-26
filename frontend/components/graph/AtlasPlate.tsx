@@ -12,7 +12,7 @@ import {
  * The framed Context Graph observation plate: the live AtlasStarChart canvas
  * inside an engraved atlas frame, with HTML-rendered cartographic overlays
  * positioned over the deterministic star coordinates. Labels are DOM (mono /
- * Fraunces) — not canvas text — so they stay crisp at any DPR and carry real
+ * Fraunces), not canvas text, so they stay crisp at any DPR and carry real
  * typographic character, exactly like the homepage ChartPlate. This is a larger,
  * working version of that plate: PLATE II · MEMORIA, a real/demo source badge, a
  * cartographic legend (TAINTED / CLEAN / SEVERED / GUARDIAN), and the named-star
@@ -112,7 +112,7 @@ export function AtlasPlate({
         </span>
       </div>
 
-      {/* source badge — honest real vs derived */}
+      {/* source badge, honest real vs derived */}
       <SourceBadge isReal={isReal} />
 
       {/* coordinate readouts */}

@@ -11,7 +11,7 @@ export function formatPercent(value: number): string {
 
 /** Format an ISO timestamp as a compact, locale-stable UTC string. */
 export function formatTimestamp(iso: string | null | undefined): string {
-  if (!iso) return "—";
+  if (!iso) return "·";
   const date = new Date(iso);
   if (Number.isNaN(date.getTime())) return iso;
   return date.toISOString().slice(0, 16).replace("T", " ") + " UTC";

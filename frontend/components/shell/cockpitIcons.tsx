@@ -1,5 +1,5 @@
 /**
- * Castellan Cockpit icon set — the EXACT inline SVG path data from the source's
+ * Castellan Cockpit icon set, the EXACT inline SVG path data from the source's
  * ICON map, rendered as a tiny stroked-path component. Using the source's own
  * path data (rather than a lucide approximation) keeps the glyphs pixel-identical
  * to the standalone. 24x24 viewBox, round caps/joins, stroke width 1.6 to match.

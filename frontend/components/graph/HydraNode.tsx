@@ -29,7 +29,7 @@ const ROLE_META: Record<GraphRole, { Icon: LucideIcon; kicker: string }> = {
 /**
  * Custom monochrome graph node. Tainted/poisoned nodes get a heavier border and
  * a slow pulsing white halo; the firewall node renders a shield with a BLOCKED
- * badge and a thick white outline. All severity is brightness/border/motion —
+ * badge and a thick white outline. All severity is brightness/border/motion
  * never hue. Clicking is wired by the canvas via onNodeClick.
  */
 export function HydraNode({ data, selected }: NodeProps) {

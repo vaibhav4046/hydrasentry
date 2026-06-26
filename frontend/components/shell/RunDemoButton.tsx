@@ -8,7 +8,7 @@ import { cn } from "@/lib/cn";
  * Top-bar "Run Demo" action. Triggers the REAL judge-demo run through the shared
  * demo store (lib/api.runJudgeDemo, with bundled-fixture fallback). The resulting
  * artifact populates every page that reads useRunDemo / the store (Command,
- * Graph, Replay, Results) without a route change. White/silver pill — the one
+ * Graph, Replay, Results) without a route change. White/silver pill, the one
  * bright affordance in the chrome.
  */
 export function RunDemoButton({ className }: { className?: string }) {

@@ -8,12 +8,12 @@ import {
 } from "./MemoryCortexCanvas";
 
 /**
- * #product section — the Memory Cortex canvas with its frame chrome (header
+ * #product section, the Memory Cortex canvas with its frame chrome (header
  * label, live risk chip), the canvas itself, and the control bar
  * (Inject / Block via MCP / Reset + decision + graph tag). Below it sits the
  * replay proof band (baseline vs poisoned cards). Owns the interactive cortex
  * state and animates the risk score with a cubic ease, exactly like the source's
- * _animRisk(). This is the design's own interactive graph — local to the page,
+ * _animRisk(). This is the design's own interactive graph, local to the page,
  * distinct from the backend judge-demo wired to the hero/nav CTAs.
  */
 function ghov(e: React.MouseEvent<HTMLElement>) {

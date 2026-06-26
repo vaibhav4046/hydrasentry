@@ -45,7 +45,7 @@ export function AnimatedRiskBadge({
 
   useEffect(() => {
     // Reduced motion / animation off: settle on the final value instantly.
-    // Animated but not yet in view: hold `from` (the initial value) — nothing to
+    // Animated but not yet in view: hold `from` (the initial value), nothing to
     // do. Animated and in view: count up. State is only ever updated via the
     // tween's onUpdate callback (not a direct setState in the effect body), which
     // keeps the deterministic `from` initial render and avoids a hydration

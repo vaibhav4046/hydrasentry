@@ -85,7 +85,7 @@ function secondsOf(clock: string): number {
 
 /** Advance a base HH:MM:SS clock by n seconds (UTC, wraps a day). */
 function tick(base: string, baseSecs: number, n: number): string {
-  if (base === "—") return "—";
+  if (base === "·") return "·";
   const total = (baseSecs + n) % 86400;
   const pad = (v: number) => String(v).padStart(2, "0");
   return `${pad(Math.floor(total / 3600))}:${pad(Math.floor((total % 3600) / 60))}:${pad(total % 60)}`;

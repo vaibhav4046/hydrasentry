@@ -3,7 +3,7 @@
 /**
  * Cinematic noir backdrop. Layers, bottom -> top:
  *   1. base void (#050608)
- *   2. the asset-pack memory-graph wallpaper (/bg/hero-noir-graph.webp — a
+ *   2. the asset-pack memory-graph wallpaper (/bg/hero-noir-graph.webp, a
  *      downscaled 1600px WebP recompressed from the original 4K PNG; the layer
  *      is dimmed to 0.32 + radially masked + drifts, so 4K detail was wasted),
  *      strongest behind the hero and fading to black toward the edges/bottom.
@@ -25,7 +25,7 @@ import { m, useReducedMotion } from "framer-motion";
 export function NoirBackground() {
   const reduceMotion = useReducedMotion();
 
-  // Stop the perpetual wallpaper drift while the tab is hidden — there's no
+  // Stop the perpetual wallpaper drift while the tab is hidden, there's no
   // reason to keep compositing a full-bleed transform loop nobody can see, and
   // it lets the browser idle the rAF/compositor when the page is backgrounded.
   const [tabHidden, setTabHidden] = useState(false);
@@ -102,7 +102,7 @@ export function NoirBackground() {
         }}
       />
 
-      {/* 5: film grain — tiled, low opacity, soft-light blend */}
+      {/* 5: film grain, tiled, low opacity, soft-light blend */}
       <div
         className="absolute inset-0 opacity-[0.06] [mix-blend-mode:soft-light]"
         style={{

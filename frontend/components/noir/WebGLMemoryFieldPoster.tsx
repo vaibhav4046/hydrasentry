@@ -13,7 +13,7 @@ import {
 import { CORE, CORE_RADIUS } from "./neuralCoreData";
 
 /**
- * A crisp, lightweight MONOCHROME poster for the WebGL hero — the static first
+ * A crisp, lightweight MONOCHROME poster for the WebGL hero, the static first
  * frame. Used three ways:
  *   1. `next/dynamic({ loading })` while the WebGL chunk streams in.
  *   2. The `prefers-reduced-motion` fallback (no animation at all).
@@ -54,7 +54,7 @@ export function WebGLMemoryFieldPoster({ className }: { className?: string }) {
           </radialGradient>
         </defs>
 
-        {/* faint branch strokes — the tree skeleton */}
+        {/* faint branch strokes, the tree skeleton */}
         <g fill="none" stroke="rgba(214,222,234,0.10)" strokeLinecap="round">
           {BRANCHES.map((b, i) => (
             <path key={i} d={b.d} strokeWidth={b.width * 0.6} />
@@ -76,7 +76,7 @@ export function WebGLMemoryFieldPoster({ className }: { className?: string }) {
           ))}
         </g>
 
-        {/* tainted chain — a touch hotter/denser */}
+        {/* tainted chain, a touch hotter/denser */}
         <g>
           {taintDots.map((d, i) => (
             <circle key={i} cx={d.x} cy={d.y} r={d.r} fill="url(#hsfDot)" opacity={d.a} />
@@ -92,7 +92,7 @@ export function WebGLMemoryFieldPoster({ className }: { className?: string }) {
   );
 }
 
-// ---- deterministic poster geometry (tiny — a few hundred dots) --------------
+// ---- deterministic poster geometry (tiny, a few hundred dots) --------------
 interface Dot {
   x: number;
   y: number;
@@ -198,7 +198,7 @@ function buildPosterDots(): { dots: Dot[]; taintDots: Dot[] } {
     }
   });
 
-  // tainted chain — hotter
+  // tainted chain, hotter
   const taintDots: Dot[] = [];
   for (let i = 0; i < DEMO_TAINTED_PATH.length - 1; i++) {
     const a = badgeCenter(DEMO_TAINTED_PATH[i]);

@@ -8,18 +8,18 @@ import type { ProviderStatus } from "@/lib/types";
 
 const MONO = "var(--font-geist-mono), 'JetBrains Mono', monospace";
 
-function str(p: ProviderStatus, key: string, fallback = "—"): string {
+function str(p: ProviderStatus, key: string, fallback = "·"): string {
   const v = p[key];
   return typeof v === "string" && v.length > 0 ? v : fallback;
 }
 
 /**
- * Configuration — ported 1:1 from the Castellan source. A two-column grid of
+ * Configuration, ported 1:1 from the Castellan source. A two-column grid of
  * provider cards: a status dot + name + status pill, then BASE URL / MODEL /
  * API KEY (masked) / ROLE rows, a Test connection button and a get-key link.
  * Providers and their masked-key fingerprints come from the REAL
  * /settings/providers; Test connection hits the live /settings/providers/test.
- * Raw keys never reach the browser — only the sha256 fingerprint + length.
+ * Raw keys never reach the browser, only the sha256 fingerprint + length.
  */
 export default function SettingsPage() {
   const [providers, setProviders] = useState<ProviderStatus[]>([]);

@@ -8,7 +8,7 @@ import { cn } from "@/lib/cn";
  * the Command page (app/mission/page.tsx). Every remaining dashboard surface
  * composes these so the card border/radius/background, the tiny-uppercase label
  * style, the number/type scale, and the spacing rhythm stay identical across the
- * cockpit. Monochrome only — emphasis is white/silver at varying opacity,
+ * cockpit. Monochrome only, emphasis is white/silver at varying opacity,
  * hairline borders, scale contrast, and tiny mono labels. No hue.
  */
 
@@ -20,7 +20,7 @@ interface CockpitCardProps {
 }
 
 /**
- * The flat hairline card. The cockpit's single surface primitive — replaces the
+ * The flat hairline card. The cockpit's single surface primitive, replaces the
  * glassy landing GlassPanel on dashboard bodies. Default padding is left to the
  * caller (pass p-5 / p-6) so cards match Command's spacing per context.
  */
@@ -76,7 +76,7 @@ interface CockpitFieldProps {
 }
 
 /**
- * A label/value row — tiny uppercase key on the left, value on the right.
+ * A label/value row, tiny uppercase key on the left, value on the right.
  * Matches the field rhythm used across the cockpit's detail cards. Pass
  * `mono` for ids, query_paths, model ids, base urls, and timestamps.
  */
@@ -104,7 +104,7 @@ export function CockpitField({
 type PillTone = "neutral" | "bright";
 
 interface CockpitPillProps {
-  /** Pill text — kept short, rendered uppercase mono. */
+  /** Pill text, kept short, rendered uppercase mono. */
   label: ReactNode;
   /** Optional leading icon node. */
   icon?: ReactNode;
@@ -118,7 +118,7 @@ interface CockpitPillProps {
 }
 
 /**
- * Cockpit status pill — mirrors the top-bar CockpitStatusPill. Monochrome:
+ * Cockpit status pill, mirrors the top-bar CockpitStatusPill. Monochrome:
  * severity is shown via brightness, border weight, and label, never hue. A
  * `bright` tone marks notable/critical state; `pulse` animates the dot.
  */

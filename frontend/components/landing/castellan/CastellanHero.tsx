@@ -4,7 +4,7 @@ import { HERO } from "./landingData";
 import { useRunJudgeDemo } from "./useRunJudgeDemo";
 
 /**
- * Castellan hero — ported 1:1 from the design source, the fold that must match
+ * Castellan hero, ported 1:1 from the design source, the fold that must match
  * hero4.png. A mono kicker pill with a pulsing dot, a massive Inter Tight 700
  * display headline with a white->grey vertical gradient clipped to the text,
  * the subcopy, and the primary "Run Judge Demo" CTA + "View Architecture"
@@ -69,7 +69,7 @@ export function CastellanHero() {
         {HERO.kicker}
       </div>
 
-      {/* display headline — white->grey gradient clipped to text */}
+      {/* display headline, white->grey gradient clipped to text */}
       <h1
         data-reveal
         style={{

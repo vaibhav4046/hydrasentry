@@ -1,7 +1,7 @@
 /**
  * Pre-rendered offscreen sprites + textures for the hero canvas. Building these
  * ONCE and blitting them with globalCompositeOperation="lighter" is what keeps
- * additive bloom cheap — no per-particle shadowBlur (which is brutally slow).
+ * additive bloom cheap, no per-particle shadowBlur (which is brutally slow).
  * All monochrome.
  */
 
@@ -32,11 +32,11 @@ export function makeRadialSprite(
 
 /** The standard set of glow sprites the renderer reuses. */
 export interface HeroSprites {
-  /** tight bright dot — particles. */
+  /** tight bright dot, particles. */
   dot: HTMLCanvasElement;
-  /** soft wide halo — core volumetric body. */
+  /** soft wide halo, core volumetric body. */
   halo: HTMLCanvasElement;
-  /** small hot kernel — dense core centre. */
+  /** small hot kernel, dense core centre. */
   kernel: HTMLCanvasElement;
 }
 

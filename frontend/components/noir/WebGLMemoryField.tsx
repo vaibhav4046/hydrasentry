@@ -20,7 +20,7 @@ interface WebGLMemoryFieldProps {
   staticFrame?: boolean;
   /** Smoothed pointer field (parallax + attraction) from usePointerField. */
   pointer?: PointerField | null;
-  /** Hovered anchor index (-1 / null = none) — brightens that node's filament. */
+  /** Hovered anchor index (-1 / null = none), brightens that node's filament. */
   hoveredAnchor?: number | null;
   /** Extra core/tainted energy while a demo runs (0..1). */
   corePulse?: number;
@@ -44,7 +44,7 @@ function pickScale(): number {
 }
 
 /**
- * The signature monochrome hero — a WebGL2 GPU PARTICLE FIELD that forms an
+ * The signature monochrome hero, a WebGL2 GPU PARTICLE FIELD that forms an
  * organic memory-graph TREE silhouette (HydraDB's voxel-tree DNA, in strict
  * monochrome). ~tens of thousands of GPU points: a breathing CORE, voxel-biased
  * BRANCH limbs, and streaming EDGE filaments core→node; the tainted chain burns
@@ -228,7 +228,7 @@ export function WebGLMemoryField({
 
     const ok = build();
     if (!ok) {
-      // Could not init WebGL2 — leave the canvas transparent; the parent's
+      // Could not init WebGL2, leave the canvas transparent; the parent's
       // <Poster> remains visible behind it (it is not unmounted on success
       // either, so this degrades gracefully to the static monochrome poster).
       return;
@@ -414,7 +414,7 @@ export function WebGLMemoryField({
       aria-hidden="true"
     >
       <canvas ref={canvasRef} className="block h-auto w-full" />
-      {/* Cinematic vignette sits ABOVE the additive canvas — a pure CSS gradient,
+      {/* Cinematic vignette sits ABOVE the additive canvas, a pure CSS gradient,
           costs nothing per frame, never touches GL fill-rate. Film grain is baked
           into the shader (per-fragment, DPR-proof) rather than a CSS noise layer,
           which avoids the data-URI/feTurbulence decode failures at high DPR. */}

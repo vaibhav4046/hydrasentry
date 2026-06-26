@@ -19,8 +19,8 @@ interface CockpitShellProps {
 }
 
 /**
- * The Castellan Cockpit app shell: a `248px 1fr` grid — a sticky left command
- * rail plus a sticky top bar and a scrolling main region — over the exact
+ * The Castellan Cockpit app shell: a `248px 1fr` grid, a sticky left command
+ * rail plus a sticky top bar and a scrolling main region, over the exact
  * ambient radar/aurora/drift backdrop. Applied to every dashboard route via
  * PageShell so the chrome stays identical across surfaces. On mobile the sidebar
  * collapses into a slide-in drawer toggled from the top bar.

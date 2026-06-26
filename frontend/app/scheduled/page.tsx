@@ -20,13 +20,13 @@ interface AgentRow {
   custom: boolean;
 }
 
-function readField(a: ScheduledAgent, key: string, fallback = "—"): string {
+function readField(a: ScheduledAgent, key: string, fallback = "·"): string {
   const v = a[key];
   return typeof v === "string" && v.length > 0 ? v : fallback;
 }
 
 /**
- * Scheduled Agents — ported 1:1 from the Castellan source. A posture summary
+ * Scheduled Agents, ported 1:1 from the Castellan source. A posture summary
  * row (active/total/next + Create agent), a slide-in create form (with the scan
  * sweep), and a three-column grid of agent cards (name + CUSTOM badge, on/off
  * toggle, schedule, LAST/NEXT, result + status dot). The six standing agents are
@@ -93,7 +93,7 @@ export default function ScheduledPage() {
       name: a.name,
       schedule: a.schedule,
       last: readField(a, "last_run"),
-      next: a.next_run || "—",
+      next: a.next_run || "·",
       result: readField(a, "latest_result", `${readField(a, "status", "armed")}`),
       enabled: a.enabled,
       custom: false,

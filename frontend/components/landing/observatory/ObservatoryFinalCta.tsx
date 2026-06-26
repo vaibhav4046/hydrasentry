@@ -8,7 +8,7 @@ import { scaleIn } from "@/lib/motion";
 /**
  * Closing observation band. A framed plate (coordinate corners, a faint
  * meridian arc) with a Fraunces masthead and the two refined CTAs. Restrained,
- * monochrome — no glowing radial blob. The plate surfaces from the dark on
+ * monochrome, no glowing radial blob. The plate surfaces from the dark on
  * scroll (framer-motion scaleIn, once). The primary fires the real judge demo.
  */
 export function ObservatoryFinalCta() {
@@ -111,7 +111,7 @@ export function ObservatoryFinalCta() {
             }}
           >
             Graph-native context integrity for memory-powered agents. Trust your
-            agent&apos;s memory — chart it, and prove it.
+            agent&apos;s memory, chart it, and prove it.
           </p>
           <div
             style={{

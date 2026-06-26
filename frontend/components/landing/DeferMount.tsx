@@ -5,7 +5,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 interface DeferMountProps {
   /** Render the children only once the placeholder scrolls near the viewport. */
   children: ReactNode;
-  /** Root margin for the observer — start mounting this far before it's visible. */
+  /** Root margin for the observer, start mounting this far before it's visible. */
   rootMargin?: string;
   /** Reserve vertical space so deferring doesn't cause layout shift / scrollbar jump. */
   minHeight?: number;
@@ -32,7 +32,7 @@ export function DeferMount({
   // Start hidden on BOTH the server and the first client paint so the hydrated
   // markup matches exactly (no React #418). The placeholder reserves height to
   // keep CLS at 0. After mount we either reveal immediately (no
-  // IntersectionObserver support) or observe and reveal on approach — both run
+  // IntersectionObserver support) or observe and reveal on approach, both run
   // post-hydration so they never diverge from the server render.
   const [show, setShow] = useState(false);
 

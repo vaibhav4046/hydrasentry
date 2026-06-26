@@ -9,7 +9,7 @@ import { DeferMount } from "./DeferMount";
  * first load. Only LandingNav + HeroSection (the artifact tree) ship eagerly in
  * the initial bundle; everything here streams in as the user scrolls.
  *
- * Deliberately restrained flow — hero (eager) -> proof -> threat model -> how it
+ * Deliberately restrained flow, hero (eager) -> proof -> threat model -> how it
  * works -> capabilities -> CTA. One idea per section, generous spacing. The
  * dense comparison table, replay-lab demo, metrics band, and architecture
  * diagram were cut from the landing to keep a single clear focal point per

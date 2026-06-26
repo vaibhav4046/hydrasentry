@@ -12,7 +12,7 @@ interface DemoDataPillProps {
 
 /**
  * Subtle, honest indicator shown only when the app is serving BUNDLED DEMO DATA
- * because no backend was reachable (see lib/demoMode.ts). Monochrome, low-key —
+ * because no backend was reachable (see lib/demoMode.ts). Monochrome, low-key
  * it states the truth ("demo data, connect a backend for live runs") without
  * pretending the backend is live and without alarming. Renders nothing while a
  * live backend is in use, and nothing on the server (SSR snapshot is false), so

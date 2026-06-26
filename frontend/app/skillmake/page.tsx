@@ -20,7 +20,7 @@ const sevBd = (sv: string) =>
   sv.toUpperCase() === "CRITICAL" ? "rgba(255,255,255,0.45)" : "rgba(255,255,255,0.2)";
 
 /**
- * SkillMake Verifier — ported 1:1 from the Castellan source. A SKILL.md textarea
+ * SkillMake Verifier, ported 1:1 from the Castellan source. A SKILL.md textarea
  * + Scan button on the left; a skill-risk card (big score, verdict, Approve /
  * Quarantine), the flagged-instructions list, and a recommended fix on the right.
  * The scan calls the REAL /skillmake/scan endpoint (bundled-fixture fallback in

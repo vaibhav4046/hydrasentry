@@ -4,7 +4,7 @@ import { InstrumentsGrid } from "./sections/InstrumentsGrid";
 import { ReductionMethod } from "./sections/ReductionMethod";
 
 /**
- * Below-the-fold observatory sections — the product story reskinned to the
+ * Below-the-fold observatory sections, the product story reskinned to the
  * star-atlas language. Each section is its own focused client component under
  * sections/ and reveals on scroll (framer-motion whileInView, once): the
  * instrument legend, the observation log (with a progressively-drawn timeline

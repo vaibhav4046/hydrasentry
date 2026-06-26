@@ -17,7 +17,7 @@ interface PageShellProps {
    * this prop is accepted for compatibility but no longer rendered.
    */
   title?: string;
-  /** Legacy status props — superseded by the cockpit's live status pill. */
+  /** Legacy status props, superseded by the cockpit's live status pill. */
   statusLabel?: string;
   statusTone?: StatusTone;
   /** Right-aligned top-bar actions (rendered left of the Run Demo button). */

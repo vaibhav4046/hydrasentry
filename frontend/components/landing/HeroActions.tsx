@@ -15,9 +15,9 @@ interface RunDemoButtonProps {
 
 /**
  * Shared "Run Judge Demo" trigger. Calls the backend client-side, stores the
- * resulting RunArtifact, and routes to /results. runJudgeDemo() NEVER rejects —
+ * resulting RunArtifact, and routes to /results. runJudgeDemo() NEVER rejects
  * on any backend failure it returns the bundled canonical 87/HIGH demo artifact
- * wrapped as a success — so this button always plays the demo and navigates,
+ * wrapped as a success, so this button always plays the demo and navigates,
  * with no "Failed to fetch" path in any environment. Used by both the hero and
  * the final CTA band; a compact variant powers the nav button.
  */

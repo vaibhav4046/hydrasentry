@@ -81,7 +81,7 @@ export function CastellanFinalCta() {
           }}
         >
           Graph-native context integrity for memory-powered AI agents. Trust your
-          agent&apos;s memory — prove it.
+          agent&apos;s memory, prove it.
         </p>
         <div
           style={{

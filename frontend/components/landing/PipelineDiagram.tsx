@@ -11,7 +11,7 @@ import { cn } from "@/lib/cn";
  * The deterministic Constellan pipeline rendered as an animated monochrome
  * node-flow. Nodes pop in left-to-right on scroll; connectors are hairline with
  * a chevron. "tainted" steps (poison present) read brighter with a dashed ring
- * and a traveling-dash underline — danger via white intensity + motion, never
+ * and a traveling-dash underline, danger via white intensity + motion, never
  * hue. Wraps into rows responsively; no horizontal overflow at any width.
  */
 export function PipelineDiagram() {
@@ -23,7 +23,7 @@ export function PipelineDiagram() {
       <SectionHeader
         kicker="THE PIPELINE"
         title="Nine deterministic stages, every run."
-        description="Seed clean context, replay it, inject poison, replay again, extract the query_paths graph, score the risk, then firewall, quarantine, and report. Same input, same output — every time."
+        description="Seed clean context, replay it, inject poison, replay again, extract the query_paths graph, score the risk, then firewall, quarantine, and report. Same input, same output, every time."
       />
 
       <m.ol

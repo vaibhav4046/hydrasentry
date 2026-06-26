@@ -31,16 +31,16 @@ const AGENTS: AgentDef[] = [
 ];
 
 interface CockpitAgentCrewProps {
-  /** Run is in flight — agents show a working (pulsing) dot. */
+  /** Run is in flight, agents show a working (pulsing) dot. */
   scanning?: boolean;
-  /** A run has landed — agents read as actively engaged (brighter dot). */
+  /** A run has landed, agents read as actively engaged (brighter dot). */
   engaged?: boolean;
   className?: string;
 }
 
 /**
  * The eight-agent crew, laid out as a quiet 2-column roster: a status dot, the
- * agent name, and a one-line role. Dot brightness reflects posture — dim when
+ * agent name, and a one-line role. Dot brightness reflects posture, dim when
  * idle, pulsing while a scan runs, bright once a run is engaged. Monochrome.
  */
 export function CockpitAgentCrew({

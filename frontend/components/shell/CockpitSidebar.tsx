@@ -10,7 +10,7 @@ import { C } from "@/lib/cockpit/derive";
 interface CockpitSidebarProps {
   /** Called after a nav link is followed (used to close the mobile drawer). */
   onNavigate?: () => void;
-  /** True when a run is engaged — lights the SkillMake / Findings "1" badges. */
+  /** True when a run is engaged, lights the SkillMake / Findings "1" badges. */
   engaged?: boolean;
 }
 

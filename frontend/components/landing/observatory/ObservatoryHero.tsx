@@ -13,13 +13,13 @@ import {
 } from "@/lib/motion";
 
 /**
- * Observatory hero — the deliberate anti-template fold. Instead of a centred
+ * Observatory hero, the deliberate anti-template fold. Instead of a centred
  * gradient headline over a glowing blob, this is an editorial, asymmetric
  * spread: a left-set Fraunces masthead with an italic accent, a coordinate
  * eyebrow, subcopy and refined hairline CTAs on the left; the live star-chart
  * plate set off-axis on the right; cartographic readouts living in the margins.
  *
- * Motion: a "First Light" masthead cascade plays once on load — the eyebrow,
+ * Motion: a "First Light" masthead cascade plays once on load, the eyebrow,
  * each headline line, the italic accent (which lands last), the subcopy, the
  * CTAs and the readouts each rise + fade + soft-blur-clear in a deliberate
  * stagger (lib/motion mastheadContainer/Line/Accent). The plate surfaces from
@@ -55,7 +55,7 @@ export function ObservatoryHero() {
           gap: "56px",
         }}
       >
-        {/* LEFT — editorial masthead, sequenced on load */}
+        {/* LEFT, editorial masthead, sequenced on load */}
         <m.div
           className="obs-hero-copy"
           style={{ minWidth: 0 }}
@@ -94,7 +94,7 @@ export function ObservatoryHero() {
             </span>
           </m.div>
 
-          {/* Fraunces masthead — left-set, revealed line by line */}
+          {/* Fraunces masthead, left-set, revealed line by line */}
           <h1
             className="obs-display"
             style={{
@@ -112,7 +112,7 @@ export function ObservatoryHero() {
             </m.span>
             <m.span variants={mastheadLine} style={{ display: "block" }}>
               of your agent&apos;s memory
-              <span style={{ color: "#7E8794" }}> — </span>
+              <span style={{ color: "#7E8794" }}>, </span>
               <m.em
                 variants={mastheadAccent}
                 className="obs-display-italic"
@@ -197,7 +197,7 @@ export function ObservatoryHero() {
           </m.div>
         </m.div>
 
-        {/* RIGHT — the observation plate, set slightly high (off-axis) with parallax */}
+        {/* RIGHT, the observation plate, set slightly high (off-axis) with parallax */}
         <m.div
           ref={plateWrapRef}
           className="obs-hero-plate"

@@ -56,13 +56,13 @@ const STAGE_HOLD_MS = 1150;
 const IDLE_HOLD_MS = 3400;
 
 /**
- * The signature monochrome hero — now a DPR-scaled NEURAL MEMORY CORE canvas: a
+ * The signature monochrome hero, now a DPR-scaled NEURAL MEMORY CORE canvas: a
  * luminous breathing core with elegant curved synaptic connections radiating to
  * the labelled context-node badges, light pulses travelling them like memories.
  * Geometry is precomputed once (seeded, SSR-safe); the canvas runs ONE rAF loop
  * with additive-bloom sprites, parked offscreen / when hidden. No per-frame React
  * state. The tainted path (memory -> conflict -> risk -> firewall) burns brighter
- * and pulses hotter/faster — danger is intensity, never hue.
+ * and pulses hotter/faster, danger is intensity, never hue.
  *
  * Public props are unchanged so /graph, /results and /replay keep working. When
  * a real `graph` is passed, its edges become the core-and-spokes web and its
@@ -115,7 +115,7 @@ export function ArtifactTreeGraph({
 
   // Autoplay walks 0 -> MAX_STAGE on a timer then holds, then loops. Reduced
   // motion freezes on the final frame. Stage updates only fire on transitions
-  // (a handful per cycle) — they re-gate voxel layers + badges, no per-frame work.
+  // (a handful per cycle), they re-gate voxel layers + badges, no per-frame work.
   useEffect(() => {
     if (controlled || !autoplay || prefersReduced) return;
     // One tracked timer id: every scheduling point cancels the prior timer
@@ -184,7 +184,7 @@ export function ArtifactTreeGraph({
     >
       {/* The FIELD layer. By default the lightweight 2D NeuralMemoryCore (used by
           /graph, /results, /replay). The landing hero injects the WebGL2 GPU
-          field via renderField — it owns its own pointer/pause hooks, so this
+          field via renderField, it owns its own pointer/pause hooks, so this
           host's pointerField simply goes unused in that case. Both draw their own
           volumetric core light + vignette + grain, so no CSS spotlight layers. */}
       {renderField ? (

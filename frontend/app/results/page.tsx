@@ -17,7 +17,7 @@ interface ResultMetric {
 }
 
 /**
- * Findings (Results Center) — ported 1:1 from the Castellan source. An
+ * Findings (Results Center), ported 1:1 from the Castellan source. An
  * eight-metric grid (total risks, critical issues, quarantined, skills,
  * replays passed/failed, report, next scan) over a `1.5fr 1fr` row: the
  * recommended-next-action card and the Evidence Report download card. Every

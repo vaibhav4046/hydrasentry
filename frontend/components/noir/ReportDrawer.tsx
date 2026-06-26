@@ -19,7 +19,7 @@ interface ReportDrawerProps {
 /**
  * Right-side slide-in drawer that renders an evidence report (markdown) with a
  * scrim. Uses AnimatePresence for enter/exit. Ships a minimal, safe markdown
- * renderer (headings, bold, code, lists, hr, paragraphs) — no raw HTML is ever
+ * renderer (headings, bold, code, lists, hr, paragraphs), no raw HTML is ever
  * injected, so report content cannot inject markup.
  */
 export function ReportDrawer({

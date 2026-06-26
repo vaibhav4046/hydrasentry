@@ -40,7 +40,7 @@ export function ChartPlate() {
         overflow: "hidden",
       }}
     >
-      {/* corner registration ticks — the engraved plate frame */}
+      {/* corner registration ticks, the engraved plate frame */}
       {(
         [
           ["top", "left"],

@@ -1,7 +1,7 @@
 /**
  * Constellan emblem + wordmark lockup for the homepage nav/footer. Matches the
- * reference renders (hero2/hero3.png): a small circular "memory node" emblem — a
- * bright core dot inside a faint orbit ring with a tick — next to the wordmark
+ * reference renders (hero2/hero3.png): a small circular "memory node" emblem, a
+ * bright core dot inside a faint orbit ring with a tick, next to the wordmark
  * where "Hydra" is muted silver and "Sentry" is white. Pure vector, monochrome
  * (silver/white only), sharp at any size. The source's CASTELLAN dot-mark is
  * reinterpreted as the Constellan emblem the reference renders show.
@@ -43,7 +43,7 @@ export function CastellanEmblem({
           stroke="rgba(174,182,194,0.45)"
           strokeWidth="1"
         />
-        {/* tilted inner ellipse — the "memory orbit" */}
+        {/* tilted inner ellipse, the "memory orbit" */}
         <ellipse
           cx="14"
           cy="14"

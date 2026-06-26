@@ -6,7 +6,7 @@ import { SectionMarker } from "./SectionMarker";
 import { sectionContainer, mastheadLine } from "@/lib/motion";
 
 /**
- * Instruments — the capabilities grid. Reveals on scroll with a small stagger;
+ * Instruments, the capabilities grid. Reveals on scroll with a small stagger;
  * each instrument cell is a hairline-bordered plate with a mono glyph badge.
  * Card hover brightness lives in CSS (.obs-card). Copy preserved from
  * landingData.
@@ -55,7 +55,7 @@ export function InstrumentsGrid() {
           style={{ maxWidth: "38ch", fontSize: "13px", lineHeight: 1.62, color: "#8B94A1" }}
         >
           Coordinated instruments replay, chart, block, quarantine, verify,
-          schedule, and refine — every reading reproducible.
+          schedule, and refine, every reading reproducible.
         </m.p>
       </div>
 

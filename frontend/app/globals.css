@@ -1,10 +1,10 @@
 @import "tailwindcss";
 
 /* ============================================================
-   Constellan design tokens — Castellan Cockpit cool silver-blue noir.
+   Constellan design tokens, Castellan Cockpit cool silver-blue noir.
    Color law: backgrounds are near-black; all "color" is white/silver
    at varying opacity. Danger/safe communicated via brightness, border,
-   icon, label, and motion — never hue. Values ported 1:1 from the
+   icon, label, and motion, never hue. Values ported 1:1 from the
    Castellan Cockpit standalone source.
    ============================================================ */
 :root {
@@ -32,7 +32,7 @@
   --hs-accent-bright: #eaf0fa;
   --hs-silver: #d9dee7;
 
-  /* Intensity tokens — near-white "danger", dimmer "safe". No saturated hue. */
+  /* Intensity tokens, near-white "danger", dimmer "safe". No saturated hue. */
   --hs-danger: #ffffff;
   --hs-safe: #d9dee7;
   --hs-warning: #b7bec9;
@@ -94,8 +94,8 @@
 
   /* On the homepage only, clip horizontal overflow from the full-bleed fixed
      noir decoration (radar ring, glows) exactly as the design source does with
-     body{overflow-x:hidden}. Scoped via :has() so the cockpit shell — which
-     relies on its own sticky rail / slide-in drawer — is untouched. Applied to
+     body{overflow-x:hidden}. Scoped via :has() so the cockpit shell, which
+     relies on its own sticky rail / slide-in drawer, is untouched. Applied to
      both html and body (and using overflow-x:clip) so neither establishes a
      horizontal scroll region. */
   html:has(.castellan-landing),
@@ -372,7 +372,7 @@
   }
 
   /* ==========================================================
-     Castellan Cockpit layer — a left-sidebar command console.
+     Castellan Cockpit layer, a left-sidebar command console.
      Premium, minimal, Linear/Vercel-grade. Monochrome only: all
      emphasis comes from white/silver at varying opacity, hairline
      borders, scale contrast, and tiny mono labels. No hue.
@@ -389,7 +389,7 @@
   }
 
   /* Refined card: flatter, calmer, hairline-bordered surface. Distinct from the
-     glassy landing panels — the cockpit reads as a quiet instrument, not a hero. */
+     glassy landing panels, the cockpit reads as a quiet instrument, not a hero. */
   .cockpit-card {
     position: relative;
     background: linear-gradient(
@@ -464,7 +464,7 @@
     background: rgba(255, 255, 255, 0.04);
   }
 
-  /* Small keycap chip (⌘K, etc.) — mono, hairline, dim. */
+  /* Small keycap chip (⌘K, etc.), mono, hairline, dim. */
   .cockpit-kbd {
     font-family: var(--font-geist-mono), ui-monospace, monospace;
     font-size: 10px;
@@ -636,7 +636,7 @@
   );
 }
 
-/* Traveling-dash along the tainted edges — a single GPU-cheap CSS keyframe on
+/* Traveling-dash along the tainted edges, a single GPU-cheap CSS keyframe on
    stroke-dashoffset (no per-frame JS). Pair with .atg-travel on a <line>/<path>
    that sets stroke-dasharray. Compositor-friendly: only dashoffset animates. */
 @keyframes atg-dash-travel {
@@ -652,7 +652,7 @@
   will-change: stroke-dashoffset;
 }
 
-/* Ember "breathing" for the scattered node-dots — one CSS keyframe, staggered
+/* Ember "breathing" for the scattered node-dots, one CSS keyframe, staggered
    per-dot via inline animation-delay/duration. Replaces ~90 per-dot JS tweens
    so the canopy twinkles at 60fps with near-zero main-thread cost. The dot's
    peak opacity is set per-element via the --atg-bright custom property. */
@@ -685,7 +685,7 @@
   );
 }
 /* ==========================================================
-   Castellan landing (homepage /) — ported from the design source.
+   Castellan landing (homepage /), ported from the design source.
    The homepage reproduces the standalone Castellan landing markup with
    inline styles; these few rules cover what inline styles can't: the
    data-reveal entrance, the card hover lift+brighten (replacing the
@@ -745,15 +745,15 @@
 }
 
 /* ==========================================================
-   Constellan — Memory Observatory homepage (/).
+   Constellan, Memory Observatory homepage (/).
    The star-atlas direction: editorial Fraunces masthead, a live canvas
    star-chart plate, cartographic mono detailing, hairline-framed legend
    grids. Scoped under .observatory-landing so the cockpit is untouched.
-   Pure monochrome (cool silver/white on void) — danger via brightness,
+   Pure monochrome (cool silver/white on void), danger via brightness,
    never hue.
    ========================================================== */
 
-/* Editorial display face — Fraunces (loaded via next/font as --font-display).
+/* Editorial display face, Fraunces (loaded via next/font as --font-display).
    This is the deliberate anti-template type: a high-contrast literary serif
    instead of Inter/Geist bold. Optical sizing pinned large; ligatures on. */
 .observatory-landing .obs-display {
@@ -770,7 +770,7 @@
 
 /* Legend / instrument cards: a hairline-bordered plate where the 1px grid gap
    shows the void through, and hover lifts the cell brightness (not a transform
-   — the grid is rigid, cartographic). */
+  , the grid is rigid, cartographic). */
 .observatory-landing .obs-card {
   transition: background 0.3s var(--hs-ease-out-expo);
 }

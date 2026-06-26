@@ -1,7 +1,7 @@
 import { CastellanEmblem } from "./CastellanEmblem";
 
 /**
- * Castellan footer — ported 1:1 from the design source: a hairline-topped bar
+ * Castellan footer, ported 1:1 from the design source: a hairline-topped bar
  * with the wordmark on the left and the mono tagline on the right.
  */
 export function CastellanFooter() {

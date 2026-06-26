@@ -1,7 +1,7 @@
 import type { CockpitIconKey } from "./cockpitIcons";
 
 /**
- * Castellan Cockpit navigation model — ported from the standalone source.
+ * Castellan Cockpit navigation model, ported from the standalone source.
  * Grouped sections (OPERATIONS / SECURITY / AUTOMATION / WORKSPACE) with tiny
  * uppercase mono labels; each item maps a cockpit label to an existing dashboard
  * route, with the source's exact icon glyph and count badge. Badges echo the

@@ -147,13 +147,13 @@ export const staggerWide: Variants = {
 };
 
 /* ============================================================
- * Observatory homepage — masthead "First Light" reveal.
+ * Observatory homepage, masthead "First Light" reveal.
  * A film-title-sequence cascade: eyebrow → headline (line by line) → subcopy →
  * CTAs → readouts, each rising + fading + soft-blur-clearing. Slower and more
  * deliberate than the generic fadeUp; the italic accent line lands last. Driven
  * on mount with initial="hidden" animate="show" so it plays once on load
  * (the chart plays its own canvas boot in parallel). Reduced-motion is handled
- * globally by MotionConfig — these compose to instant under "always".
+ * globally by MotionConfig, these compose to instant under "always".
  * ============================================================ */
 
 /** Orchestrates the masthead children with a deliberate cadence after load. */
@@ -175,7 +175,7 @@ export const mastheadLine: Variants = {
   },
 };
 
-/** The italic accent — lands last, a touch slower so it reads as the punctuation. */
+/** The italic accent, lands last, a touch slower so it reads as the punctuation. */
 export const mastheadAccent: Variants = {
   hidden: { opacity: 0, y: 14, filter: "blur(8px)" },
   show: {

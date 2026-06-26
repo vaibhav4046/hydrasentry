@@ -24,7 +24,7 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Constellan — Context Integrity for HydraDB Agents",
+  title: "Constellan, Context Integrity for HydraDB Agents",
   description:
     "Constellan replays agent tasks against clean and poisoned HydraDB context, visualizes the graph path that caused failure, blocks unsafe memory through MCP, and exports evidence reports.",
   icons: {

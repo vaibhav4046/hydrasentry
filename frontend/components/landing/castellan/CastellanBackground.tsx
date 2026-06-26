@@ -1,5 +1,5 @@
 /**
- * Castellan landing noir background — ported 1:1 from the design source's fixed
+ * Castellan landing noir background, ported 1:1 from the design source's fixed
  * background layer. Radial silver glows + a masked grid + a slow conic "radar"
  * sweep + two drifting particles + a bottom vignette. Pure CSS (no canvas/WebGL)
  * so it matches hero4.png exactly and costs ~nothing. Uses the hsRadar / hsDrift

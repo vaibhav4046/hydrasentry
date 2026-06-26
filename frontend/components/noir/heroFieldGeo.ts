@@ -1,5 +1,5 @@
 /**
- * Deterministic GPU-buffer geometry for the WebGL2 hero — the "guarded memory
+ * Deterministic GPU-buffer geometry for the WebGL2 hero, the "guarded memory
  * graph" rendered as a dense particle FIELD that forms a recognizable organic
  * TREE/GRAPH silhouette (HydraDB's voxel-tree DNA) in STRICT MONOCHROME.
  *
@@ -14,14 +14,14 @@
  * the 2D NeuralMemoryCore. The renderer maps viewBox → clip space in the shader.
  *
  * The silhouette is assembled from three families, all monochrome:
- *   1. CORE   — a dense breathing nebula cluster (the agent's memory).
- *   2. BRANCH — points sampled along the hand-authored tree limbs (the trunk +
+ *   1. CORE  , a dense breathing nebula cluster (the agent's memory).
+ *   2. BRANCH, points sampled along the hand-authored tree limbs (the trunk +
  *               canopy beziers from artifactTreeData), grid-biased so they read
  *               as discrete voxels growing outward, not a smooth airbrush.
- *   3. EDGE   — curved filaments streaming from the core out to each of the 11
+ *   3. EDGE  , curved filaments streaming from the core out to each of the 11
  *               context-node anchors; the tainted chain (memory → conflict →
  *               risk → firewall) gets denser, brighter, faster-flowing points.
- *   + DUST    — sparse far atmosphere motes for depth/parallax.
+ *   + DUST   , sparse far atmosphere motes for depth/parallax.
  */
 import {
   BRANCHES,
@@ -43,13 +43,13 @@ export { NO_ANCHOR, ANCHOR_IDS, ANCHOR_STAGE, anchorIndexFor };
 
 /**
  * Per-point GPU attributes, packed into interleaved-free parallel arrays (one
- * VBO each — simplest, and lets us update none of them per frame; all motion is
+ * VBO each, simplest, and lets us update none of them per frame; all motion is
  * in the shader from these immutable bases + uniforms).
  *
- *  aBase    : vec3  — base target position in viewBox space (x, y) + depth z in
+ *  aBase    : vec3 , base target position in viewBox space (x, y) + depth z in
  *                     [-1..1] (z<0 far/dim/small, z>0 near/bright/large).
- *  aRnd     : vec4  — per-point randoms: (phase, sizeSeed, brightSeed, driftSeed).
- *  aMeta    : vec4  — (kind, anchorIndex, tainted, flow):
+ *  aRnd     : vec4 , per-point randoms: (phase, sizeSeed, brightSeed, driftSeed).
+ *  aMeta    : vec4 , (kind, anchorIndex, tainted, flow):
  *                       kind     0=core 1=branch 2=edge 3=dust
  *                       anchorIndex  which node spoke this rides (or -1)
  *                       tainted  1 if on the tainted chain (brighter/faster)
@@ -63,7 +63,7 @@ export interface HeroGeometry {
   meta: Float32Array; // count * 4
 }
 
-// ---- deterministic PRNG (mulberry32) — matches the rest of the codebase ------
+// ---- deterministic PRNG (mulberry32), matches the rest of the codebase ------
 function mulberry32(seed: number): () => number {
   let a = seed >>> 0;
   return () => {
@@ -117,7 +117,7 @@ function quadAt(p0: Pt, ctrl: Pt, p1: Pt, t: number): Pt {
 }
 
 /** Bow a chord into an organic control point (perpendicular push), like the
- *  2D web — alternating sign per spoke keeps the filaments from being clean
+ *  2D web, alternating sign per spoke keeps the filaments from being clean
  *  radial spokes. */
 function bowCtrl(a: Pt, b: Pt, bow: number): Pt {
   const mx = (a.x + b.x) / 2;
@@ -249,7 +249,7 @@ export function buildHeroGeometry(opts: GeoOptions = {}): HeroGeometry {
     const brightSeed = Math.min(1, 0.45 + (1 - radFrac) * 0.6 + rng() * 0.2);
     put(x, y, z, 0, NO_ANCHOR, 0, 0, sizeSeed, brightSeed);
   }
-  // corona: motes from the rim outward, dimmer/farther — the cluster dissolves
+  // corona: motes from the rim outward, dimmer/farther, the cluster dissolves
   // into the field rather than ending at a hard edge.
   for (let i = 0; i < coronaN; i++) {
     const ang = rng() * Math.PI * 2;

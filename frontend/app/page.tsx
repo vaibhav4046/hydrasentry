@@ -6,13 +6,13 @@ import { ObservatoryFinalCta } from "@/components/landing/observatory/Observator
 import { ObservatoryFooter } from "@/components/landing/observatory/ObservatoryFooter";
 
 /**
- * Landing page (/) — "Constellan: The Memory Observatory".
+ * Landing page (/), "Constellan: The Memory Observatory".
  *
  * A deliberate anti-AI-template direction: the homepage is a precision celestial
  * star-atlas / observatory console. The agent's memory is charted as a sparse
  * constellation on a live canvas star-chart (azimuth ring, RA/Dec ticks, named
  * stars of varying magnitude, a slow sentinel sweep, and the tainted memory
- * collapsing into a dark crossed-out star) — the opposite of the centered
+ * collapsing into a dark crossed-out star), the opposite of the centered
  * gradient-headline + glowing neural blob cliché. The masthead is set left in an
  * editorial Fraunces serif (the unexpected display face), the chart sits
  * off-axis, and cartographic mono labels live in the margins.

@@ -8,7 +8,7 @@ import { cn } from "@/lib/cn";
 
 /**
  * Capability grid. Each card carries the animated silver border-sweep
- * (.hydra-border-sweep, runs on hover/focus), a hover lift, and a white glow —
+ * (.hydra-border-sweep, runs on hover/focus), a hover lift, and a white glow
  * Railway-style feature cards adapted to noir. Metrics moved to MetricsStrip.
  */
 export function FeatureSection() {

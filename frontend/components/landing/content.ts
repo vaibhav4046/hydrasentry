@@ -60,7 +60,7 @@ export interface FeatureDef {
 }
 
 /**
- * Six core capabilities — the differentiated ones, in narrative order: replay
+ * Six core capabilities, the differentiated ones, in narrative order: replay
  * the attack, see the graph evidence, firewall the call, verify the skill,
  * expose it all over MCP, export the report. Trimmed from eight to keep the
  * grid a clean 3x2 and avoid a wall of cards (the operational scheduled-scan /
@@ -83,7 +83,7 @@ export const FEATURES: FeatureDef[] = [
   {
     title: "Context Firewall",
     description:
-      "Allow, warn, block, or quarantine context before the agent acts — with manual, copilot, and autopilot modes.",
+      "Allow, warn, block, or quarantine context before the agent acts, with manual, copilot, and autopilot modes.",
     Icon: ShieldHalf,
   },
   {
@@ -107,7 +107,7 @@ export const FEATURES: FeatureDef[] = [
 ];
 
 /**
- * Trust marquee row — the primitives Constellan speaks natively. Rendered as
+ * Trust marquee row, the primitives Constellan speaks natively. Rendered as
  * an auto-scrolling monochrome strip (the wordmarks/icons of the stack it
  * secures), Railway-style but noir.
  */
@@ -124,7 +124,7 @@ export interface UseCaseDef {
 }
 
 /**
- * Five context-attack classes Constellan catches — adapted from HydraDB's
+ * Five context-attack classes Constellan catches, adapted from HydraDB's
  * use-case bento to our security framing. The first tile spans wide.
  */
 export const USE_CASES: UseCaseDef[] = [

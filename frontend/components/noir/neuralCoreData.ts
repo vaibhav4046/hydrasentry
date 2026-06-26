@@ -5,7 +5,7 @@
  * neural CORE: a glowing center with elegant CURVED synaptic connections
  * radiating out to the context nodes, light pulses travelling the connections
  * like thoughts. Everything is computed from FIXED data or a SEEDED PRNG
- * (mulberry32) — no Math.random / Date at module or render scope — so SSR and
+ * (mulberry32), no Math.random / Date at module or render scope, so SSR and
  * client render byte-identical and there is no hydration drift.
  *
  * Coordinate space reuses artifactTreeData's 1000 x 720 viewBox so the existing
@@ -27,12 +27,12 @@ import type { Graph } from "@/lib/types";
 
 export { VB_W, VB_H };
 
-/** The luminous memory core — the focal point everything connects to. */
+/** The luminous memory core, the focal point everything connects to. */
 export const CORE = { x: CANOPY.x, y: 330 };
 /** Core glow radius in viewBox units (the soft luminous body, not the sprite). */
 export const CORE_RADIUS = 88;
 
-// ---- deterministic PRNG (mulberry32) — same generator as artifactTreeData ----
+// ---- deterministic PRNG (mulberry32), same generator as artifactTreeData ----
 function mulberry32(seed: number): () => number {
   let a = seed >>> 0;
   return () => {
@@ -62,7 +62,7 @@ export interface Connection {
   p0: Pt;
   ctrl: Pt;
   p1: Pt;
-  /** 0..1 depth — drives brightness, line width and glow blur. */
+  /** 0..1 depth, drives brightness, line width and glow blur. */
   depth: number;
   tainted: boolean;
   /** Eligible from this demo stage onward (gated cheaply, no React churn). */
@@ -76,7 +76,7 @@ export interface Connection {
 /**
  * Bow a straight segment into an organic curve. The control point is the
  * midpoint pushed perpendicular to the chord by `bow` (a signed fraction of the
- * chord length) — alternating sign per index gives the web a natural, non-radial
+ * chord length), alternating sign per index gives the web a natural, non-radial
  * sway instead of clean spokes.
  */
 function curve(a: Pt, b: Pt, bow: number): Pt {
@@ -196,7 +196,7 @@ export interface DriftParticle {
 function buildDrift(): DriftParticle[] {
   const rng = mulberry32(0x91b2);
   const out: DriftParticle[] = [];
-  const COUNT = 38; // capped — tasteful atmosphere, not a swarm.
+  const COUNT = 38; // capped, tasteful atmosphere, not a swarm.
   for (let i = 0; i < COUNT; i++) {
     out.push({
       x: rng() * VB_W,

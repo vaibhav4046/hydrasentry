@@ -7,7 +7,7 @@ import type { GraphCanvas as GraphCanvasType } from "./GraphCanvas";
 /**
  * Code-split boundary for the React Flow map. `@xyflow/react` (~260KB of JS
  * plus its stylesheet) is the single heaviest dependency in the app and is only
- * ever needed once the user switches to the detailed "Graph view" on /graph —
+ * ever needed once the user switches to the detailed "Graph view" on /graph
  * which itself requires a real run. Loading it eagerly bloated the /graph route
  * bundle; this defers it (ssr:false so React Flow never runs on the server)
  * until the view is actually mounted. The CSS imports live inside GraphCanvas,

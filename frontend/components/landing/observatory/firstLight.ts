@@ -1,10 +1,10 @@
 /**
- * "First Light" — the cinematic boot timeline for the Memory Observatory star
+ * "First Light", the cinematic boot timeline for the Memory Observatory star
  * chart. A film-title-sequence reveal: the engraved plate frame draws in, the
  * azimuth ring sweeps on, RA/Dec ticks tick in, the named stars ignite one by
  * one (with a brief diffraction flash on the brighter ones), the constellation
  * lines draw along their length, and finally the tainted limb lights and the
- * extinction star collapses — after which the chart settles into its calm idle
+ * extinction star collapses, after which the chart settles into its calm idle
  * (drift, sparse twinkle, sentinel sweep).
  *
  * This module is pure math (no canvas, no React): it maps elapsed seconds to a

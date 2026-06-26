@@ -22,7 +22,7 @@ interface ProviderCardProps {
 /**
  * Settings tile for one model provider: name, configured status, model id,
  * masked key, and a Test button that reflects idle/testing/ok/fail state.
- * Stateless about the provider list — parent owns data; this owns test UI.
+ * Stateless about the provider list, parent owns data; this owns test UI.
  */
 export function ProviderCard({
   name,

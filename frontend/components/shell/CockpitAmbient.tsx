@@ -1,5 +1,5 @@
 /**
- * Castellan Cockpit ambient backdrop — ported 1:1 from the standalone source.
+ * Castellan Cockpit ambient backdrop, ported 1:1 from the standalone source.
  *
  * Layers, bottom -> top:
  *   1. layered radial + linear base gradient (cool silver-blue noir)

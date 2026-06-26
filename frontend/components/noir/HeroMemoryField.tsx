@@ -47,7 +47,7 @@ interface HeroMemoryFieldProps {
 }
 
 /** Feature-detect WebGL2. SSR returns null (no `document`); the first CLIENT
- *  render resolves it synchronously via a lazy initializer — no effect, no
+ *  render resolves it synchronously via a lazy initializer, no effect, no
  *  cascading re-render. The poster covers the SSR/null window either way. This
  *  is a one-shot capability probe of an external system (the GPU), exactly the
  *  kind of read a lazy useState initializer is meant for. */

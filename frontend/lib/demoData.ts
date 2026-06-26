@@ -13,7 +13,7 @@
  * data" indicator whenever a fixture is served (see lib/demoMode.ts). Keys are
  * already masked to sha256 fingerprints in the snapshot; no raw secrets ship.
  *
- * Do not hand-edit the JSON values — re-capture from a running backend if the
+ * Do not hand-edit the JSON values, re-capture from a running backend if the
  * contract changes.
  */
 import type {

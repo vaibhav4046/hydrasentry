@@ -7,7 +7,7 @@ import { cn } from "@/lib/cn";
 interface CockpitMetricProps {
   /** Tiny uppercase label, e.g. "RISK SCORE". */
   label: string;
-  /** Big display value, e.g. "87", "—", "2026-06-25". */
+  /** Big display value, e.g. "87", "·", "2026-06-25". */
   value: string;
   /** Small sub line under the value. */
   sub?: string;

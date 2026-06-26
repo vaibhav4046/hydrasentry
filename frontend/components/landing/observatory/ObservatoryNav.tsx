@@ -57,7 +57,7 @@ export function ObservatoryNav() {
 
   return (
     <>
-      {/* ANNOUNCEMENT — coordinate strip */}
+      {/* ANNOUNCEMENT, coordinate strip */}
       <button
         type="button"
         onClick={run}

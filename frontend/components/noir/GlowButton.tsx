@@ -31,7 +31,7 @@ const VARIANT: Record<GlowButtonVariant, string> = {
 };
 
 /**
- * The single button primitive. Monochrome only — `danger` is dark glass with a
+ * The single button primitive. Monochrome only, `danger` is dark glass with a
  * bright white outline and a warning glyph, never a saturated red. Renders a
  * native <button>; forwards ref and all button props.
  */

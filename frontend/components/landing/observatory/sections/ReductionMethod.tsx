@@ -6,7 +6,7 @@ import { SectionMarker } from "./SectionMarker";
 import { sectionContainer, mastheadLine, EASE_OUT_EXPO } from "@/lib/motion";
 
 /**
- * Reduction method — the architecture as a five-stage deterministic loop. As it
+ * Reduction method, the architecture as a five-stage deterministic loop. As it
  * enters, the heading reveals, the top rule draws left-to-right (scaleX), and
  * the stage columns fade/rise in sequence; the final node glows (the evidence).
  */

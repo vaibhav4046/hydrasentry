@@ -40,7 +40,7 @@ const FOOTER_COLS: FooterCol[] = [
 /**
  * Premium multi-column footer. A brand column with the tagline sits beside three
  * navigation columns; a hairline-glow rule separates the legal strip. Monochrome
- * throughout — hover lifts links from muted to ink.
+ * throughout, hover lifts links from muted to ink.
  */
 export function SiteFooter() {
   return (
@@ -56,7 +56,7 @@ export function SiteFooter() {
             <MonochromeLogo variant="wordmark" height={28} />
             <p className="max-w-xs text-[13px] leading-relaxed text-muted">
               Context-integrity harness for memory-native agents. Replay,
-              visualize, firewall, and report — HydraDB-native, fully
+              visualize, firewall, and report, HydraDB-native, fully
               deterministic.
             </p>
           </div>

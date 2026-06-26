@@ -3,7 +3,7 @@
 import { useEffect, useRef } from "react";
 
 /**
- * Memory Cortex — the #product canvas, ported 1:1 from the design source's
+ * Memory Cortex, the #product canvas, ported 1:1 from the design source's
  * interactive neural-graph (NOT WebGL: a single 2D <canvas> with one rAF loop).
  * A seeded cortex of neurons + synapses fires on hover; "Inject poisoned memory"
  * spreads a taint wavefront from the poison entry node to the core; "Block via
@@ -474,7 +474,7 @@ export function MemoryCortexCanvas({ state, injectedAt }: MemoryCortexCanvasProp
   );
 }
 
-/** Derived display values for the surrounding chrome — mirrors the source. */
+/** Derived display values for the surrounding chrome, mirrors the source. */
 export function cortexVals(state: CortexState) {
   const { poisoned: p, firewall: fw, risk } = state;
   const hot = risk >= 40;

@@ -11,7 +11,7 @@ import type { NodeProvenance } from "@/lib/cockpit/graphModel";
 const MONO = "var(--font-geist-mono), 'JetBrains Mono', monospace";
 
 /**
- * Memory Graph — the evidence surface, rendered as a detailed, logical
+ * Memory Graph, the evidence surface, rendered as a detailed, logical
  * constellation star-atlas (the same observatory language as the homepage
  * star-chart, scaled up into a working observation plate). Every context entity
  * of the memory_poisoning_refund run is a star; thin constellation lines carry
@@ -115,10 +115,10 @@ export default function GraphPage() {
             NODE INSPECTOR
           </div>
           <div style={{ marginTop: 10, fontSize: 17, fontWeight: 700, color: inspColor }}>
-            {insp?.type ?? "—"}
+            {insp?.type ?? "·"}
           </div>
           <div style={{ fontFamily: MONO, fontSize: 11, color: C.muted, marginTop: 2 }}>
-            {insp && insp.chunk !== "—" ? insp.chunk : (selected?.id ?? "")}
+            {insp && insp.chunk !== "·" ? insp.chunk : (selected?.id ?? "")}
           </div>
           <div
             style={{
@@ -176,7 +176,7 @@ export default function GraphPage() {
               RISK REASON
             </div>
             <div style={{ marginTop: 6, fontSize: 12, lineHeight: 1.5, color: C.silver }}>
-              {insp?.reason ?? "—"}
+              {insp?.reason ?? "·"}
             </div>
           </div>
           <div style={{ marginTop: "auto", paddingTop: 14, fontSize: 11, color: C.faint }}>

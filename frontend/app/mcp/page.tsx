@@ -69,7 +69,7 @@ async function invoke(tool: string): Promise<McpToolResult | null> {
 }
 
 /**
- * MCP Gateway — ported 1:1 from the Castellan source. A status row (server
+ * MCP Gateway, ported 1:1 from the Castellan source. A status row (server
  * online + shared-secret warning), a TOOLS list (280px) and a request/response
  * console + recent-calls log. The tool catalog comes from the REAL /mcp/manifest;
  * selecting a tool issues its REAL MCP call and the live response renders in the

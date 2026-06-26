@@ -3,7 +3,7 @@
  * because the backend was unreachable (network error, timeout, CORS, non-2xx).
  *
  * lib/api.ts flips this on the first fallback. The UI reads it via
- * `useDemoMode()` (useSyncExternalStore, SSR-safe — always false on the server,
+ * `useDemoMode()` (useSyncExternalStore, SSR-safe, always false on the server,
  * so first paint matches and there is no hydration mismatch) and shows a subtle,
  * honest "demo data" indicator. It never claims a live backend.
  *

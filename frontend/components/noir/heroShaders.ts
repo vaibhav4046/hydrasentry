@@ -1,10 +1,10 @@
 /**
  * GLSL (ES 3.00 / WebGL2) shader sources for the monochrome GPU particle hero.
  *
- * STRICT MONOCHROME: the fragment shader only ever varies WHITE intensity — no
+ * STRICT MONOCHROME: the fragment shader only ever varies WHITE intensity, no
  * hue, ever. "Danger" (tainted chain) is brighter + faster, not coloured.
  *
- * VERTEX — per-point animation, all on the GPU from immutable base attributes +
+ * VERTEX, per-point animation, all on the GPU from immutable base attributes +
  * a handful of uniforms (one rAF only updates uTime/uMouse/uStage/uHover):
  *   • viewBox → clip mapping (same 1000x720 space as the badge overlay).
  *   • organic CURL/SIMPLEX noise drift (continuous shimmer; never keyframed).
@@ -16,7 +16,7 @@
  *   • gl_PointSize scales by depth (z) → real depth/parallax + depth-of-field.
  * It passes a per-point brightness + softness to the fragment via varyings.
  *
- * FRAGMENT — soft round sprite (radial alpha falloff) for natural additive bloom
+ * FRAGMENT, soft round sprite (radial alpha falloff) for natural additive bloom
  * (renderer uses gl.blendFunc(ONE, ONE)); brightness from depth + tainted, with
  * a touch of core-distance lift. Discards fully-transparent corners cheaply.
  */
@@ -238,7 +238,7 @@ uniform vec2  uResolutionF;// device px, for grain coordinates
 
 out vec4 fragColor;
 
-// cheap hash for per-fragment film grain (monochrome, no texture/data-URI — so
+// cheap hash for per-fragment film grain (monochrome, no texture/data-URI, so
 // it cannot fail to decode at any DPR the way a CSS noise background can).
 float hash21(vec2 p){
   p = fract(p * vec2(123.34, 456.21));
@@ -258,13 +258,13 @@ void main(){
   float core = pow(max(0.0, 1.0 - r), 4.0);
   float a = (alpha * 0.85 + core * 0.5) * vBright * uExposure;
 
-  // subtle FILM GRAIN baked into each mote — a touch of per-fragment luminance
+  // subtle FILM GRAIN baked into each mote, a touch of per-fragment luminance
   // jitter, animated by time. Keeps the field cinematic without a fragile CSS
   // noise layer. Monochrome (scales intensity only). Very low amplitude.
   float g = hash21(gl_FragCoord.xy + fract(uTimeF) * 91.7);
   a *= (1.0 - 0.10 + 0.10 * g);
 
-  // STRICT MONOCHROME. Tainted motes are not coloured — only nudged toward the
+  // STRICT MONOCHROME. Tainted motes are not coloured, only nudged toward the
   // very brightest white so the danger chain reads as the hottest part of the
   // field (intensity, never hue).
   vec3 col = vec3(1.0);

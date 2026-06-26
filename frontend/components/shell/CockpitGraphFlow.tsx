@@ -22,7 +22,7 @@ import {
 } from "@/lib/cockpit/graphModel";
 
 /**
- * Context Graph — a deterministic, tiered, left-to-right DIRECTED graph rendered
+ * Context Graph, a deterministic, tiered, left-to-right DIRECTED graph rendered
  * as crisp SVG (no free canvas scatter). It always shows the logical
  * memory-poisoning attack flow so /graph is never blank on the deployed
  * standalone, and renders a REAL run's graph in the same tiered layout when one
@@ -245,7 +245,7 @@ function FlowNodeChip({
       onClick={() => onInspect(node.id)}
       style={{ cursor: "pointer" }}
       role="button"
-      aria-label={`${node.title} — ${node.kicker}`}
+      aria-label={`${node.title}, ${node.kicker}`}
     >
       {/* Soft halo for the tainted / blocking nodes. */}
       {(hot || guard) && (

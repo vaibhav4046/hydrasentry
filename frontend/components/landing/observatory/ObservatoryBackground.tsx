@@ -1,8 +1,8 @@
 /**
- * Observatory background — the void of deep space. Deliberately restrained (the
+ * Observatory background, the void of deep space. Deliberately restrained (the
  * "one light source" rule): a near-black vertical gradient, a faint equatorial
  * coordinate grid masked toward the upper centre, and a bottom vignette. No
- * conic radar sweep, no glowing blob, no drifting particles — all celestial
+ * conic radar sweep, no glowing blob, no drifting particles, all celestial
  * motion lives inside the star-chart canvas, so this layer is static, cheap, and
  * lets the chart and the type carry the page. Fixed, full-bleed, aria-hidden,
  * z-0; the page content sits above it.

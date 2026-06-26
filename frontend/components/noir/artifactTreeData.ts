@@ -2,7 +2,7 @@
  * Deterministic geometry + node data for ArtifactTreeGraph.
  *
  * Everything here is computed from FIXED arrays or a SEEDED PRNG (mulberry32) so
- * SSR and client render byte-identical markup — no Math.random / Date at module
+ * SSR and client render byte-identical markup, no Math.random / Date at module
  * or render scope, no hydration mismatch. The tree is elegant WHITE LINEWORK
  * (branch <path> strokes) plus scattered glowing node-dots, echoing HydraDB's
  * voxel tree without its orange heat-map. All "danger" is intensity, never hue.
@@ -64,24 +64,24 @@ export interface Branch {
 export const BRANCHES: Branch[] = [
   // trunk (thick, bright), bottom-center rising to the canopy core
   { d: "M500 690 C 498 600, 502 470, 500 360", width: 3.6, bright: 1, order: 0 },
-  // primary fork — left
+  // primary fork, left
   { d: "M500 410 C 470 360, 420 330, 372 300", width: 2.6, bright: 0.96, order: 1 },
-  // primary fork — right
+  // primary fork, right
   { d: "M500 410 C 532 358, 584 330, 632 300", width: 2.6, bright: 0.96, order: 1 },
-  // primary fork — up-left
+  // primary fork, up-left
   { d: "M500 380 C 484 320, 452 280, 430 232", width: 2.3, bright: 0.9, order: 1 },
-  // primary fork — up-right
+  // primary fork, up-right
   { d: "M500 380 C 518 320, 552 282, 576 234", width: 2.3, bright: 0.9, order: 1 },
-  // secondary — left canopy
+  // secondary, left canopy
   { d: "M372 300 C 332 276, 300 250, 276 214", width: 1.7, bright: 0.74, order: 2 },
   { d: "M372 300 C 360 256, 348 224, 342 188", width: 1.6, bright: 0.7, order: 2 },
   { d: "M430 232 C 410 196, 396 168, 392 138", width: 1.5, bright: 0.68, order: 2 },
-  // secondary — right canopy
+  // secondary, right canopy
   { d: "M632 300 C 672 276, 706 252, 730 216", width: 1.7, bright: 0.74, order: 2 },
   { d: "M632 300 C 644 258, 658 226, 666 190", width: 1.6, bright: 0.7, order: 2 },
   { d: "M576 234 C 596 198, 612 170, 618 140", width: 1.5, bright: 0.68, order: 2 },
   { d: "M500 360 C 496 320, 500 296, 500 268", width: 1.4, bright: 0.82, order: 2 },
-  // tertiary sub-twigs off the secondaries — richer canopy (left)
+  // tertiary sub-twigs off the secondaries, richer canopy (left)
   { d: "M300 250 C 286 232, 278 220, 268 206", width: 1.0, bright: 0.52, order: 3 },
   { d: "M348 224 C 336 208, 330 198, 320 184", width: 1.0, bright: 0.52, order: 3 },
   { d: "M396 168 C 384 152, 378 142, 370 130", width: 0.95, bright: 0.5, order: 3 },
@@ -113,13 +113,13 @@ export interface Particle {
 }
 
 /**
- * Sample dots along each branch with seeded jitter — dense near the trunk,
+ * Sample dots along each branch with seeded jitter, dense near the trunk,
  * sparse toward the tips. Pure function of the fixed seed; identical every run.
  */
 function buildParticles(): Particle[] {
   const rng = mulberry32(0x4ad7);
   const out: Particle[] = [];
-  // Cheap bezier sampler — enough fidelity for dot placement.
+  // Cheap bezier sampler, enough fidelity for dot placement.
   for (const b of BRANCHES) {
     const pts = parsePathPoints(b.d);
     if (!pts) continue;
@@ -205,7 +205,7 @@ const LX = 150;
 const RX = 850;
 
 export const DEMO_BADGES: DemoBadge[] = [
-  // TOP center — the task that kicks everything off
+  // TOP center, the task that kicks everything off
   {
     id: "user_task",
     title: "USER TASK",

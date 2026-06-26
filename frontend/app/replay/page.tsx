@@ -30,7 +30,7 @@ const STAGE_NAMES = [
 ];
 
 /**
- * Replay Lab — ported 1:1 from the Castellan source. Scenario chips, a
+ * Replay Lab, ported 1:1 from the Castellan source. Scenario chips, a
  * baseline-vs-poisoned answer comparison, a three-card row (risk gauge ring,
  * attack type + confidence, behavior diff), and the replay stage timeline.
  * Scenario chips come from the REAL /scenarios; the baseline/poisoned text,

@@ -18,7 +18,7 @@ import {
 } from "./atlasDraw";
 
 /**
- * The working Context Graph star-atlas canvas — a larger, interactive
+ * The working Context Graph star-atlas canvas, a larger, interactive
  * observation plate of THIS run's memory, in the same cartographic language as
  * the homepage StarChart (azimuth ring, RA/Dec ticks, sparse twinkle field, a
  * slow sentinel sweep), but rendering the rich, logical context graph:
@@ -33,7 +33,7 @@ import {
  *   - hover brightens a star + its incident lines + label; click selects it.
  *
  * Implementation: DPR-scaled canvas for crisp hairlines at retina/4K; geometry
- * is 100% deterministic (atlasGraphModel) so SSR/CSR match — only opacities and
+ * is 100% deterministic (atlasGraphModel) so SSR/CSR match, only opacities and
  * two slow angles animate, all on the 2D context at 60fps. rAF pauses off-screen
  * / when hidden, and under prefers-reduced-motion one static frame is drawn.
  * Monochrome only; danger = brightness + the dark extinction star + the dashed
@@ -132,7 +132,7 @@ export function AtlasStarChart({
         model.stars.map((s) => [s.id, s]),
       );
 
-      // A star is "active" when hovered or selected — it and its lines/label
+      // A star is "active" when hovered or selected, it and its lines/label
       // brighten. We also brighten lines incident to the active star.
       const activeId = hoverId ?? selectedId;
 
@@ -308,7 +308,7 @@ function drawLine(
     ctx.lineTo(cut, cy2);
     ctx.stroke();
     ctx.setLineDash([]);
-    // the cut mark — a short cross perpendicular to the limb, the sever point
+    // the cut mark, a short cross perpendicular to the limb, the sever point
     const perp = ang + Math.PI / 2;
     const m = 4.5 * p.scale + 2;
     ctx.strokeStyle = `rgba(${SILVER},${incident ? 0.85 : 0.6})`;
@@ -354,7 +354,7 @@ function drawLine(
     return;
   }
 
-  // Clean relation — faint silver with a small arrowhead.
+  // Clean relation, faint silver with a small arrowhead.
   ctx.strokeStyle = `rgba(${SILVER},${incident ? 0.5 : 0.26})`;
   ctx.lineWidth = incident ? 1.4 : 1.1;
   if (len > 0) {
@@ -408,7 +408,7 @@ function drawStar(
 
   if (s.extinct) {
     // Collapsed star: a dark void disc punched out of the field, a broken
-    // collapse ring, and an extinction cross — the memory going dark.
+    // collapse ring, and an extinction cross, the memory going dark.
     const pulse = reduce ? 0.6 : 0.5 + 0.5 * Math.sin(t * 1.3 + s.x * 5);
     const rr = r * 1.9 * (1.08 - pulse * 0.22);
     ctx.fillStyle = "rgba(2,3,4,0.96)";

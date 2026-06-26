@@ -131,7 +131,7 @@ export function ArtifactTreeHero() {
     // runJudgeDemo() NEVER rejects: on any backend failure it returns the bundled
     // demo artifact (the canonical 87/HIGH run) wrapped as a success. So we ALWAYS
     // have a run to store and the staged animation + /results navigation always
-    // play — there is no "Failed to fetch" path on this button in any environment.
+    // play, there is no "Failed to fetch" path on this button in any environment.
     const result = await runJudgeDemo();
     if (result.ok) setRun(result.data);
     setStage("complete");
@@ -300,7 +300,7 @@ export function ArtifactTreeHero() {
         <GraphKeyframeStrip activeStage={stripStage} onScrub={handleScrub} />
       </m.div>
 
-      {/* primitive strip — hairline-divided mono row */}
+      {/* primitive strip, hairline-divided mono row */}
       <m.ul
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}

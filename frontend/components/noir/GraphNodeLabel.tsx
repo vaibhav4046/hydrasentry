@@ -26,7 +26,7 @@ interface GraphNodeLabelProps {
 }
 
 /**
- * Circular glass node badge + its text label — the connected "context node"
+ * Circular glass node badge + its text label, the connected "context node"
  * around the artifact tree. Hover raises + glows; the tainted variant gets a
  * white-hot ring and a slow pulsing halo (danger = intensity, never hue).
  * Reusable by ArtifactTreeGraph and any graph surface that needs labelled nodes.

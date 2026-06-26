@@ -3,7 +3,7 @@
 import type { ReactNode } from "react";
 
 /**
- * Refined observatory CTAs — deliberately NOT rounded gradient pills. The
+ * Refined observatory CTAs, deliberately NOT rounded gradient pills. The
  * primary is a precise near-square white "transit" button with a thin frame and
  * a corner registration tick; the secondary is a hairline-outline ghost. Both
  * use a 2px radius (sharp, instrument-like) and a single confident hover state.

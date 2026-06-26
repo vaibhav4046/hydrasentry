@@ -1,7 +1,7 @@
 import { CastellanEmblem } from "../castellan/CastellanEmblem";
 
 /**
- * Observatory footer — a hairline-topped bar with the Constellan wordmark on the
+ * Observatory footer, a hairline-topped bar with the Constellan wordmark on the
  * left and a mono coordinate/atlas tagline on the right. Restrained, monochrome.
  */
 export function ObservatoryFooter() {

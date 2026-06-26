@@ -21,7 +21,7 @@ export function UseCaseBento() {
       <SectionHeader
         kicker="THREAT MODEL"
         title="Five ways context poisons an agent."
-        description="Every incident class maps to a deterministic scenario you can replay, score, and block — not a vague prompt that 'looked wrong'."
+        description="Every incident class maps to a deterministic scenario you can replay, score, and block, not a vague prompt that 'looked wrong'."
       />
 
       <m.div

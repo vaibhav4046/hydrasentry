@@ -6,7 +6,7 @@ import { SectionMarker } from "./SectionMarker";
 import { sectionContainer, mastheadLine } from "@/lib/motion";
 
 /**
- * Instrument legend — the product primitives rendered as an engraved atlas
+ * Instrument legend, the product primitives rendered as an engraved atlas
  * legend (a hairline-bordered grid where the 1px gap shows the void through).
  * Reveals on scroll: the marker + grid fade/rise/blur in a small stagger
  * (whileInView, once). Card hover brightness lives in CSS (.obs-card). Copy is

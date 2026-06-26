@@ -22,19 +22,19 @@ const SILVER = "#9CA3AF"; // muted silver
 const HAIR = "rgba(156,163,175,0.55)"; // hairline silver (the "connecting" stroke)
 
 // Deterministic geometry per variant. textLength locks the glyph run width so
-// the node-dot + hairline underline align identically on every platform/font —
+// the node-dot + hairline underline align identically on every platform/font
 // the lockup is razor-sharp at nav (~20px) through 4K because it is pure vector.
 const FULL = { vw: 232, vh: 32, aspect: 232 / 32 };
 const COMPACT = { vw: 60, vh: 32, aspect: 60 / 32 };
 
 /**
- * Constellan brand logotype — a sleek, intentional monochrome wordmark.
+ * Constellan brand logotype, a sleek, intentional monochrome wordmark.
  *
- * Treatment: all-caps, tight optical tracking, two-tone weight — "HYDRA" set in
+ * Treatment: all-caps, tight optical tracking, two-tone weight, "HYDRA" set in
  * silver at a lighter weight, "SENTRY" in white at a heavier weight, so the eye
  * lands on the security half of the name. One graph-identity detail, kept
  * minimal and crisp: a hairline "connecting" underline runs beneath HYDRA into a
- * single white node-dot at the HYDRA|SENTRY seam — a node + edge echoing the
+ * single white node-dot at the HYDRA|SENTRY seam, a node + edge echoing the
  * context graph the product secures. Restraint over flash; sharp at any size.
  */
 export function MonochromeLogo({
@@ -75,7 +75,7 @@ function FullLockup() {
   const seamX = hydraX + hydraLen; // node-dot + SENTRY start
   return (
     <g>
-      {/* hairline "edge" beneath HYDRA — the graph connector */}
+      {/* hairline "edge" beneath HYDRA, the graph connector */}
       <line
         x1={hydraX + 1}
         y1={27.5}
@@ -85,7 +85,7 @@ function FullLockup() {
         strokeWidth={1}
         strokeLinecap="round"
       />
-      {/* HYDRA — silver, lighter weight, tight tracking */}
+      {/* HYDRA, silver, lighter weight, tight tracking */}
       <text
         x={hydraX}
         y={baseY}
@@ -99,9 +99,9 @@ function FullLockup() {
       >
         HYDRA
       </text>
-      {/* node-dot at the seam — the single graph glyph (white, crisp) */}
+      {/* node-dot at the seam, the single graph glyph (white, crisp) */}
       <circle cx={seamX + 1.5} cy={25} r={2.4} fill={INK} />
-      {/* SENTRY — white, heavier weight, tighter tracking */}
+      {/* SENTRY, white, heavier weight, tighter tracking */}
       <text
         x={seamX + 7}
         y={baseY}

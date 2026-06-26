@@ -16,13 +16,13 @@ interface MemoryTreeProps {
 /**
  * Pixelated voxel "memory tree" + context node-box graph, in Constellan noir.
  *
- * Echoes HydraDB.com's signature hero — a tree built from thousands of small
+ * Echoes HydraDB.com's signature hero, a tree built from thousands of small
  * square cells, a thick trunk splitting into branches that splay up and to the
  * RIGHT, scattering to embers at the tips, whose right limbs extend into a
  * graph of small outlined node-boxes joined by dashed edges. HydraDB renders it
  * as an orange heat-map; ours is strictly MONOCHROME: the "heat" becomes WHITE
  * BRIGHTNESS. Hottest cells (trunk core + the tainted path) are bright white;
- * cooler/outer cells fade to dim gray (#5F6875) and low opacity. No hue, ever —
+ * cooler/outer cells fade to dim gray (#5F6875) and low opacity. No hue, ever
  * danger is intensity, not colour (the project's hard brand law).
  *
  * The rightward graph tells Constellan's story: node-boxes labelled `policy
@@ -31,7 +31,7 @@ interface MemoryTreeProps {
  * with a perpetual traveling dash + soft pulse. Other edges are faint dashed.
  *
  * Technique: SVG <rect> cells (vector-sharp at every DPI), count capped ~720.
- * Geometry is DETERMINISTIC — a seeded mulberry32 PRNG drives a fixed layout in
+ * Geometry is DETERMINISTIC, a seeded mulberry32 PRNG drives a fixed layout in
  * useMemo, so SSR and client render identical markup (no hydration mismatch, no
  * Math.random at module/render scope). GPU-light: animates only opacity /
  * transform / stroke-dashoffset. prefers-reduced-motion renders the fully
@@ -115,7 +115,7 @@ const SPINES: Spine[] = [
   { x0: 120, y0: 236, x1: 86, y1: 190, t0: 0.9, t1: 0.5, bright: 0.46, taint: false },
   { x0: 120, y0: 236, x1: 104, y1: 168, t0: 0.9, t1: 0.5, bright: 0.42, taint: false },
   { x0: 156, y0: 214, x1: 138, y1: 156, t0: 0.8, t1: 0.45, bright: 0.42, taint: false },
-  // secondary right twigs (denser, brighter — the active side)
+  // secondary right twigs (denser, brighter, the active side)
   { x0: 246, y0: 250, x1: 286, y1: 214, t0: 0.95, t1: 0.5, bright: 0.56, taint: false },
   { x0: 246, y0: 250, x1: 300, y1: 246, t0: 0.9, t1: 0.5, bright: 0.5, taint: false },
   { x0: 206, y0: 212, x1: 236, y1: 168, t0: 0.8, t1: 0.45, bright: 0.46, taint: false },

@@ -85,7 +85,7 @@ const REQUEST_TIMEOUT_MS = 3500;
  * One-way latch: once any request fails (or if no backend is configured), stop
  * issuing network calls for the rest of the session and serve fixtures directly.
  * This keeps the offline experience instant and prevents a console error on
- * every page — the doomed request is attempted at most once per session.
+ * every page, the doomed request is attempted at most once per session.
  */
 let backendUnreachable = !BACKEND_CONFIGURED;
 
@@ -434,7 +434,7 @@ export async function toggleAgent(
 ): Promise<ApiResult<ScheduledAgent>> {
   // If the agents list was served from the bundled fixture (the live backend
   // returned an empty seed, or is unreachable), the real toggle endpoint does
-  // not know this fixture id — calling it would 404 and log a console error.
+  // not know this fixture id, calling it would 404 and log a console error.
   // Flip the bundled agent locally instead so the optimistic UI reconciles
   // cleanly with zero failed requests.
   if (skipNetwork() || isDemoFallbackActive()) {

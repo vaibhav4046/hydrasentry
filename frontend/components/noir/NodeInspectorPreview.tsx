@@ -40,7 +40,7 @@ interface FieldRow {
  * AnimatePresence when `node` is non-null. Shows node type, source chunk,
  * tenant / sub-tenant, relevancy, a status pill ("TAINTED" as a white-outline
  * pill), the risk reason, and a monochrome danger "Quarantine" action. Empty
- * fields are omitted. Strictly black/white/silver — danger is a brighter
+ * fields are omitted. Strictly black/white/silver, danger is a brighter
  * outline + glow, never red.
  */
 export function NodeInspectorPreview({

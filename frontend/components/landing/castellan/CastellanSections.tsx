@@ -8,7 +8,7 @@ import {
 /**
  * The static below-the-fold sections, ported 1:1 from the design source:
  * primitives strip, attack flow (9 steps), capabilities (6 cards), and
- * architecture (5 stages). Server-rendered (no client JS) — card hover lift +
+ * architecture (5 stages). Server-rendered (no client JS), card hover lift +
  * border-brighten is handled by the `.castellan-card` CSS class instead of the
  * source's per-card JS handlers, so these ship zero hydration cost. Copy, grid
  * shapes, sizes, and styles are verbatim from the source inline styles.
@@ -84,7 +84,7 @@ export function CastellanSections() {
             }}
           >
             Promptfoo tells you a prompt failed. Constellan shows the graph
-            anatomy of how poisoned context reached the agent — and stops it.
+            anatomy of how poisoned context reached the agent, and stops it.
           </p>
         </div>
         <div
@@ -153,7 +153,7 @@ export function CastellanSections() {
           </div>
           <p style={{ maxWidth: "38ch", fontSize: "13.5px", lineHeight: 1.6, color: "#9BA3AF" }}>
             Eight coordinated agents test, replay, explain, block, quarantine,
-            schedule, and refine — autonomously.
+            schedule, and refine, autonomously.
           </p>
         </div>
         <div

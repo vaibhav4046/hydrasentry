@@ -49,7 +49,7 @@ const ATTRACT_PULL = 16;
 const GRAIN_ALPHA = 0.035;
 
 /**
- * The signature monochrome hero — a "guarded MEMORY GRAPH" rendered as a living
+ * The signature monochrome hero, a "guarded MEMORY GRAPH" rendered as a living
  * PARTICLE FIELD, peer-grade with HydraDB's voxel-tree but in strict monochrome.
  *
  *  - A dense breathing CORE cluster (the agent's memory) of silver motes.
@@ -57,7 +57,7 @@ const GRAIN_ALPHA = 0.035;
  *    memories being recalled. Tainted edges are denser/faster/brighter (danger
  *    = intensity, never hue). The tainted chain burns hottest.
  *  - INTERACTIVE: a spring-smoothed pointer drives layered PARALLAX (near motes
- *    move more than far — real depth) and local ATTRACTION + illumination
+ *    move more than far, real depth) and local ATTRACTION + illumination
  *    (particles near the cursor brighten and drift toward it). Hovering a node
  *    lifts + lights its edges. Touch → a gentle drift, no sticky follow.
  *  - DEPTH-OF-FIELD: far particles are smaller/dimmer/softer, near ones sharp +
@@ -162,7 +162,7 @@ export function NeuralMemoryCore({
       px.y = p.ey * VB_H;
     };
     // shift for a depth layer: nearer layers travel further (negative so the
-    // field leans INTO the cursor — content drifts opposite the pointer like
+    // field leans INTO the cursor, content drifts opposite the pointer like
     // looking through a window). Returns {dx,dy} in vb units.
     const parallax = (depth: number) => {
       const amt = PARALLAX_FAR + (PARALLAX_NEAR - PARALLAX_FAR) * depth;
@@ -210,7 +210,7 @@ export function NeuralMemoryCore({
       const scale = 0.92 + 0.16 * breath;
 
       // 1) volumetric halo (soft body) + a SMALL hot kernel. Kept restrained on
-      //    purpose: the discrete cluster motes (below) must read as structure —
+      //    purpose: the discrete cluster motes (below) must read as structure
       //    a giant kernel disc would wash them into a featureless blob.
       ctx.globalCompositeOperation = "lighter";
       const halo = DS(CORE_RADIUS) * 1.9 * scale;
@@ -220,7 +220,7 @@ export function NeuralMemoryCore({
       ctx.globalAlpha = 0.55 + 0.16 * breath;
       ctx.drawImage(sprites.kernel, DX(cx0) - kern, DY(cy0) - kern, kern * 2, kern * 2);
 
-      // 2) the cluster motes — slow swirl + twinkle, parallaxed by their depth,
+      // 2) the cluster motes, slow swirl + twinkle, parallaxed by their depth,
       //    pulled/brightened near the cursor.
       const secs = now / 1000;
       for (const m of field.coreParticles) {
@@ -268,7 +268,7 @@ export function NeuralMemoryCore({
         y += at.dy;
         // born at core, die at node: sine envelope keeps the stream luminous
         // mid-run. Floor keeps the stream visible end-to-end (memories flowing,
-        // not blinking on/off) — the signature "energy travelling the edge".
+        // not blinking on/off), the signature "energy travelling the edge".
         const envelope = 0.32 + 0.68 * Math.sin(t * Math.PI);
         const hov = hoverHit(c);
         const baseA =
@@ -343,7 +343,7 @@ export function NeuralMemoryCore({
 
     // ---- cinematic overlays: vignette + grain -------------------------------
     const drawOverlays = () => {
-      // vignette (deepen corners to black) — drawn in device space, cheap radial
+      // vignette (deepen corners to black), drawn in device space, cheap radial
       const g = ctx.createRadialGradient(
         canvas.width * 0.5,
         canvas.height * 0.46,

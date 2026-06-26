@@ -17,7 +17,7 @@ interface DemoTimelineProps {
 const DEFAULT_STEPS: DemoStep[] = [
   { label: "Clean", detail: "Seed trusted HydraDB context, run baseline." },
   { label: "Poison", detail: "Inject adversarial memory into the tenant." },
-  { label: "Attacked", detail: "Replay the task — behavior diverges." },
+  { label: "Attacked", detail: "Replay the task, behavior diverges." },
   { label: "Graph", detail: "Extract query_paths, taint the failing path." },
   { label: "Blocked", detail: "Firewall blocks and quarantines the memory." },
   { label: "Report", detail: "Export signed evidence of the incident." },
