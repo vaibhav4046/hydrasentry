@@ -60,7 +60,7 @@ export function ObservatoryHero() {
           className="obs-hero-copy"
           style={{ minWidth: 0 }}
           variants={mastheadContainer}
-          initial="hidden"
+          initial={false}
           animate="show"
         >
           {/* coordinate eyebrow */}
@@ -111,14 +111,14 @@ export function ObservatoryHero() {
           >
             <m.span
               variants={mastheadLine}
-              className="obs-display-grad"
+              
               style={{ display: "block" }}
             >
               Chart the constellation
             </m.span>
             <m.span
               variants={mastheadLine}
-              className="obs-display-grad"
+              
               style={{ display: "block" }}
             >
               of your agent&apos;s memory
@@ -212,7 +212,7 @@ export function ObservatoryHero() {
           className="obs-hero-plate"
           style={{ minWidth: 0, alignSelf: "start", marginTop: "6px", y: plateY }}
           variants={plateReveal}
-          initial="hidden"
+          initial={false}
           animate="show"
         >
           <ChartPlate />
