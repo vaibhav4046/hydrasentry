@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { PageShell } from "@/components/shared/PageShell";
 import { UNSAFE_DEMO_SKILL } from "@/components/skillmake/demoSkill";
 import { scanSkill, scanSkillFromMarketplace } from "@/lib/api";
@@ -9,7 +9,11 @@ import type { SkillScan } from "@/lib/types";
 
 const MONO = "var(--font-geist-mono), 'JetBrains Mono', monospace";
 
-/** Real, validated skillmake.xyz slugs offered as one-click marketplace pulls. */
+/** Real, validated skillmake.xyz slugs offered as one-click marketplace pulls.
+ * These are GENUINE marketplace skills and scan CLEAN (LOW / 0 findings): they
+ * are the honest "clean control" so a 0-findings result reads as intended, not
+ * as a broken scanner. The CRITICAL catch is the bundled unsafe-demo-skill, which
+ * the page lands on and auto-scans. */
 const EXAMPLE_SLUGS = ["firecrawl-mcp", "playwright-skill"] as const;
 
 /** Cheap deterministic hash to label the textarea before a real scan runs. */
@@ -41,14 +45,45 @@ export default function SkillMakePage() {
   const [pullNote, setPullNote] = useState<string | null>(null);
   const [skillName, setSkillName] = useState("unsafe-demo-skill");
 
-  async function handleScan(name = skillName) {
+  async function handleScan(name = skillName, scanContent = content) {
     setIsScanning(true);
-    const r = await scanSkill(content, name);
+    const r = await scanSkill(scanContent, name);
     setIsScanning(false);
     if (r.ok) {
       setScan(r.data);
       setStatus(r.data.findings.length ? "flagged" : "clean");
     }
+  }
+
+  /**
+   * Land on the CRITICAL catch: auto-scan the bundled unsafe-demo-skill once on
+   * mount so a judge sees the 100 / CRITICAL result immediately, instead of a
+   * scanner that "did nothing". Runs only when nothing has been scanned yet and
+   * the editor still holds the unsafe demo skill (so it never clobbers a pull or
+   * manual edit on a remount). Marked with a ref so it fires at most once.
+   */
+  const didAutoScan = useRef(false);
+  useEffect(() => {
+    if (didAutoScan.current) return;
+    didAutoScan.current = true;
+    if (content === UNSAFE_DEMO_SKILL && !scan) {
+      // Defer off the effect body so the scan's setState does not run
+      // synchronously within the effect (avoids cascading-render lint + matches
+      // the "fire an async action after mount" intent).
+      queueMicrotask(() => void handleScan("unsafe-demo-skill", UNSAFE_DEMO_SKILL));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  /** Reset the editor to the bundled unsafe-demo-skill and scan it (the CRITICAL
+   * catch), e.g. after a clean marketplace pull, so the dangerous case is always
+   * one click away. */
+  function loadUnsafeDemo() {
+    setContent(UNSAFE_DEMO_SKILL);
+    setSkillName("unsafe-demo-skill");
+    setSlug("unsafe-demo-skill");
+    setPullNote(null);
+    void handleScan("unsafe-demo-skill", UNSAFE_DEMO_SKILL);
   }
 
   /**
@@ -85,9 +120,10 @@ export default function SkillMakePage() {
   }
 
   const findings = scan?.findings ?? [];
-  const risk = scan ? scan.risk_score : 90;
-  const hot = risk >= 70;
-  const verdict = hot ? "QUARANTINE" : "CLEAN";
+  const hasScan = scan !== null;
+  const risk = hasScan ? scan.risk_score : 0;
+  const hot = hasScan && risk >= 70;
+  const verdict = !hasScan ? (isScanning ? "SCANNING" : "UNSCANNED") : hot ? "QUARANTINE" : "CLEAN";
   const riskColor = hot ? C.white : C.silver;
   const hash = scan?.skill_hash ?? localHash(content);
   const fix =
@@ -196,12 +232,13 @@ export default function SkillMakePage() {
               </button>
             </div>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 9, alignItems: "center" }}>
-              <span style={{ fontSize: 10.5, color: C.faint }}>Examples:</span>
+              <span style={{ fontSize: 10.5, color: C.faint }}>Clean controls (real marketplace skills):</span>
               {EXAMPLE_SLUGS.map((s) => (
                 <button
                   key={s}
                   type="button"
                   onClick={() => setSlug(s)}
+                  title="A genuine skillmake.xyz skill. Scans CLEAN (LOW / 0 findings) — the honest control next to the CRITICAL catch."
                   style={{
                     cursor: "pointer",
                     fontFamily: MONO,
@@ -214,9 +251,31 @@ export default function SkillMakePage() {
                     transition: "all .15s",
                   }}
                 >
-                  {s}
+                  {s} · clean
                 </button>
               ))}
+            </div>
+            {/* The dangerous case, always one click away (the CRITICAL catch). */}
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 8, alignItems: "center" }}>
+              <span style={{ fontSize: 10.5, color: C.faint }}>Unsafe example:</span>
+              <button
+                type="button"
+                onClick={loadUnsafeDemo}
+                title="Load the bundled unsafe-demo-skill (prompt injection, secret access, silent refund approval, exfiltration) and scan it — the CRITICAL / 100 catch."
+                style={{
+                  cursor: "pointer",
+                  fontFamily: MONO,
+                  fontSize: 10,
+                  color: "#fff",
+                  padding: "3px 9px",
+                  border: "1px solid rgba(255,255,255,0.4)",
+                  borderRadius: 999,
+                  background: "rgba(255,255,255,0.07)",
+                  transition: "all .15s",
+                }}
+              >
+                unsafe-demo-skill · CRITICAL
+              </button>
             </div>
             {pullNote && (
               <div style={{ marginTop: 9, fontFamily: MONO, fontSize: 10, color: C.muted, lineHeight: 1.5 }}>
