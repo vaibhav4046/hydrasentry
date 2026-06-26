@@ -209,7 +209,7 @@ export function ObservationLog() {
         }}
       >
         <div style={{ maxWidth: "30ch" }}>
-          <SectionMarker index="01" label="OBSERVATION LOG" />
+          <SectionMarker index="01" label="HOW IT WORKS" />
           <m.h2
             variants={mastheadLine}
             className="obs-display"
@@ -222,19 +222,20 @@ export function ObservationLog() {
               color: "#F3F6FB",
             }}
           >
-            The transit of a{" "}
+            How a{" "}
             <em style={{ fontStyle: "normal", fontWeight: 400, color: "#EAF0FA" }}>
               poisoned memory
-            </em>
+            </em>{" "}
+            reaches the agent
           </m.h2>
         </div>
         <m.p
           variants={mastheadLine}
           style={{ maxWidth: "40ch", fontSize: "13.5px", lineHeight: 1.62, color: "#8B94A1" }}
         >
-          Promptfoo tells you a prompt failed. Constellan charts the graph anatomy
-          of how poisoned context reached the agent, nine recorded observations,
-          one severed star.
+          Most tools tell you a prompt failed. Constellan traces the exact graph
+          path poisoned context took toward the agent, nine recorded steps, one
+          blocked at the firewall.
         </m.p>
       </div>
 
@@ -255,7 +256,7 @@ export function ObservationLog() {
           viewBox={`0 0 ${L.vbW} ${L.vbH}`}
           className="obs-transit-svg"
           role="img"
-          aria-label="Transit of a poisoned memory across the Constellan pipeline: seed clean context, baseline replay (safe), inject poison, poisoned replay (compromised), score risk 87 high, extract the tainted query_paths graph, intercept and block at the MCP firewall, quarantine, and export the evidence report."
+          aria-label="How a poisoned memory moves through the Constellan pipeline: seed clean context, baseline replay (safe), inject poison, poisoned replay (compromised), score risk 87 high, extract the tainted query_paths graph, block at the MCP firewall, quarantine, and export the evidence report."
           style={{ width: "100%", height: "auto", display: "block", overflow: "visible" }}
         >
           {/* base track (dim hairline) */}

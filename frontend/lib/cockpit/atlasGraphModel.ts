@@ -640,11 +640,11 @@ export function buildAtlasField(count = 130): AtlasFieldStar[] {
   return stars;
 }
 
-/** Right-margin cartographic coordinate readouts (fixed flavour). */
+/** Right-margin run-metadata readouts (fixed, mirrors the canonical demo run). */
 export const ATLAS_COORD_TICKS = [
-  "RA 14h 02m",
-  "DEC +38° 24′",
-  "EPOCH J2026.0",
-  "FIELD MEMORIA·II",
-  "MAG LIMIT 6.2",
+  "RUN memory_poisoning_refund",
+  "9 NODES",
+  "1 TAINTED PATH",
+  "SOURCE HYDRADB",
+  "RISK 87 HIGH",
 ] as const;

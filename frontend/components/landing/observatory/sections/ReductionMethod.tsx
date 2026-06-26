@@ -20,7 +20,7 @@ export function ReductionMethod() {
       whileInView="show"
       viewport={{ once: true, margin: "-90px" }}
     >
-      <SectionMarker index="03" label="REDUCTION METHOD" />
+      <SectionMarker index="03" label="THE METHOD" />
       <m.h2
         variants={mastheadLine}
         className="obs-display"

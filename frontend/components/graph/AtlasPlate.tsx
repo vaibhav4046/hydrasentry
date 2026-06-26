@@ -108,7 +108,7 @@ export function AtlasPlate({
           className="mono"
           style={{ fontSize: "9.5px", letterSpacing: "0.26em", color: "#9BA3AF" }}
         >
-          PLATE II · MEMORIA
+          CONTEXT GRAPH
         </span>
       </div>
 

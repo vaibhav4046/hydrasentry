@@ -102,7 +102,7 @@ export function ChartPlate() {
             color: "#9BA3AF",
           }}
         >
-          PLATE I · MEMORIA
+          AGENT MEMORY MAP
         </span>
       </div>
 

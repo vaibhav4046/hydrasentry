@@ -32,7 +32,7 @@ export function InstrumentsGrid() {
         }}
       >
         <div style={{ maxWidth: "30ch" }}>
-          <SectionMarker index="02" label="INSTRUMENTS" />
+          <SectionMarker index="02" label="CAPABILITIES" />
           <m.h2
             variants={mastheadLine}
             className="obs-display"
@@ -45,7 +45,7 @@ export function InstrumentsGrid() {
               color: "#F3F6FB",
             }}
           >
-            A full observatory,
+            A full platform,
             <br />
             not a test runner
           </m.h2>
@@ -54,8 +54,8 @@ export function InstrumentsGrid() {
           variants={mastheadLine}
           style={{ maxWidth: "38ch", fontSize: "13px", lineHeight: 1.62, color: "#8B94A1" }}
         >
-          Coordinated instruments replay, chart, block, quarantine, verify,
-          schedule, and refine, every reading reproducible.
+          One system to replay, map, block, quarantine, verify, schedule, and
+          refine. Every result reproducible.
         </m.p>
       </div>
 

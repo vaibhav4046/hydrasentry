@@ -79,7 +79,7 @@ export function ObservatoryFinalCta() {
             className="mono"
             style={{ fontSize: "10px", letterSpacing: "0.26em", color: "#9BA3AF" }}
           >
-            OPEN THE OBSERVATORY
+            GET STARTED
           </span>
           <h2
             className="obs-display"
@@ -92,7 +92,7 @@ export function ObservatoryFinalCta() {
               color: "#F3F6FB",
             }}
           >
-            Observe the attack before
+            Catch the attack before
             <br />
             your users{" "}
             <em style={{ fontStyle: "normal", fontWeight: 400, color: "#EAF0FA" }}>
@@ -110,8 +110,8 @@ export function ObservatoryFinalCta() {
               marginRight: "auto",
             }}
           >
-            Graph-native context integrity for memory-powered agents. Trust your
-            agent&apos;s memory, chart it, and prove it.
+            Graph-native context integrity for memory-powered agents. See exactly
+            what your agent&apos;s memory does, and prove it is safe.
           </p>
           <div
             style={{
@@ -125,7 +125,7 @@ export function ObservatoryFinalCta() {
             <TransitButton onClick={run} disabled={isRunning}>
               {isRunning ? "Routing…" : "Run Judge Demo"} →
             </TransitButton>
-            <SightButton href="#architecture">Read the field notes</SightButton>
+            <SightButton href="#architecture">See how it works</SightButton>
           </div>
         </div>
       </m.div>

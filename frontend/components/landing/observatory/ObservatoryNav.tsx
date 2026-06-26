@@ -14,9 +14,9 @@ import { useRunJudgeDemo } from "../castellan/useRunJudgeDemo";
  */
 
 const NAV_LINKS: { label: string; href: string }[] = [
-  { label: "Observatory", href: "#product" },
-  { label: "Transit", href: "#flow" },
-  { label: "Instruments", href: "#features" },
+  { label: "Overview", href: "#product" },
+  { label: "How it works", href: "#flow" },
+  { label: "Capabilities", href: "#features" },
   { label: "Method", href: "#architecture" },
 ];
 
@@ -88,7 +88,7 @@ export function ObservatoryNav() {
             padding: "2px 7px",
           }}
         >
-          FIRST LIGHT
+          LIVE DEMO
         </span>
         <span
           style={{
@@ -97,9 +97,9 @@ export function ObservatoryNav() {
             color: "#8B94A1",
           }}
         >
-          One-click observation of a poisoned memory ·{" "}
+          Watch Constellan catch a poisoned memory in one click ·{" "}
           <span style={{ color: "#D9DEE7" }}>
-            {isRunning ? "routing…" : "open the plate"}
+            {isRunning ? "running…" : "run it"}
           </span>
         </span>
         <span
@@ -185,7 +185,7 @@ export function ObservatoryNav() {
               onMouseEnter={ghov}
               onMouseLeave={gunhov}
             >
-              Field notes
+              Method
             </a>
             <button
               type="button"

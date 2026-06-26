@@ -22,7 +22,7 @@ export function InstrumentLegend() {
       whileInView="show"
       viewport={{ once: true, margin: "-90px" }}
     >
-      <SectionMarker index="00" label="INSTRUMENT LEGEND" />
+      <SectionMarker index="00" label="WHAT CONSTELLAN DOES" />
       <m.div
         variants={mastheadLine}
         className="obs-grid-4"

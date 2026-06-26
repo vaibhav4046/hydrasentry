@@ -135,10 +135,10 @@ export function igniteOrder(id: string): number {
   return IGNITE_SEQUENCE.length > 1 ? i / (IGNITE_SEQUENCE.length - 1) : 0;
 }
 
-/** Right-margin cartographic coordinate readouts (pure flavour, fixed). */
+/** Right-margin run-metadata readouts (fixed, mirrors the canonical demo run). */
 export const COORD_TICKS = [
-  "RA 14h 02m",
-  "DEC +38° 24′",
-  "EPOCH J2026.0",
-  "MAG LIMIT 6.2",
+  "RUN memory_poisoning_refund",
+  "SOURCE HYDRADB",
+  "1 TAINTED PATH",
+  "RISK 87 HIGH",
 ] as const;

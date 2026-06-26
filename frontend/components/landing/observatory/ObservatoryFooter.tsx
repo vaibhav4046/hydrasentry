@@ -32,7 +32,7 @@ export function ObservatoryFooter() {
           className="mono"
           style={{ fontSize: "10px", letterSpacing: "0.16em", color: "#5F6875" }}
         >
-          MEMORY OBSERVATORY · GRAPH-NATIVE CONTEXT INTEGRITY · J2026.0
+CONSTELLAN · GRAPH-NATIVE CONTEXT INTEGRITY FOR HYDRADB AGENTS
         </div>
       </div>
     </footer>

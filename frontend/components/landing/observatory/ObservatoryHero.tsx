@@ -90,7 +90,7 @@ export function ObservatoryHero() {
                 color: "#9BA3AF",
               }}
             >
-              N 38°·24 / OBS · CONTEXT INTEGRITY FOR HYDRADB AGENTS
+              CONTEXT INTEGRITY FOR HYDRADB AGENTS
             </span>
           </m.div>
 
@@ -149,12 +149,12 @@ export function ObservatoryHero() {
               textWrap: "pretty",
             }}
           >
-            Constellan is the memory observatory for AI agents. It replays a task
-            against clean and poisoned HydraDB context, maps the exact{" "}
+            Constellan is the context-integrity layer for AI agents. It replays a
+            task against clean and poisoned HydraDB context, maps the exact{" "}
             <span className="mono" style={{ color: "#D9DEE7", fontSize: "0.92em" }}>
               query_paths
             </span>{" "}
-            that carried the poison, and severs the tainted star through MCP
+            that carried the poison, and blocks the tainted context through MCP
             before the agent acts.
           </m.p>
 
@@ -172,7 +172,7 @@ export function ObservatoryHero() {
             <TransitButton onClick={run} disabled={isRunning}>
               {isRunning ? "Routing…" : "Run Judge Demo"} →
             </TransitButton>
-            <SightButton href="#architecture">Sight the architecture</SightButton>
+            <SightButton href="#architecture">See how it works</SightButton>
           </m.div>
 
           {/* baseline rule + tiny readout */}
@@ -190,8 +190,8 @@ export function ObservatoryHero() {
           >
             {[
               ["DETERMINISTIC", "87 / HIGH · reproducible"],
-              ["GRAPH-NATIVE", "real query_paths, never faked"],
-              ["MONOCHROME", "one light source"],
+              ["GRAPH-NATIVE", "real HydraDB query_paths"],
+              ["MCP-ENFORCED", "blocked before the agent acts"],
             ].map(([k, v]) => (
               <div key={k} style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
                 <span
