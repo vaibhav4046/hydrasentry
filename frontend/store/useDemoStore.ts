@@ -5,13 +5,16 @@
  * Judge Demo" succeeds it stores the RunArtifact here and routes to /results.
  * `stage` mirrors the backend pipeline stage label for any live progress UI.
  *
- * PERSISTENCE: the completed run is persisted to sessionStorage via zustand's
- * `persist` middleware so it survives a reload or a new tab in the same session.
- * This fixes the cold deep-link inconsistency where /results, /graph and
- * /mission disagreed after a run: once a run lands, every page reflects the SAME
- * run cross-tab. Only `currentRun` is persisted (the artifact); transient flags
- * (`isRunning`, `stage`) are not. sessionStorage (not localStorage) keeps the
- * demo session-scoped so a brand-new browser session starts clean/nominal.
+ * PERSISTENCE: the completed run is persisted to localStorage via zustand's
+ * `persist` middleware so it survives a reload AND an independently-opened new
+ * tab. This fixes the cold deep-link inconsistency that finding H2 calls out:
+ * "a judge who runs the demo then opens /results in a new tab sees 0 risks next
+ * to a graph screaming poison detected." sessionStorage is per-tab and would NOT
+ * survive a fresh tab, so localStorage is required for the cross-tab case. On a
+ * truly first visit (nothing stored) the cold state is still clean/nominal, so
+ * "before any run -> all clean; after a run -> all show 87/HIGH" holds. Only
+ * `currentRun` is persisted (the artifact); transient flags (`isRunning`,
+ * `stage`) are not.
  *
  * Hydration is SSR-safe: `skipHydration` defers reading storage until the client
  * mounts (see RunStoreHydrator), so server and first client render both start
@@ -47,9 +50,10 @@ export const useDemoStore = create<DemoState>()(
     }),
     {
       name: STORAGE_KEY,
-      // Session-scoped: a fresh browser session starts clean/nominal; reloads
-      // and new tabs within the session see the same run.
-      storage: createJSONStorage(() => sessionStorage),
+      // localStorage so a run survives reload AND an independently-opened new
+      // tab (the H2 cross-tab case). A first visit has nothing stored, so the
+      // cold state is clean/nominal.
+      storage: createJSONStorage(() => localStorage),
       // Persist only the run artifact, never the transient in-flight flags.
       partialize: (state) => ({ currentRun: state.currentRun }),
       // Defer storage read to the client (avoids SSR hydration mismatch).
