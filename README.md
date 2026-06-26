@@ -237,7 +237,7 @@ npm run dev                          # http://localhost:3000
 
 ```bash
 cd backend
-pytest                # 44 tests, ~85% coverage
+pytest                # 66 tests (deterministic, no network)
 ```
 
 ---
@@ -323,6 +323,7 @@ Bug-bounty mode is **disabled by default**. Before running anything against a sy
 
 ## Limitations (honest)
 
+- **Detection scope: graph taint and marker forensics, not content classification.** Constellan flags a poisoned memory by tracing its taint through the retrieval graph and matching forbidden/safe markers on flagged or owned memories. That is exactly the replay-harness use case: a memory you have labelled (trust `poisoned`/`stale`) or that carries known attack wording, the way the bundled scenarios and the local adapter present it. It does **not** semantically classify the *content* of an unlabelled, never-seen paraphrase. Concretely: an unlabelled memory that paraphrases a policy override in fresh wording, with no forbidden marker and no poisoned/stale trust tag, scores LOW and the firewall allows it. Catching that unlabelled semantic case needs a content-signal layer (a contradiction/embedding classifier), which is roadmap, not shipped. What ships is honest and deterministic about the graph-and-marker evidence it actually has.
 - **Scheduling is simulated.** The six scheduled agents are an in-app simulated schedule persisted in SQLite. No real cron jobs or external timers are registered.
 - **No fine-tuning is performed.** The model router *supports* a local OpenAI-compatible endpoint as an optional judge, but Constellan does not train or fine-tune any model.
 - **The MCP gateway is HTTP, MCP-inspired**, not a native stdio MCP server.
@@ -332,6 +333,7 @@ Bug-bounty mode is **disabled by default**. Before running anything against a sy
 
 ## Roadmap
 
+- **Content-signal layer for unlabelled poison.** A local contradiction/low-overlap classifier so an unlabelled semantic paraphrase that overrides policy scores MEDIUM instead of LOW, complementing the current graph-taint + marker forensics (see Limitations).
 - Native MCP stdio server with a documented Claude Code connection
 - Real scheduled execution (replace the simulated scheduler with a real runner)
 - Optional local risk-classifier fine-tuning behind the existing router seam
