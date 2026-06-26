@@ -10,7 +10,7 @@
 
 ## Bug-bounty mode is DISABLED by default
 
-HydraSentry does not run any test against a system you do not own unless an official, written scope is pasted above. **If official scope is missing, bug-bounty mode is DISABLED.** All built-in scenarios run only against tenants and subtenants this app created (`hydrasentry-owned-test`).
+Constellan does not run any test against a system you do not own unless an official, written scope is pasted above. **If official scope is missing, bug-bounty mode is DISABLED.** All built-in scenarios run only against tenants and subtenants this app created (`hydrasentry-owned-test`).
 
 ## Safety rules (always apply, even with scope)
 

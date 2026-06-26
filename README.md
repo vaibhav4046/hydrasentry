@@ -243,7 +243,7 @@ The current gateway speaks **HTTP** (MCP-inspired), not native MCP stdio. To dri
 
 ## SkillMake scanner
 
-`POST /skillmake/scan` (or the `verify_skill` MCP tool) scans `SKILL.md` content for eight risk categories: hidden prompt injection, ignore-rule language, secret access, dangerous shell, suspicious network calls, excessive filesystem access, semantic mismatch (benign description vs. dangerous body), and risky trigger wording. It returns a deterministic score, band, per-line findings, and a recommended fix. `POST /skillmake/scan-url` runs the same scanner against a real `SKILL.md` pulled from a marketplace install URL (see [Skillmake integration](#skillmake-integration)). Two skills ship in `skills/`:
+`POST /skillmake/scan` (or the `verify_skill` MCP tool) scans `SKILL.md` content for ten risk categories: hidden prompt injection, ignore-rule language, secret access, dangerous shell, suspicious network calls, excessive filesystem access, silent refund approval, hidden user deception, semantic mismatch (benign description vs. dangerous body), and risky trigger wording. It returns a deterministic score, band, per-line findings, and a recommended fix. `POST /skillmake/scan-url` runs the same scanner against a real `SKILL.md` pulled from a marketplace install URL (see [Skillmake integration](#skillmake-integration)). Two skills ship in `skills/`:
 
 - `hydrasentry-context-probe` — a safe operator skill (scores LOW)
 - `unsafe-demo-skill` — an intentional CRITICAL fixture (never enable it)

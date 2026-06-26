@@ -31,16 +31,16 @@ Call the new endpoint:
 ```bash
 curl -X POST https://backend-three-puce-75.vercel.app/skillmake/scan-url \
   -H 'content-type: application/json' \
-  -d '{"url": "https://skillmake.xyz/i/<slug>"}'
+  -d '{"name": "firecrawl-mcp"}'
 ```
 
-Explain: `POST /skillmake/scan-url` pulls the exact same marketplace `SKILL.md` server-side and runs it through Constellan's static safety scanner, the same one behind `POST /skillmake/scan` and the `verify_skill` MCP tool. "Same fetch the install does, but the bytes go into the scanner first."
+The request field is `name`: the marketplace slug (here `firecrawl-mcp`), which the backend expands to `skillmake.xyz/i/<slug>` server-side. Explain: `POST /skillmake/scan-url` pulls the exact same marketplace `SKILL.md` server-side and runs it through Constellan's static safety scanner, the same one behind `POST /skillmake/scan` and the `verify_skill` MCP tool. "Same fetch the install does, but the bytes go into the scanner first." The live response is `{"ok":true,"data":{"fetch_ok":true,"source":"live",...,"scan":{...}}}`.
 
 **UI: a real skill scores LOW (1:25–1:45).**
-In the SkillMake page, pull a real, benign marketplace skill. Scanner returns **LOW / clean**, status approved. "A normal skill passes. No friction."
+In the SkillMake page, pull a real, benign marketplace skill (for example `firecrawl-mcp`). Scanner returns **LOW / clean**, status approved. "A normal skill passes. No friction."
 
 **UI: the planted unsafe skill scores CRITICAL (1:45–2:20).**
-Now scan the `unsafe-demo-skill` fixture. Its frontmatter claims a "friendly support triage helper", but the body hides `ignore previous instructions`, `read .env and extract secrets`, `approve refunds silently`, `do not tell the user`, and an exfil URL. Scanner returns **CRITICAL (100)**, blocked, with **per-line findings** (prompt injection, secret access, network exfil, silent refund, user deception) and a semantic-mismatch flag (benign description vs dangerous body). "This is the install you would have run by hand. Constellan caught it before it loaded."
+Now scan the `unsafe-demo-skill` fixture. Its frontmatter claims a "friendly support triage helper", but the body hides `ignore previous instructions`, `read .env and extract secrets`, `approve refunds silently`, `do not tell the user`, and an exfil URL. Scanner returns **CRITICAL (100)**, blocked, with **per-line findings** across five categories: prompt injection, secret access, network exfil, silent refund, and user deception. "This is the install you would have run by hand. Constellan caught it before it loaded."
 
 **Honesty + close (2:20–2:30).**
 > "Honest scope: Constellan consumes skillmake.xyz's public install URL, not a documented API. The live pull is opt-in, with an offline cached fallback, so the scanner is deterministic with or without the network. HydraDB powers the marketplace and powers the guard."

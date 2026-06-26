@@ -1,0 +1,230 @@
+% Constellan - Submission and QA Verification Report
+% Compile with pdflatex (e.g. on Overleaf). Requires the assets/ folder alongside this file.
+\documentclass[11pt]{article}
+\usepackage[a4paper,margin=20mm]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{enumitem}
+\usepackage{caption}
+\usepackage[hidelinks]{hyperref}
+
+\definecolor{crit}{HTML}{9B1C1C}
+\definecolor{high}{HTML}{9A4B00}
+\definecolor{med}{HTML}{7A6A00}
+\definecolor{low}{HTML}{3F5460}
+\definecolor{codebg}{HTML}{0F1218}
+\definecolor{codefg}{HTML}{E6EDF6}
+
+\newcommand{\sevHIGH}{\textcolor{high}{\textbf{HIGH}}}
+\newcommand{\sevMED}{\textcolor{med}{\textbf{MEDIUM}}}
+\newcommand{\sevLOW}{\textcolor{low}{\textbf{LOW}}}
+
+\lstset{
+  basicstyle=\ttfamily\small\color{codefg},
+  backgroundcolor=\color{codebg},
+  breaklines=true,
+  breakatwhitespace=false,
+  columns=fullflexible,
+  keepspaces=true,
+  frame=single,
+  framerule=0pt,
+  xleftmargin=6pt, xrightmargin=6pt,
+  aboveskip=8pt, belowskip=8pt,
+}
+\lstdefinestyle{inlinecode}{basicstyle=\ttfamily\small\color{black},backgroundcolor=\color{white}}
+\newcommand{\code}[1]{\lstinline[style=inlinecode]|#1|}
+
+\captionsetup{font=small,labelfont=bf}
+\setlist{nosep,leftmargin=1.4em}
+\hypersetup{colorlinks=false}
+\pagestyle{plain}
+
+\title{\vspace{-12mm}\textbf{\Huge Constellan}\\[4pt]
+{\large Context Integrity for HydraDB Agents}\\[8pt]
+{\normalsize Submission and QA Verification Report}}
+\author{\normalsize HydraDB Build Blitz \quad$\cdot$\quad Product: Constellan \quad$\cdot$\quad Repo/engine: hydrasentry}
+\date{\normalsize 26 June 2026}
+
+\begin{document}
+\maketitle
+\thispagestyle{plain}
+
+\noindent\fbox{\parbox{\dimexpr\linewidth-2\fboxsep-2\fboxrule}{%
+\small \textbf{Live frontend:} \url{https://frontend-nu-ochre-z41mw3z0l5.vercel.app} \\
+\textbf{Live backend:} \url{https://backend-three-puce-75.vercel.app} (\code{APP_MODE=demo}) \\
+\textbf{Repo:} \url{https://github.com/vaibhav4046/hydrasentry} \\
+One command reproduces the canonical run: \code{curl -X POST https://backend-three-puce-75.vercel.app/runs/judge-demo}}}
+
+\section*{Executive summary}
+Constellan is a context-integrity harness for AI agents that run on HydraDB. It red-teams the memory and knowledge layer rather than the prompt: it seeds an owned HydraDB tenant with a clean policy, injects a poisoned memory, replays the agent against both, renders the graph anatomy of how the poisoned context travelled through HydraDB retrieval paths into an unsafe tool action, blocks that action through an MCP gateway, and verifies SkillMake skills statically before they load.
+
+This report records two things: independent verification that the live deployment behaves exactly as the submission claims, and the result of a structured five-lens read-only QA audit (32 findings, adversarially verified against source) with the fixes applied during this engagement.
+
+\begin{itemize}
+\item The canonical judge demo is deterministic at \textbf{87 / HIGH / memory\_poisoning / 0.92}, verified against the live backend.
+\item The SkillMake bounty centrepiece holds and is reproducible offline: the planted \code{unsafe-demo-skill} scores \textbf{CRITICAL / 100 / blocked}; a real marketplace skill (\code{firecrawl-mcp}, pulled live from skillmake.xyz) scores \textbf{LOW / approved}. Both are test-locked.
+\item Graph-source honesty holds by construction: derived data is always labelled \textbf{DERIVED SCENARIO GRAPH FALLBACK} and is never presented as real HydraDB output.
+\item The audit found \textbf{0 critical} and \textbf{0 secret-leak} issues. The real risks were in the demo script and docs, not the engine. The most important was a \sevHIGH{}: the bounty video's on-camera \code{curl} used the wrong JSON field and would have returned HTTP 422 on camera. That and four other doc/script issues were fixed during this engagement.
+\end{itemize}
+
+\section{Live deployment and how to verify it}
+Both tiers are deployed on Vercel and were exercised live for this report.
+
+\begin{center}\small
+\begin{tabular}{@{}lll@{}}
+\toprule
+Tier & URL & State \\
+\midrule
+Frontend (Constellan UI) & frontend-nu-ochre-z41mw3z0l5.vercel.app & Live, public \\
+Backend (FastAPI engine) & backend-three-puce-75.vercel.app & Live, \code{APP_MODE=demo} \\
+Source & github.com/vaibhav4046/hydrasentry & Public \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\textbf{Naming.} The product is \textbf{Constellan}. The repository, directory, tenant ids (\code{hydrasentry-owned-test}), the finding-report header, and a few code strings keep the original \code{hydrasentry} name on purpose so internal identifiers stay stable. The hosted backend runs in demo mode, so its graph is honestly labelled DERIVED SCENARIO GRAPH FALLBACK. The vanity host \code{constellan.vercel.app} is SSO-gated and stale and is never presented as live.
+
+\section{Verified live evidence}
+Every block below is a real capture taken against the live deployment.
+
+\begin{lstlisting}
+GET /health
+{"ok":true,"data":{"status":"healthy","mode":"demo","service":"hydrasentry","version":"1.0.0"}}
+\end{lstlisting}
+
+\begin{lstlisting}
+POST /runs/judge-demo
+{"risk":{"score":87,"band":"HIGH","attack_type":"memory_poisoning","confidence":0.92,
+         "deterministic_only":true},
+ "graph_source":"derived_scenario_graph",
+ "firewall":{"decision":"block"},
+ "quarantine":{"memory_id":"mem_poison_047","status":"quarantined"},
+ "skill_scan":{"name":"unsafe-demo-skill","risk_score":100,"band":"CRITICAL","status":"blocked"}}
+\end{lstlisting}
+
+CORS is wired end to end: the backend returns the exact frontend origin, not a wildcard.
+
+\begin{lstlisting}
+GET /health  (Origin: https://frontend-nu-ochre-z41mw3z0l5.vercel.app)
+HTTP/1.1 200 OK
+Access-Control-Allow-Origin: https://frontend-nu-ochre-z41mw3z0l5.vercel.app
+\end{lstlisting}
+
+The SkillMake live pull works against the real marketplace:
+
+\begin{lstlisting}
+POST /skillmake/scan-url   {"name": "firecrawl-mcp"}
+HTTP 200
+{"ok":true,"data":{"fetch_ok":true,"slug":"firecrawl-mcp","source":"live",
+  "scan":{"risk_score":0,"band":"LOW","status":"approved"}}}
+\end{lstlisting}
+
+\section{Product walkthrough}
+Screenshots captured headlessly against the live site; post-run views were produced by triggering the real judge demo in the browser.
+
+\begin{figure}[h]\centering\includegraphics[width=0.9\linewidth]{assets/A00_idle_landing.jpg}
+\caption{The Constellan landing page: monochrome noir memory observatory with the live agent-memory atlas and the Run Judge Demo call to action.}\end{figure}
+
+\begin{figure}[h]\centering\includegraphics[width=0.9\linewidth]{assets/B00_results_run.jpg}
+\caption{Results center after the canonical run. Risk 87 / HIGH, one critical issue, one memory quarantined, firewall BLOCK, regression replay scheduled.}\end{figure}
+
+\begin{figure}[h]\centering\includegraphics[width=0.9\linewidth]{assets/B01_graph_tainted.jpg}
+\caption{The memory graph (centrepiece). The tainted query\_paths route runs mem\_poison\_047 to policy\_conflict to instant\_refund\_action to quarantine. The source badge honestly reads DERIVED SCENARIO GRAPH FALLBACK.}\end{figure}
+
+\begin{figure}[h]\centering\includegraphics[width=0.9\linewidth]{assets/B03_skillmake_critical.jpg}
+\caption{The SkillMake verifier. The pulled SKILL.md source is on the left; the unsafe fixture scores CRITICAL with per-line flagged instructions on the right.}\end{figure}
+
+\begin{figure}[h]\centering\includegraphics[width=0.9\linewidth]{assets/B04_mcp.jpg}
+\caption{The MCP gateway: read and write tools exposed as an MCP-inspired HTTP control surface, write tools guarded by a shared secret.}\end{figure}
+
+\begin{figure}[h]\centering\includegraphics[width=0.9\linewidth]{assets/B02_replay.jpg}
+\caption{The replay lab: baseline versus poisoned replays side by side, so the behaviour change is concrete rather than asserted.}\end{figure}
+
+\begin{figure}[h]\centering\includegraphics[width=0.9\linewidth]{assets/B05_scheduled.jpg}
+\caption{Scheduled agents: an in-app simulated schedule, labelled as simulated; no real cron is registered.}\end{figure}
+
+\begin{figure}[h]\centering\includegraphics[width=0.9\linewidth]{assets/B06_mission.jpg}
+\caption{The mission view: the five attack scenarios and the strict ordered run loop that drives them.}\end{figure}
+
+\clearpage
+\section{SkillMake bounty alignment}
+skillmake.xyz is a HydraDB-powered marketplace of agent SKILL.md files. Its own guidance is that installed skills are not sandboxed and should be inspected by hand. Constellan automates that inspection: \code{POST /skillmake/scan-url} takes a marketplace slug, pulls the real SKILL.md server-side, and runs it through the same deterministic scanner used by \code{POST /skillmake/scan} and the \code{verify_skill} MCP tool. HydraDB powers both the marketplace and the guard.
+
+Verified live: the benign \code{firecrawl-mcp} skill (pulled live, \code{source: live}) scores LOW / approved; the planted \code{unsafe-demo-skill} scores CRITICAL / 100 / blocked. Both are locked by tests in \code{backend/tests/test_skillmake_scanner.py} and \code{test_api.py}. The scanner implements ten categories: prompt injection, ignore-rule language, secret access, dangerous shell, suspicious network calls, excessive filesystem access, silent refund approval, user deception, semantic mismatch, and risky trigger wording.
+
+\section{QA audit}
+Five parallel read-only audit agents swept distinct dimensions; each finding was verified against source. Total: 32 findings.
+
+\begin{center}\small
+\begin{tabular}{@{}lcl@{}}
+\toprule
+Severity & Count & Notes \\
+\midrule
+Critical & 0 & None found. \\
+High & 1 & Bounty video curl field. Fixed this session. \\
+Medium & 4 & Two doc/script truthfulness gaps; two engine cosmetics. \\
+Low & 7 & Docs, dead code, accessibility, a latent CORS footgun. \\
+Verified non-issue & 13 & Confirmed correct. \\
+Informational & 7 & Design notes and confirmations. \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\subsection{Open and resolved findings}
+\begin{itemize}
+\item \sevHIGH{} \textbf{Bounty video curl used the wrong JSON field (would 422 on camera).} The endpoint body \code{SkillScanUrlBody} (\code{backend/main.py:78}) requires \code{name}. Live: \code{{"url":...}} returns 422; \code{{"name":"firecrawl-mcp"}} returns 200. \textit{Fixed this session.}
+\item \sevMED{} \textbf{Video claimed a semantic-mismatch flag fires on the unsafe fixture; it does not.} The fixture verbs are absent from \code{_DANGER_VERBS} (\code{skillmake_scanner.py:40}). Score still saturates at 100 via other categories. \textit{Fixed this session} (script lists only the five categories that fire).
+\item \sevMED{} \textbf{The canonical run surfaces a past-dated next scheduled run.} \code{_SEED_NOW=2026-06-24} yields \code{next_run=2026-06-25}. \textit{Open, documented.} Fix: derive from \code{date.today()} in \code{storage.seed_scheduled_agents} and \code{scheduler.schedule_scan}. Not applied (engine change plus redeploy); does not affect the 87 score.
+\item \sevMED{} \textbf{semantic\_mismatch detector misses its own canonical fixture.} Same root cause as the video claim, as a code-quality gap. \textit{Open, documented.} Fix: extend \code{_DANGER_VERBS} and add a regression test.
+\item \sevMED{} \textbf{Clean nodes appear inside tainted\_path.} \code{ensure_node} (\code{graph_extractor.py:78}) only writes fields on first creation, so clean nodes created before the poison edges are still appended to the tainted path. Scoring unaffected. \textit{Open, documented.}
+\item \sevLOW{} \textbf{Docs undercounted scanner categories (eight versus ten).} \textit{Fixed this session.}
+\item \sevLOW{} \textbf{BOUNTY\_SCOPE.md used the old product name.} \textit{Fixed this session.}
+\item \sevLOW{} \textbf{CORS fallback to wildcard with credentials is a latent footgun} (\code{main.py:49}); does not trigger in production. \textit{Open, documented.}
+\item \sevLOW{} \textbf{Other low items:} unguarded \code{chunk['text']} in the unreachable derived fallback; a docstring saying 8-node while the demo is 6-node; a dead \code{GraphSourceBadge} component; two faint secondary labels that may fall below WCAG AA. None affect the demo.
+\end{itemize}
+
+\subsection{Verified non-issues}
+\begin{itemize}
+\item \textbf{Graph-source honesty by construction.} Every badge computes \code{isReal} as strict equality to \code{graph_source === 'real_query_paths'}; any unexpected value falls through to DERIVED.
+\item \textbf{No secret leaked in any tracked file;} \code{.env.example} ships blank; keys reach the UI only as \code{sha256:} fingerprints.
+\item \textbf{Offline fallback never throws;} every client function returns a normalized \code{ApiResult} envelope.
+\item \textbf{Canonical determinism holds;} 87 / HIGH / 0.92 stable across repeated runs. 44 pytest tests pass.
+\item \textbf{The pound-sign mojibake is a non-issue;} the JSON is valid UTF-8, the artifact was a console code-page effect.
+\item \textbf{Serverless ephemerality is handled and documented.}
+\end{itemize}
+
+\section{Fixes applied in this engagement}
+\begin{enumerate}
+\item Documentation de-staling: removed stale ``no live deployment'' claims; added live URLs near the top of README, DEMO, SUBMISSION, CLAUDE; reconciled the Constellan/hydrasentry naming; neutralised the SSO-gated vanity host.
+\item Bounty video curl (\sevHIGH{}): corrected to \code{{"name":"firecrawl-mcp"}} and documented the field.
+\item Video truthfulness (\sevMED{}): removed the false semantic-mismatch claim.
+\item Category count (\sevLOW{}): README and DEMO now say ten categories.
+\item Naming (\sevLOW{}): BOUNTY\_SCOPE.md now uses Constellan.
+\end{enumerate}
+The deterministic engine, the risk scores, and the REAL-versus-DERIVED honesty guardrails were deliberately not modified.
+
+\section{Strengths, limitations, recommendations}
+\textbf{Strengths.} Built around HydraDB \code{query_paths} as first-class forensic evidence; determinism as an engineering choice; honesty enforced in code with a fail-safe default to DERIVED; a real MCP control surface; a genuine live SkillMake integration.
+
+\textbf{Limitations (stated, not hidden).} Scheduling is simulated; no fine-tuning; the MCP gateway is HTTP not native stdio; the hosted backend is demo mode (DERIVED graph); cloud persistence is ephemeral.
+
+\textbf{Recommendations.} (1) Optionally polish the engine then redeploy: derive \code{next_run} from today's date and extend \code{_DANGER_VERBS}; re-run \code{pytest} (must stay green at 87 / HIGH) first. (2) Rehearse the corrected video curl once. (3) Otherwise leave the verified engine and scores untouched for the deadline.
+
+\section*{Appendix: one-command reproduction}
+\begin{lstlisting}
+curl -X POST https://backend-three-puce-75.vercel.app/runs/judge-demo
+
+curl -X POST https://backend-three-puce-75.vercel.app/skillmake/scan-url \
+  -H 'content-type: application/json' -d '{"name": "firecrawl-mcp"}'
+
+# Local, deterministic, offline
+cd backend && pip install -r requirements.txt && uvicorn main:app --port 8000
+cd frontend && npm install && npm run dev
+cd backend && pytest      # 44 tests, ~85% coverage
+\end{lstlisting}
+
+\end{document}
