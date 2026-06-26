@@ -744,6 +744,138 @@
   }
 }
 
+/* ==========================================================
+   Constellan — Memory Observatory homepage (/).
+   The star-atlas direction: editorial Fraunces masthead, a live canvas
+   star-chart plate, cartographic mono detailing, hairline-framed legend
+   grids. Scoped under .observatory-landing so the cockpit is untouched.
+   Pure monochrome (cool silver/white on void) — danger via brightness,
+   never hue.
+   ========================================================== */
+
+/* Editorial display face — Fraunces (loaded via next/font as --font-display).
+   This is the deliberate anti-template type: a high-contrast literary serif
+   instead of Inter/Geist bold. Optical sizing pinned large; ligatures on. */
+.observatory-landing .obs-display {
+  font-family: var(--font-display), "Fraunces", Georgia, "Times New Roman", serif;
+  font-optical-sizing: auto;
+  font-feature-settings: "liga" 1, "dlig" 1;
+}
+.observatory-landing .obs-display-italic {
+  font-family: var(--font-display), "Fraunces", Georgia, serif;
+}
+
+/* data-reveal entrance is inherited from .castellan-landing (page.tsx keeps
+   both classes), so no duplicate rule needed here. */
+
+/* Legend / instrument cards: a hairline-bordered plate where the 1px grid gap
+   shows the void through, and hover lifts the cell brightness (not a transform
+   — the grid is rigid, cartographic). */
+.observatory-landing .obs-card {
+  transition: background 0.3s var(--hs-ease-out-expo);
+}
+.observatory-landing .obs-card:hover {
+  background: rgba(234, 240, 250, 0.035) !important;
+}
+
+/* Observation-log rows brighten on hover. */
+.observatory-landing .obs-log-row {
+  transition: background 0.25s var(--hs-ease-out-expo);
+}
+.observatory-landing .obs-log-row:hover {
+  background: rgba(234, 240, 250, 0.02);
+}
+
+/* Refined CTA hovers. */
+.observatory-landing .obs-btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.2),
+    0 22px 52px -20px rgba(220, 228, 240, 0.85);
+}
+.observatory-landing .obs-btn-ghost:hover {
+  border-color: rgba(234, 240, 250, 0.34);
+  background: rgba(234, 240, 250, 0.04);
+  color: #f3f6fb;
+}
+
+/* ---- Observatory responsive chrome -------------------------------------- */
+/* Nav links collapse on tablet; the inline display:flex needs !important. */
+@media (max-width: 1024px) {
+  .observatory-landing .obs-navlinks {
+    display: none !important;
+  }
+}
+@media (max-width: 560px) {
+  .observatory-landing .obs-nav-inner {
+    padding-left: 16px !important;
+    padding-right: 16px !important;
+    gap: 12px !important;
+  }
+  .observatory-landing .obs-docs-btn {
+    display: none !important;
+  }
+}
+
+/* Hero: stack the masthead above the plate on tablet/mobile, and cap the plate
+   width so it never dominates a single column. */
+@media (max-width: 920px) {
+  .observatory-landing .obs-hero-grid {
+    grid-template-columns: 1fr !important;
+    gap: 40px !important;
+  }
+  .observatory-landing .obs-hero-plate {
+    max-width: 460px;
+    width: 100%;
+    margin-left: auto;
+    margin-right: auto;
+  }
+}
+
+/* Legend / instrument grids collapse cleanly. */
+@media (max-width: 920px) {
+  .observatory-landing .obs-grid-4 {
+    grid-template-columns: 1fr 1fr !important;
+  }
+  .observatory-landing .obs-grid-3 {
+    grid-template-columns: 1fr 1fr !important;
+  }
+  .observatory-landing .obs-method {
+    grid-template-columns: 1fr 1fr 1fr !important;
+  }
+}
+@media (max-width: 600px) {
+  .observatory-landing .obs-grid-4,
+  .observatory-landing .obs-grid-3 {
+    grid-template-columns: 1fr !important;
+  }
+  .observatory-landing .obs-method {
+    grid-template-columns: 1fr 1fr !important;
+  }
+}
+
+/* Observation-log: drop the right-hand description column on narrow screens and
+   let the title wrap, so the row never forces horizontal overflow. */
+@media (max-width: 760px) {
+  .observatory-landing .obs-log-row {
+    grid-template-columns: 44px 1fr !important;
+    gap: 14px !important;
+  }
+  .observatory-landing .obs-log-desc {
+    display: none !important;
+  }
+}
+
+/* The named-star labels can crowd at very small plate sizes; trim the faint
+   designation line under ~420px so only the catalogue name shows. */
+@media (max-width: 420px) {
+  .observatory-landing .obs-star-label > div:last-child {
+    display: none;
+  }
+  .observatory-landing .obs-plate-coords {
+    display: none !important;
+  }
+}
+
 /* Honor reduced-motion: kill transitions/animations and scroll smoothing. */
 @media (prefers-reduced-motion: reduce) {
   html {

@@ -1,32 +1,39 @@
-import { CastellanBackground } from "@/components/landing/castellan/CastellanBackground";
-import { CastellanNav } from "@/components/landing/castellan/CastellanNav";
-import { CastellanHero } from "@/components/landing/castellan/CastellanHero";
-import { CastellanProduct } from "@/components/landing/castellan/CastellanProduct";
-import { CastellanSections } from "@/components/landing/castellan/CastellanSections";
-import { CastellanFinalCta } from "@/components/landing/castellan/CastellanFinalCta";
-import { CastellanFooter } from "@/components/landing/castellan/CastellanFooter";
+import { ObservatoryBackground } from "@/components/landing/observatory/ObservatoryBackground";
+import { ObservatoryNav } from "@/components/landing/observatory/ObservatoryNav";
+import { ObservatoryHero } from "@/components/landing/observatory/ObservatoryHero";
+import { ObservatorySections } from "@/components/landing/observatory/ObservatorySections";
+import { ObservatoryFinalCta } from "@/components/landing/observatory/ObservatoryFinalCta";
+import { ObservatoryFooter } from "@/components/landing/observatory/ObservatoryFooter";
 
 /**
- * Landing page (/), a same-to-same port of the standalone Castellan landing
- * design (docs/castellan_import/Constellan.dc.html), rebranded Constellan.
+ * Landing page (/) — "Constellan: The Memory Observatory".
  *
- * Layered like the source: a fixed noir background (CastellanBackground, z-0:
- * radial glows + masked grid + conic radar + drifting particles) sits behind a
- * relative content column (z-2). Order: announcement bar + nav, hero, the
- * interactive Memory Cortex canvas + replay band, the static below-fold sections
- * (primitives, attack flow, capabilities, architecture), the final CTA, footer.
+ * A deliberate anti-AI-template direction: the homepage is a precision celestial
+ * star-atlas / observatory console. The agent's memory is charted as a sparse
+ * constellation on a live canvas star-chart (azimuth ring, RA/Dec ticks, named
+ * stars of varying magnitude, a slow sentinel sweep, and the tainted memory
+ * collapsing into a dark crossed-out star) — the opposite of the centered
+ * gradient-headline + glowing neural blob cliché. The masthead is set left in an
+ * editorial Fraunces serif (the unexpected display face), the chart sits
+ * off-axis, and cartographic mono labels live in the margins.
  *
- * The previous WebGL neural-field hero (HeroMemoryField / ArtifactTreeHero /
- * WebGLMemoryField and the old landing/* sections) is no longer used on `/` —
- * those component files are left in place but unimported here. The hero/nav/
- * announcement "Run Judge Demo" CTAs call the real backend via runJudgeDemo()
- * (bundled-demo fallback) and route into the cockpit at /results; the Memory
- * Cortex canvas keeps the design's own local inject/block/reset interaction.
+ * Layered like the cockpit: a fixed void background (ObservatoryBackground, z-0)
+ * behind a relative content column (z-2). Order: coordinate announcement + nav,
+ * editorial hero with the star-chart plate, the below-fold observatory sections
+ * (instrument legend, observation log, instruments, reduction method), the
+ * closing observation band, footer.
+ *
+ * The announcement / nav / hero / final-CTA "Run Judge Demo" CTAs all fire the
+ * real backend via runJudgeDemo() (bundled-demo fallback) and route into the
+ * cockpit at /results. The previous Castellan landing (components/landing/
+ * castellan/*) is left in place but unimported here. The .castellan-landing
+ * wrapper class is reused so the global overflow-x clip + [data-reveal] entrance
+ * CSS still apply to the homepage.
  */
 export default function LandingPage() {
   return (
     <div
-      className="castellan-landing"
+      className="castellan-landing observatory-landing"
       style={{
         position: "relative",
         minHeight: "100vh",
@@ -34,27 +41,26 @@ export default function LandingPage() {
         isolation: "isolate",
       }}
     >
-      <CastellanBackground />
+      <ObservatoryBackground />
 
-      <CastellanNav />
+      <ObservatoryNav />
 
       <main
         id="top"
         style={{
           position: "relative",
           zIndex: 2,
-          maxWidth: "1280px",
+          maxWidth: "1240px",
           margin: "0 auto",
           padding: "0 28px",
         }}
       >
-        <CastellanHero />
-        <CastellanProduct />
-        <CastellanSections />
-        <CastellanFinalCta />
+        <ObservatoryHero />
+        <ObservatorySections />
+        <ObservatoryFinalCta />
       </main>
 
-      <CastellanFooter />
+      <ObservatoryFooter />
     </div>
   );
 }
