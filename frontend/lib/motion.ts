@@ -145,3 +145,60 @@ export const staggerWide: Variants = {
   hidden: {},
   show: { transition: { staggerChildren: 0.12, delayChildren: 0.06 } },
 };
+
+/* ============================================================
+ * Observatory homepage — masthead "First Light" reveal.
+ * A film-title-sequence cascade: eyebrow → headline (line by line) → subcopy →
+ * CTAs → readouts, each rising + fading + soft-blur-clearing. Slower and more
+ * deliberate than the generic fadeUp; the italic accent line lands last. Driven
+ * on mount with initial="hidden" animate="show" so it plays once on load
+ * (the chart plays its own canvas boot in parallel). Reduced-motion is handled
+ * globally by MotionConfig — these compose to instant under "always".
+ * ============================================================ */
+
+/** Orchestrates the masthead children with a deliberate cadence after load. */
+export const mastheadContainer: Variants = {
+  hidden: {},
+  show: {
+    transition: { staggerChildren: 0.11, delayChildren: 0.12 },
+  },
+};
+
+/** One masthead line/element: rise + fade + blur-clear, cinematic easing. */
+export const mastheadLine: Variants = {
+  hidden: { opacity: 0, y: 22, filter: "blur(10px)" },
+  show: {
+    opacity: 1,
+    y: 0,
+    filter: "blur(0px)",
+    transition: { duration: 0.85, ease: EASE_OUT_EXPO },
+  },
+};
+
+/** The italic accent — lands last, a touch slower so it reads as the punctuation. */
+export const mastheadAccent: Variants = {
+  hidden: { opacity: 0, y: 14, filter: "blur(8px)" },
+  show: {
+    opacity: 1,
+    y: 0,
+    filter: "blur(0px)",
+    transition: { duration: 1.0, ease: EASE_OUT_EXPO, delay: 0.12 },
+  },
+};
+
+/** The hero plate: surfaces from the dark slightly behind the copy. */
+export const plateReveal: Variants = {
+  hidden: { opacity: 0, scale: 0.985, filter: "blur(8px)" },
+  show: {
+    opacity: 1,
+    scale: 1,
+    filter: "blur(0px)",
+    transition: { duration: 1.1, ease: EASE_OUT_EXPO, delay: 0.1 },
+  },
+};
+
+/** Section-reveal container for below-the-fold whileInView choreography. */
+export const sectionContainer: Variants = {
+  hidden: {},
+  show: { transition: { staggerChildren: 0.09, delayChildren: 0.04 } },
+};

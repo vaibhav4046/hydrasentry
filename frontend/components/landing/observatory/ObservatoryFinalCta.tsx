@@ -1,20 +1,26 @@
 "use client";
 
+import { m } from "framer-motion";
 import { TransitButton, SightButton } from "./ObservatoryButtons";
 import { useRunJudgeDemo } from "../castellan/useRunJudgeDemo";
+import { scaleIn } from "@/lib/motion";
 
 /**
  * Closing observation band. A framed plate (coordinate corners, a faint
  * meridian arc) with a Fraunces masthead and the two refined CTAs. Restrained,
- * monochrome — no glowing radial blob. The primary fires the real judge demo.
+ * monochrome — no glowing radial blob. The plate surfaces from the dark on
+ * scroll (framer-motion scaleIn, once). The primary fires the real judge demo.
  */
 export function ObservatoryFinalCta() {
   const { run, isRunning } = useRunJudgeDemo();
 
   return (
     <section style={{ padding: "56px 0 96px" }}>
-      <div
-        data-reveal
+      <m.div
+        variants={scaleIn}
+        initial="hidden"
+        whileInView="show"
+        viewport={{ once: true, margin: "-100px" }}
         style={{
           position: "relative",
           padding: "clamp(40px,6vw,72px) clamp(28px,5vw,64px)",
@@ -122,7 +128,7 @@ export function ObservatoryFinalCta() {
             <SightButton href="#architecture">Read the field notes</SightButton>
           </div>
         </div>
-      </div>
+      </m.div>
     </section>
   );
 }

@@ -108,6 +108,33 @@ export function buildFieldStars(count = 90): FieldStar[] {
   return stars;
 }
 
+/**
+ * Ignition order for the "First Light" boot sequence — the order in which the
+ * named stars light up. The core ignites first (the agent memory waking), then
+ * the figure fills out from brightest to faintest, and the tainted star ignites
+ * LAST so its collapse reads as the climax of the reveal. Returns the star's
+ * normalized position in the sequence, [0..1].
+ */
+const IGNITE_SEQUENCE: string[] = [
+  "core",
+  "query",
+  "policy",
+  "firewall",
+  "replay",
+  "report",
+  "skill",
+  "taint",
+];
+const IGNITE_INDEX = new Map<string, number>(
+  IGNITE_SEQUENCE.map((id, i) => [id, i]),
+);
+
+/** A star's [0..1] position in the ignition sequence (0 = first to light). */
+export function igniteOrder(id: string): number {
+  const i = IGNITE_INDEX.get(id) ?? 0;
+  return IGNITE_SEQUENCE.length > 1 ? i / (IGNITE_SEQUENCE.length - 1) : 0;
+}
+
 /** Right-margin cartographic coordinate readouts (pure flavour, fixed). */
 export const COORD_TICKS = [
   "RA 14h 02m",

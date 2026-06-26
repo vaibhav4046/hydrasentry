@@ -61,7 +61,7 @@ export function ObservatoryNav() {
       <button
         type="button"
         onClick={run}
-        className="mono"
+        className="mono obs-announce"
         style={{
           position: "relative",
           zIndex: 5,
@@ -102,7 +102,11 @@ export function ObservatoryNav() {
             {isRunning ? "routing…" : "open the plate"}
           </span>
         </span>
-        <span aria-hidden style={{ color: "#5F6875" }}>
+        <span
+          aria-hidden
+          className="obs-announce-arrow"
+          style={{ color: "#5F6875" }}
+        >
           →
         </span>
       </button>
@@ -187,6 +191,7 @@ export function ObservatoryNav() {
               type="button"
               onClick={run}
               disabled={isRunning}
+              className="obs-btn-primary"
               style={{
                 cursor: isRunning ? "default" : "pointer",
                 fontFamily: "inherit",
