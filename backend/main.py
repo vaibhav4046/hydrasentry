@@ -14,10 +14,12 @@ from contextlib import asynccontextmanager
 from typing import Any, Optional
 
 from fastapi import FastAPI, Header, Request, Response
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, PlainTextResponse
 from pydantic import BaseModel
 from sse_starlette.sse import EventSourceResponse
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
 import mcp_gateway
 import model_router
@@ -65,6 +67,40 @@ def err(message: str, status: int = 400, **extra: Any) -> JSONResponse:
     payload = {"ok": False, "error": message}
     payload.update(extra)
     return JSONResponse(payload, status_code=status)
+
+
+# --- Never-500 contract -----------------------------------------------------
+# Every error leaves the service as the project envelope ``{ok: false, error}``
+# with a 4xx status, never a bare FastAPI/Starlette 500 with a stack trace.
+# Three handlers cover the surface: request validation (malformed body/params),
+# explicit HTTP errors raised inside handlers, and any other unhandled
+# exception. The detail string is kept short and non-sensitive.
+
+@app.exception_handler(RequestValidationError)
+async def _on_validation_error(_request: Request,
+                               exc: RequestValidationError) -> JSONResponse:
+    # 422 -> 400 with a compact, safe summary of what failed to validate.
+    problems = [
+        {"loc": ".".join(str(p) for p in e.get("loc", [])), "msg": e.get("msg", "")}
+        for e in exc.errors()[:8]
+    ]
+    return err("invalid request payload", status=400, problems=problems)
+
+
+@app.exception_handler(StarletteHTTPException)
+async def _on_http_error(_request: Request,
+                         exc: StarletteHTTPException) -> JSONResponse:
+    detail = exc.detail if isinstance(exc.detail, str) else "request failed"
+    status = exc.status_code if 400 <= exc.status_code < 600 else 400
+    return err(detail, status=status)
+
+
+@app.exception_handler(Exception)
+async def _on_unhandled_error(request: Request, exc: Exception) -> JSONResponse:
+    # Fail closed: log the real cause server-side, return a generic envelope.
+    logger.exception("unhandled error on %s %s: %s",
+                     request.method, request.url.path, exc)
+    return err("internal error", status=400, kind=type(exc).__name__)
 
 
 # --- Request models ---------------------------------------------------------
@@ -152,7 +188,11 @@ async def get_scenarios() -> JSONResponse:
 @app.post("/runs/judge-demo")
 async def judge_demo() -> JSONResponse:
     # Defined before the parametrised /runs/{scenario_id} so the literal wins.
-    artifact = await asyncio.to_thread(scenario_engine.run_judge_demo)
+    try:
+        artifact = await asyncio.to_thread(scenario_engine.run_judge_demo)
+    except Exception as exc:  # noqa: BLE001 -- never-500 contract
+        logger.exception("judge-demo run failed: %s", exc)
+        return err("judge-demo run failed", status=400, kind=type(exc).__name__)
     return ok(artifact)
 
 
@@ -249,8 +289,12 @@ async def toggle_scheduled_agent(agent_id: str) -> JSONResponse:
 
 @app.post("/skillmake/scan")
 async def skillmake_scan(body: SkillScanBody) -> JSONResponse:
-    scan = skillmake_scanner.scan_skill(body.content, name=body.name)
-    storage.save_skill_scan(scan)
+    try:
+        scan = skillmake_scanner.scan_skill(body.content, name=body.name)
+        storage.save_skill_scan(scan)
+    except Exception as exc:  # noqa: BLE001 -- never-500 contract
+        logger.exception("skill scan failed: %s", exc)
+        return err("skill scan failed", status=400, kind=type(exc).__name__)
     return ok(scan)
 
 
@@ -297,17 +341,39 @@ async def results_summary() -> JSONResponse:
     return ok(storage.results_summary())
 
 
+# Outer bound on accepted memories at the HTTP edge. The local_scan engine caps
+# again internally; this rejects an obviously oversized batch before any work so
+# the endpoint cannot be used as a CPU sink. Generous vs the engine cap (200).
+_SCAN_LOCAL_MAX_MEMORIES = 500
+
+
 @app.post("/scan/local")
 async def scan_local(body: LocalScanBody) -> JSONResponse:
     """Zero-setup local scan: run the full pipeline on caller-supplied memories
     with NO HydraDB key, account, or network. The graph is a transparent local
     heuristic graph (``local_graph``), never presented as real HydraDB. Additive
     and isolated from the canonical demo and the Real/Demo adapters.
+
+    Fails closed: malformed, oversized, or garbage payloads return a clean
+    ``{ok: false, error}`` envelope (4xx), never a bare 500. Pydantic validates
+    the body shape; this adds a size guard and a defensive catch so an
+    unexpected engine error still surfaces as a clean error.
     """
     from adapters.local_scan import run_local_scan
 
+    if len(body.memories) > _SCAN_LOCAL_MAX_MEMORIES:
+        return err(
+            f"too many memories: {len(body.memories)} "
+            f"(max {_SCAN_LOCAL_MAX_MEMORIES})",
+            status=413,
+        )
+
     payload = body.model_dump(exclude_none=True)
-    result = await asyncio.to_thread(run_local_scan, payload)
+    try:
+        result = await asyncio.to_thread(run_local_scan, payload)
+    except Exception as exc:  # noqa: BLE001 -- never-500 contract, log + envelope
+        logger.exception("local scan failed: %s", exc)
+        return err("local scan failed", status=400, kind=type(exc).__name__)
     return ok(result)
 
 

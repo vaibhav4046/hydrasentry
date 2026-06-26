@@ -40,6 +40,10 @@ interface AtlasPlateProps {
   /** Honest source label: true only for parsed real HydraDB query_paths. */
   isReal: boolean;
   isRunning: boolean;
+  /** Bottom-right coordinate readouts; defaults to the canonical demo ticks. */
+  coordTicks?: readonly string[];
+  /** When true, the REAL source is a captured offline sample, not a live call. */
+  captured?: boolean;
 }
 
 export function AtlasPlate({
@@ -48,6 +52,8 @@ export function AtlasPlate({
   onSelect,
   isReal,
   isRunning,
+  coordTicks = ATLAS_COORD_TICKS,
+  captured = false,
 }: AtlasPlateProps) {
   const [hoverId, setHoverId] = useState<string | null>(null);
   const onHover = useCallback((id: string | null) => setHoverId(id), []);
@@ -113,7 +119,7 @@ export function AtlasPlate({
       </div>
 
       {/* source badge, honest real vs derived */}
-      <SourceBadge isReal={isReal} />
+      <SourceBadge isReal={isReal} captured={captured} />
 
       {/* coordinate readouts */}
       <div
@@ -129,7 +135,7 @@ export function AtlasPlate({
           pointerEvents: "none",
         }}
       >
-        {ATLAS_COORD_TICKS.map((c) => (
+        {coordTicks.map((c) => (
           <span
             key={c}
             style={{ fontSize: "8.5px", letterSpacing: "0.14em", color: "#5F6875" }}
@@ -202,7 +208,10 @@ function CornerMarks() {
  * query_paths, otherwise "DERIVED SCENARIO GRAPH FALLBACK". A leading dot +
  * "SOURCE" label make it unmistakably a readout. (pointerEvents:none.)
  */
-function SourceBadge({ isReal }: { isReal: boolean }) {
+function SourceBadge({ isReal, captured = false }: { isReal: boolean; captured?: boolean }) {
+  const realLabel = captured
+    ? "REAL HYDRADB QUERY_PATHS · CAPTURED"
+    : "REAL HYDRADB QUERY_PATHS";
   return (
     <div
       style={{
@@ -240,7 +249,7 @@ function SourceBadge({ isReal }: { isReal: boolean }) {
           color: isReal ? "#EAF0FA" : "#9BA3AF",
         }}
       >
-        {isReal ? "REAL HYDRADB QUERY_PATHS" : "DERIVED SCENARIO GRAPH FALLBACK"}
+        {isReal ? realLabel : "DERIVED SCENARIO GRAPH FALLBACK"}
       </span>
     </div>
   );

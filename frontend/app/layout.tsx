@@ -4,6 +4,7 @@ import "./globals.css";
 import { NoirBackground } from "@/components/noir/NoirBackground";
 import { MotionProvider } from "@/components/noir/MotionProvider";
 import { DemoDataPill } from "@/components/shared/DemoDataPill";
+import { RunStoreHydrator } from "@/components/shared/RunStoreHydrator";
 
 // Constellan type system — a deliberate, harmonious three-part mix (no serif):
 //   DISPLAY  Space Grotesk (--font-display): a sleek geometric grotesk with real
@@ -64,6 +65,7 @@ export default function RootLayout({
       className={`${inter.variable} ${spaceGrotesk.variable} ${jetbrainsMono.variable} h-full antialiased`}
     >
       <body className="min-h-full">
+        <RunStoreHydrator />
         <NoirBackground />
         <MotionProvider>{children}</MotionProvider>
         <DemoDataPill variant="fixed" />

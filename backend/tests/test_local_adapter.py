@@ -187,3 +187,61 @@ def test_local_scan_caps_oversized_memory_list():
     result = run_local_scan(payload)
     assert result["ok"] is True
     assert result["graph_source"] == "local_graph"
+
+
+# --- never-500 contract: every bad input -> clean envelope, never a bare 500 --
+
+def test_scan_local_malformed_body_returns_clean_400_not_500():
+    # memories must be a list; a string is rejected with the project envelope.
+    resp = client.post("/scan/local", json={"memories": "not-a-list"})
+    assert resp.status_code == 400
+    body = resp.json()
+    assert body["ok"] is False
+    assert "error" in body
+
+
+def test_scan_local_missing_required_text_returns_clean_400():
+    resp = client.post("/scan/local", json={"memories": [{"id": "x"}]})
+    assert resp.status_code == 400
+    assert resp.json()["ok"] is False
+
+
+def test_scan_local_top_level_garbage_returns_clean_400():
+    # A bare JSON array (not an object) is a validation error, not a 500.
+    resp = client.post("/scan/local", json=["a", "b"])
+    assert resp.status_code == 400
+    assert resp.json()["ok"] is False
+
+
+def test_scan_local_oversized_batch_returns_413_not_500():
+    payload = {"memories": [{"text": "note", "id": f"m{i}"} for i in range(600)]}
+    resp = client.post("/scan/local", json=payload)
+    assert resp.status_code == 413
+    body = resp.json()
+    assert body["ok"] is False
+    assert "too many memories" in body["error"]
+
+
+def test_scan_local_oversized_text_truncates_and_succeeds():
+    # A single huge text is truncated by the engine, not rejected; still 200 ok.
+    resp = client.post("/scan/local",
+                       json={"memories": [{"text": "x" * 50000, "id": "big"}]})
+    assert resp.status_code == 200
+    assert resp.json()["data"]["ok"] is True
+
+
+def test_scan_local_control_chars_do_not_crash():
+    weird = "control \x07 bytes ‮ rtl text"
+    resp = client.post("/scan/local",
+                       json={"memories": [{"text": weird, "id": "u"}]})
+    assert resp.status_code == 200
+    assert resp.json()["data"]["ok"] is True
+
+
+def test_judge_demo_still_87_high_after_hardening():
+    # The never-500 wrappers must not change the canonical result.
+    art = client.post("/runs/judge-demo").json()["data"]
+    assert art["risk"]["score"] == 87
+    assert art["risk"]["band"] == "HIGH"
+    assert art["risk"]["attack_type"] == "memory_poisoning"
+    assert art["risk"]["confidence"] == 0.92

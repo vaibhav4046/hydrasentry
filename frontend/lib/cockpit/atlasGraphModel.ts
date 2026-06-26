@@ -450,6 +450,172 @@ function demoModel(): AtlasGraphModel {
 }
 
 // ---------------------------------------------------------------------------
+// The CLEAN / baseline atlas (the cold standalone before any run). Same star
+// layout and logical scaffold as the demo constellation, but with the threat
+// removed: nothing is tainted, nothing is an extinction star, the firewall is
+// idle (not severing a limb), and the poison/conflict/quarantine narrative
+// reads as nominal. This keeps cold /graph consistent with cold /results (0
+// risks) and cold /mission (NOMINAL): before any run -> all clean; the poisoned
+// constellation only appears AFTER a run lands.
+// ---------------------------------------------------------------------------
+
+/** Per-star clean overrides: kind/label/des/provenance for the nominal posture.
+ * Stars not listed keep their demo definition (they are already clean). */
+const CLEAN_OVERRIDES: Partial<
+  Record<AtlasGraphStar["id"], Partial<AtlasGraphStar>>
+> = {
+  poison: {
+    kind: "memory",
+    label: "CUSTOMER MEMORY",
+    des: "mem_customer_001",
+    tainted: false,
+    extinct: false,
+    insp: {
+      type: "Clean Memory",
+      tenant: "owned",
+      sub: SUB,
+      chunk: "mem_customer_001",
+      ver: "v2",
+      trust: "trusted",
+      status: "clean",
+      reason: "Customer memory is a normal account; no injected directive present.",
+    },
+  },
+  chunk: {
+    tainted: false,
+    insp: {
+      type: "Source Chunk",
+      tenant: "owned",
+      sub: SUB,
+      chunk: "mem_customer_001",
+      ver: "v2",
+      trust: "trusted",
+      status: "indexed",
+      reason: "Provenance chunk the customer memory was retrieved from.",
+    },
+  },
+  conflict: {
+    kind: "policy",
+    label: "POLICY CHECK",
+    des: "memory agrees with policy v2",
+    tainted: false,
+    insp: {
+      type: "Policy Check",
+      tenant: "owned",
+      sub: SUB,
+      chunk: "oq-rel-09",
+      ver: "v2",
+      trust: "trusted",
+      status: "clean",
+      reason: "Retrieved memory is consistent with current approval policy v2.",
+    },
+  },
+  path: {
+    des: "policy→mem→tool · 3 hops · clean",
+    tainted: false,
+    insp: {
+      type: "Retrieval query_path",
+      tenant: "owned",
+      sub: SUB,
+      chunk: "oq-path-12",
+      ver: "v2",
+      trust: "trusted",
+      status: "clean",
+      reason: "HydraDB path policy → memory → tool_action · 3 hops · no taint.",
+    },
+  },
+  unsafe: {
+    kind: "action",
+    label: "TOOL ACTION",
+    des: "request_manager_approval()",
+    tainted: false,
+    extinct: false,
+    insp: {
+      type: "Tool Action",
+      tenant: "owned",
+      sub: SUB,
+      chunk: "·",
+      ver: "·",
+      trust: "action",
+      status: "allowed",
+      reason: "request_manager_approval(), compliant with policy v2.",
+    },
+  },
+  fw: {
+    des: "monitoring · ALLOW",
+    insp: {
+      type: "MCP Firewall",
+      tenant: "owned",
+      sub: SUB,
+      chunk: "·",
+      ver: "·",
+      trust: "control",
+      status: "ALLOW",
+      reason: "Guardian star idle: no unsafe context to sever; baseline allowed.",
+    },
+  },
+  quarantine: {
+    kind: "memory",
+    label: "MEMORY POOL",
+    des: "no quarantine",
+    insp: {
+      type: "Memory Pool",
+      tenant: "owned",
+      sub: SUB,
+      chunk: "·",
+      ver: "·",
+      trust: "trusted",
+      status: "nominal",
+      reason: "No poisoned memory detected; nothing to quarantine.",
+    },
+  },
+  risk: {
+    label: "RISK",
+    des: "12 / NOMINAL",
+    insp: {
+      type: "Risk",
+      tenant: "owned",
+      sub: SUB,
+      chunk: "·",
+      ver: "·",
+      trust: "derived",
+      status: "NOMINAL",
+      reason: "Composite risk 12 / NOMINAL; baseline posture, no attack.",
+    },
+  },
+};
+
+function cleanModel(): AtlasGraphModel {
+  const stars: AtlasGraphStar[] = DEMO_STARS.map((s) => {
+    const ov = CLEAN_OVERRIDES[s.id];
+    const base: AtlasGraphStar = {
+      ...s,
+      tainted: false,
+      extinct: false,
+    };
+    return ov ? { ...base, ...ov } : base;
+  });
+  // Drop taint + the severed limb from every line; keep the logical scaffold.
+  const lines: AtlasGraphLine[] = DEMO_LINES.map((l) => ({
+    ...l,
+    tainted: false,
+    severed: false,
+    label:
+      l.from === "poison" && l.to === "conflict"
+        ? "agrees with"
+        : l.from === "unsafe" && l.to === "fw"
+          ? "checked"
+          : l.label,
+  }));
+  return { stars, lines };
+}
+
+/** The clean/baseline star atlas (cold standalone, before any run). */
+export function buildCleanAtlas(): AtlasGraphModel {
+  return cleanModel();
+}
+
+// ---------------------------------------------------------------------------
 // Real-run mapping: ENRICH the canonical atlas with the live graph rather than
 // replacing it. We keep the full deterministic demo constellation (positions,
 // magnitudes, glyphs, the conflict→path→firewall narrative scaffold) and bind
@@ -652,4 +818,22 @@ export const ATLAS_COORD_TICKS = [
   "1 TAINTED PATH",
   "SOURCE DERIVED",
   "RISK 87 HIGH",
+] as const;
+
+/** Cold/baseline readouts, before any run (matches cold /results + /mission). */
+export const ATLAS_COORD_TICKS_CLEAN = [
+  "RUN none · baseline",
+  "6 NODES",
+  "0 TAINTED PATHS",
+  "SOURCE BASELINE",
+  "RISK 12 NOMINAL",
+] as const;
+
+/** Readouts for the captured REAL HydraDB sample run. */
+export const ATLAS_COORD_TICKS_REAL = [
+  "RUN memory_poisoning_refund",
+  "8 NODES",
+  "1 TAINTED PATH",
+  "SOURCE REAL HYDRADB",
+  "CAPTURED LIVE RUN",
 ] as const;
