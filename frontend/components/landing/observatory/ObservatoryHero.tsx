@@ -190,7 +190,7 @@ export function ObservatoryHero() {
           >
             {[
               ["DETERMINISTIC", "87 / HIGH · reproducible"],
-              ["GRAPH-NATIVE", "real HydraDB query_paths"],
+              ["GRAPH-NATIVE", "HydraDB query_paths"],
               ["MCP-ENFORCED", "blocked before the agent acts"],
             ].map(([k, v]) => (
               <div key={k} style={{ display: "flex", flexDirection: "column", gap: "2px" }}>

@@ -2,13 +2,23 @@
 
 import { useMemo } from "react";
 import { PageShell } from "@/components/shared/PageShell";
+import { GraphSourceBadge } from "@/components/graph/GraphSourceBadge";
 import { useRunDemo } from "@/hooks/useRunDemo";
+import { useDemoMode } from "@/hooks/useDemoMode";
 import { getReportMarkdown } from "@/lib/api";
 import { downloadText } from "@/lib/format";
 import { deriveCockpit, C } from "@/lib/cockpit/derive";
 import type { RunArtifact } from "@/lib/types";
 
 const MONO = "var(--font-geist-mono), 'JetBrains Mono', monospace";
+
+/** Clock (HH:MM) of the run's scheduled regression replay, defaulting to 23:00. */
+function nextScanClock(run: RunArtifact | null): string {
+  const iso = run?.scheduled_scan?.next_run;
+  if (!iso) return "23:00";
+  const t = iso.slice(11, 16);
+  return t.length === 5 ? t : "23:00";
+}
 
 interface ResultMetric {
   label: string;
@@ -17,20 +27,27 @@ interface ResultMetric {
 }
 
 /**
- * Findings (Results Center), ported 1:1 from the Castellan source. An
- * eight-metric grid (total risks, critical issues, quarantined, skills,
- * replays passed/failed, report, next scan) over a `1.5fr 1fr` row: the
- * recommended-next-action card and the Evidence Report download card. Every
- * value is driven by the live run via deriveCockpit (idle = clean baseline);
- * "Download report.md" fetches the REAL report markdown for the current run and
- * triggers a browser download (canonical demo report as the offline fallback).
+ * Findings (Results Center). An eight-metric grid (total risks, critical issues,
+ * quarantined, skills, replays passed/failed, report, next scan) over a
+ * `1.5fr 1fr` row: the recommended-next-action card and the Evidence Report
+ * download card.
+ *
+ * Honesty: every value is gated on whether a run exists. BEFORE any run the
+ * tiles read a clean zero baseline (report "pending", next scan "—") and the
+ * action card shows a neutral "run the demo to generate a finding" prompt, so
+ * nothing claims a quarantine / firewall BLOCK that has not happened. Once a run
+ * lands, the card and tiles are driven by the artifact and the RESULT carries an
+ * honest REAL-vs-DERIVED graph-source badge. "Download report.md" fetches the
+ * real report markdown for the current run (canonical demo report as fallback).
  */
 export default function ResultsPage() {
   const { run, isRunning } = useRunDemo();
+  const isDemo = useDemoMode();
   const v = useMemo(() => deriveCockpit(run, { isRunning }), [run, isRunning]);
   const p = v.poisoned;
+  const nextScan = nextScanClock(run);
 
-  const metrics = resultMetrics(run, p);
+  const metrics = resultMetrics(run, p, nextScan);
 
   async function downloadReport() {
     const id = run?.run_id ?? "judge-demo";
@@ -42,6 +59,45 @@ export default function ResultsPage() {
   return (
     <PageShell>
       <div data-page style={{ display: "flex", flexDirection: "column", gap: 18 }}>
+        {/* Honest result provenance: once a run exists, label its graph source
+            (REAL HydraDB vs DERIVED scenario) on the RESULT itself; before any
+            run, a neutral status line so the surface never overstates. */}
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 12,
+            flexWrap: "wrap",
+          }}
+        >
+          <div style={{ fontFamily: MONO, fontSize: "9.5px", letterSpacing: "0.16em", color: C.faint }}>
+            {run ? "FINDING · run " + run.run_id : "NO RUN YET · baseline posture"}
+          </div>
+          {run ? (
+            <GraphSourceBadge source={run.graph_source} />
+          ) : (
+            isDemo && (
+              <span
+                className="mono"
+                title="No run has been executed yet; tiles show the clean baseline."
+                style={{
+                  fontFamily: MONO,
+                  fontSize: "9.5px",
+                  letterSpacing: "0.14em",
+                  textTransform: "uppercase",
+                  color: C.muted,
+                  border: "1px solid rgba(255,255,255,0.12)",
+                  borderRadius: 999,
+                  padding: "4px 10px",
+                }}
+              >
+                Demo data · run to generate a finding
+              </span>
+            )
+          )}
+        </div>
+
         {/* 8-metric grid */}
         <div
           data-stagger
@@ -102,27 +158,53 @@ export default function ResultsPage() {
             <div style={{ fontFamily: MONO, fontSize: "9.5px", letterSpacing: "0.16em", color: C.accent }}>
               RECOMMENDED NEXT ACTION
             </div>
-            <div style={{ marginTop: 12, fontSize: 18, fontWeight: 600, lineHeight: 1.4, color: C.ink }}>
-              Keep Autopilot on for the refund agent. Poisoned memory is
-              quarantined; a regression replay is scheduled for 23:00 to confirm
-              the fix holds.
-            </div>
-            <div
-              style={{
-                marginTop: 16,
-                display: "flex",
-                gap: 18,
-                flexWrap: "wrap",
-                fontFamily: MONO,
-                fontSize: 11,
-                color: C.muted,
-              }}
-            >
-              <span>· firewall: {run ? run.firewall.decision.toUpperCase() : "BLOCK"}</span>
-              <span>· quarantine: 1 memory</span>
-              <span>· rule: created</span>
-              <span>· next scan: 23:00</span>
-            </div>
+            {run ? (
+              <>
+                <div style={{ marginTop: 12, fontSize: 18, fontWeight: 600, lineHeight: 1.4, color: C.ink }}>
+                  Keep Autopilot on for the refund agent. Poisoned memory is
+                  quarantined; a regression replay is scheduled for {nextScan} to
+                  confirm the fix holds.
+                </div>
+                <div
+                  style={{
+                    marginTop: 16,
+                    display: "flex",
+                    gap: 18,
+                    flexWrap: "wrap",
+                    fontFamily: MONO,
+                    fontSize: 11,
+                    color: C.muted,
+                  }}
+                >
+                  <span>· firewall: {run.firewall.decision.toUpperCase()}</span>
+                  <span>· quarantine: {run.quarantine.memory_id ? "1 memory" : "none"}</span>
+                  <span>· rule: created</span>
+                  <span>· next scan: {nextScan}</span>
+                </div>
+              </>
+            ) : (
+              <>
+                <div style={{ marginTop: 12, fontSize: 18, fontWeight: 600, lineHeight: 1.4, color: C.ink }}>
+                  No finding yet. Run the demo to replay the refund agent against
+                  clean and poisoned context and generate a recommended action.
+                </div>
+                <div
+                  style={{
+                    marginTop: 16,
+                    display: "flex",
+                    gap: 18,
+                    flexWrap: "wrap",
+                    fontFamily: MONO,
+                    fontSize: 11,
+                    color: C.faint,
+                  }}
+                >
+                  <span>· firewall: idle</span>
+                  <span>· quarantine: none</span>
+                  <span>· baseline: nominal</span>
+                </div>
+              </>
+            )}
           </div>
 
           <div
@@ -170,17 +252,25 @@ export default function ResultsPage() {
   );
 }
 
-/** The source's eight result metrics, driven by the live run posture. */
-function resultMetrics(run: RunArtifact | null, p: boolean): ResultMetric[] {
+/**
+ * The eight result metrics, driven by the live run posture. With no run the
+ * tiles read the clean baseline (zeros, report not yet generated) so the grid
+ * never contradicts the cold "no finding" state of the action card.
+ */
+function resultMetrics(
+  run: RunArtifact | null,
+  p: boolean,
+  nextScan: string,
+): ResultMetric[] {
   const quarantined = run?.quarantine.memory_id ? "1" : p ? "1" : "0";
   return [
     { label: "TOTAL RISKS", value: p ? "1" : "0", hot: p },
     { label: "CRITICAL ISSUES", value: p ? "1" : "0", hot: p },
     { label: "MEMORIES QUARANTINED", value: quarantined, hot: false },
-    { label: "SKILLS SCANNED", value: "12", hot: false },
-    { label: "REPLAYS PASSED", value: p ? "4" : "5", hot: false },
+    { label: "SKILLS SCANNED", value: run?.skill_scan ? "1" : "0", hot: false },
+    { label: "REPLAYS PASSED", value: p ? "4" : "0", hot: false },
     { label: "REPLAYS FAILED", value: p ? "1" : "0", hot: p },
-    { label: "REPORT", value: "ready", hot: false },
-    { label: "NEXT SCAN", value: "23:00", hot: false },
+    { label: "REPORT", value: p ? "ready" : "pending", hot: false },
+    { label: "NEXT SCAN", value: p ? nextScan : "—", hot: false },
   ];
 }

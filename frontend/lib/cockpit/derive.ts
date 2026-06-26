@@ -170,7 +170,7 @@ export function deriveCockpit(
       { t: tick(base, bs, 5), text: `firewall.decision = ${run.firewall.decision.toUpperCase()}`, color: C.white },
       { t: tick(base, bs, 4), text: `risk score = ${risk} · ${riskState.toLowerCase()}`, color: C.accent },
       { t: tick(base, bs, 3), text: "taint → query_path → core", color: sil },
-      { t: tick(base, bs, 2), text: `poison detected · ${run.quarantine.memory_id ?? "oq-chunk-7f3"}`, color: C.accent },
+      { t: tick(base, bs, 2), text: `poison detected · ${run.quarantine.memory_id ?? "mem_poison_047"}`, color: C.accent },
       { t: tick(base, bs, 1), text: "memory quarantined", color: C.muted },
       { t: tick(base, bs, 0), text: `scan scheduled ${nextScan}`, color: C.faint },
     ];

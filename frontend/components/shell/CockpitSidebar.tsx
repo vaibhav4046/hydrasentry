@@ -206,7 +206,7 @@ export function CockpitSidebar({ onNavigate, engaged }: CockpitSidebarProps) {
         >
           demo · region lhr1 · build {BUILD_SHORT}
           <br />
-          tenant owned · sub hydrasentry-demo
+          tenant owned · sub support_agent
         </div>
       </div>
     </aside>

@@ -25,6 +25,69 @@ function readField(a: ScheduledAgent, key: string, fallback = "·"): string {
   return typeof v === "string" && v.length > 0 ? v : fallback;
 }
 
+const DAY_MS = 86_400_000;
+const WEEK_MS = 7 * DAY_MS;
+
+/**
+ * Human "next run" label that is NEVER in the past. The seeded fixture carries a
+ * fixed next_run timestamp (a snapshot date), so on any later day the raw value
+ * would read as a past date and look broken. This rolls the scheduled instant
+ * forward by whole days (or weeks, for a weekly cron) until it is in the future,
+ * then renders it relative to now ("today 02:00", "tomorrow 02:00", "Mon 06:00").
+ * Computed on the client only (see useEffect gate) so SSR markup never depends on
+ * the current clock and there is no hydration mismatch.
+ */
+function formatScheduleNext(iso: string | undefined, schedule: string): string {
+  if (!iso) return "·";
+  const base = new Date(iso);
+  const t = base.getTime();
+  if (Number.isNaN(t)) return iso;
+  const now = Date.now();
+  const weekly = /\*\s*\d\s*$|mon|tue|wed|thu|fri|sat|sun/i.test(schedule);
+  const step = weekly ? WEEK_MS : DAY_MS;
+  let next = t;
+  if (next <= now) {
+    const ahead = Math.ceil((now - next) / step);
+    next += ahead * step;
+    if (next <= now) next += step;
+  }
+  const d = new Date(next);
+  const hh = String(d.getHours()).padStart(2, "0");
+  const mm = String(d.getMinutes()).padStart(2, "0");
+  const clock = `${hh}:${mm}`;
+  const startToday = new Date();
+  startToday.setHours(0, 0, 0, 0);
+  const dayDelta = Math.round((new Date(d).setHours(0, 0, 0, 0) - startToday.getTime()) / DAY_MS);
+  if (dayDelta <= 0) return `today ${clock}`;
+  if (dayDelta === 1) return `tomorrow ${clock}`;
+  if (dayDelta < 7) {
+    const dow = d.toLocaleDateString("en-US", { weekday: "short" });
+    return `${dow} ${clock}`;
+  }
+  return `${d.toLocaleDateString("en-US", { month: "short", day: "numeric" })} ${clock}`;
+}
+
+/** Future-relative label for the soonest upcoming run across enabled agents. */
+function nextSoonest(agents: ScheduledAgent[]): string {
+  const now = Date.now();
+  let best = Infinity;
+  let bestLabel = "—";
+  for (const a of agents) {
+    if (!a.enabled || !a.next_run) continue;
+    const base = new Date(a.next_run).getTime();
+    if (Number.isNaN(base)) continue;
+    const weekly = /\*\s*\d\s*$|mon|tue|wed|thu|fri|sat|sun/i.test(a.schedule);
+    const step = weekly ? WEEK_MS : DAY_MS;
+    let next = base;
+    if (next <= now) next += Math.ceil((now - next) / step + 1e-9) * step;
+    if (next < best) {
+      best = next;
+      bestLabel = formatScheduleNext(a.next_run, a.schedule);
+    }
+  }
+  return bestLabel;
+}
+
 /**
  * Scheduled Agents, ported 1:1 from the Castellan source. A posture summary
  * row (active/total/next + Create agent), a slide-in create form (with the scan
@@ -41,11 +104,24 @@ export default function ScheduledPage() {
   const [name, setName] = useState("");
   const [sched, setSched] = useState("Nightly 23:00");
   const [type, setType] = useState("Memory scan");
+  // Gate clock-relative formatting to the client so SSR markup (which has no
+  // "now") matches the first paint, then upgrades to future-relative dates.
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    void getScheduledAgents().then((r) => {
-      if (r.ok) setLive(r.data);
+    // Flip the client-only gate on the next microtask (not synchronously in the
+    // effect body) so future-relative dates render without a cascading render
+    // warning, then load the agents.
+    let active = true;
+    void Promise.resolve().then(() => {
+      if (active) setMounted(true);
     });
+    void getScheduledAgents().then((r) => {
+      if (active && r.ok) setLive(r.data);
+    });
+    return () => {
+      active = false;
+    };
   }, []);
 
   async function handleToggle(id: string) {
@@ -93,13 +169,18 @@ export default function ScheduledPage() {
       name: a.name,
       schedule: a.schedule,
       last: readField(a, "last_run"),
-      next: a.next_run || "·",
+      // Never show a past date: roll the seeded next_run forward to its next
+      // future occurrence (client-only; raw ISO on the server for hydration).
+      next: mounted ? formatScheduleNext(a.next_run, a.schedule) : (a.next_run || "·"),
       result: readField(a, "latest_result", `${readField(a, "status", "armed")}`),
       enabled: a.enabled,
       custom: false,
     })),
   ];
   const activeCount = rows.filter((r) => r.enabled).length;
+  // Soonest upcoming run across enabled live agents (future-relative, client
+  // only). Falls back to a neutral dash before mount / with nothing scheduled.
+  const soonestNext = mounted ? nextSoonest(live) : "—";
 
   return (
     <PageShell>
@@ -124,7 +205,7 @@ export default function ScheduledPage() {
               <span style={{ color: "#fff" }}>{rows.length}</span> agents
             </span>
             <span>
-              next <span style={{ color: C.silver }}>23:00</span>
+              next <span style={{ color: C.silver }}>{soonestNext}</span>
             </span>
           </div>
           <button
@@ -330,6 +411,8 @@ function AgentCard({ row, onToggle }: { row: AgentRow; onToggle: () => void }) {
         <button
           type="button"
           onClick={onToggle}
+          role="switch"
+          aria-checked={row.enabled}
           aria-label={`Toggle ${row.name}`}
           style={{
             cursor: "pointer",

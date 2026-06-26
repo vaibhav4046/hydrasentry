@@ -52,7 +52,7 @@ async function invoke(tool: string): Promise<McpToolResult | null> {
       return r.ok ? r.data : null;
     }
     case "quarantine_memory": {
-      const r = await mcpQuarantineMemory("oq-chunk-7f3", "hydrasentry-owned-test");
+      const r = await mcpQuarantineMemory("mem_poison_047", "hydrasentry-owned-test", "support_agent");
       return r.ok ? r.data : null;
     }
     case "generate_report": {
@@ -334,10 +334,10 @@ export default function McpPage() {
 /** Source-faithful request body preview per tool. */
 function requestPreview(tool: string): string {
   const map: Record<string, string> = {
-    scan_context: '{\n  "tenant": "owned",\n  "sub": "hydrasentry-demo",\n  "graph_context": true\n}',
+    scan_context: '{\n  "tenant": "owned",\n  "sub": "support_agent",\n  "graph_context": true\n}',
     replay_attack: '{\n  "scenario": "memory_poisoning_refund"\n}',
     verify_skill: '{\n  "path": "unsafe-demo-skill"\n}',
-    quarantine_memory: '{\n  "chunk_id": "oq-chunk-7f3",\n  "secret": "***"\n}',
+    quarantine_memory: '{\n  "chunk_id": "mem_poison_047",\n  "secret": "***"\n}',
     generate_report: '{\n  "run_id": "run_3f7a"\n}',
     schedule_scan: '{\n  "when": "23:00",\n  "type": "regression"\n}',
     list_findings: '{ "latest": true }',
