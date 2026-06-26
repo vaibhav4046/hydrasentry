@@ -786,6 +786,71 @@
   background: rgba(234, 240, 250, 0.02);
 }
 
+/* ---- Observation log: the poisoned-memory transit diagram --------------- *
+ * A compact serpentine SVG track (replaces the old tall vertical timeline).
+ * SVG <text> labels use the mono face for crisp, overflow-proof typography
+ * that scales with the viewBox. The figure is capped in height so it reads as
+ * one viewport, never a long scroll. */
+.observatory-landing .obs-transit {
+  /* keep the instrument compact: cap the rendered SVG height; the viewBox
+     scales the whole serpentine track to fit inside it. */
+}
+.observatory-landing .obs-transit-svg {
+  max-width: 1040px;
+  margin-inline: auto;
+}
+.observatory-landing .obs-transit-idx {
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+}
+.observatory-landing .obs-transit-title {
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+.observatory-landing .obs-transit-cap {
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 10px;
+  letter-spacing: 0.01em;
+}
+.observatory-landing .obs-transit-block {
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.22em;
+}
+/* The wide serpentine packs the most label text; at tablet widths nudge the
+   title up slightly so it stays legible as the viewBox scales down. The narrow
+   (vertical) layout below 700px swaps to its own roomier viewBox via JS, so it
+   needs no font overrides here, the SVG never clips and captions are sized to
+   fit the column. */
+@media (max-width: 860px) and (min-width: 701px) {
+  .observatory-landing .obs-transit-title {
+    font-size: 14px;
+  }
+  .observatory-landing .obs-transit-cap {
+    font-size: 11px;
+  }
+}
+/* Narrow vertical layout (< 700px): the roomier vbW renders text ~0.9x, so
+   nudge sizes up a touch for crisp legibility on phones. */
+@media (max-width: 700px) {
+  .observatory-landing .obs-transit-title {
+    font-size: 14.5px;
+  }
+  .observatory-landing .obs-transit-cap {
+    font-size: 11px;
+  }
+  .observatory-landing .obs-transit-idx {
+    font-size: 11.5px;
+  }
+  .observatory-landing .obs-transit-block {
+    font-size: 11px;
+  }
+}
+
 /* Refined CTA hovers. */
 .observatory-landing .obs-btn-primary:hover {
   transform: translateY(-2px);
@@ -944,17 +1009,9 @@
   }
 }
 
-/* Observation-log: drop the right-hand description column on narrow screens and
-   let the title wrap, so the row never forces horizontal overflow. */
-@media (max-width: 760px) {
-  .observatory-landing .obs-log-row {
-    grid-template-columns: 44px 1fr !important;
-    gap: 14px !important;
-  }
-  .observatory-landing .obs-log-desc {
-    display: none !important;
-  }
-}
+/* Observation log is now the serpentine transit diagram (SVG, scales by its
+   viewBox); its responsive type-size trims live with the .obs-transit-* rules
+   above. No row-grid overrides are needed here any more. */
 
 /* The named-star labels can crowd at very small plate sizes; trim the faint
    designation line under ~420px so only the catalogue name shows. */
