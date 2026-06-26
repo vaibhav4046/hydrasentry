@@ -1,5 +1,5 @@
 /**
- * Constellan, Context Graph star-atlas model (the working observation plate of
+ * HydraSentry, Context Graph star-atlas model (the working observation plate of
  * THIS run's memory). This is the detailed, comprehensive, logical successor to
  * the homepage's 7 decorative stars: a precise star model of the
  * memory_poisoning_refund scenario where every context entity is a star and the

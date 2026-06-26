@@ -41,6 +41,19 @@ export function ReductionMethod() {
       >
         From task to evidence in one deterministic loop
       </m.h2>
+      <m.p
+        variants={mastheadLine}
+        style={{
+          marginTop: "14px",
+          maxWidth: "48ch",
+          fontSize: "13.5px",
+          lineHeight: 1.6,
+          color: "#8B94A1",
+        }}
+      >
+        Every accepted finding becomes a regression rule, so the same poisoned
+        memory can never reach the agent twice.
+      </m.p>
 
       <div style={{ position: "relative", marginTop: "30px" }}>
         {/* top rule draws across as the section enters (variant-driven so it

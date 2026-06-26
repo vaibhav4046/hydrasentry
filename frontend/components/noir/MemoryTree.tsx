@@ -14,7 +14,7 @@ interface MemoryTreeProps {
 }
 
 /**
- * Pixelated voxel "memory tree" + context node-box graph, in Constellan noir.
+ * Pixelated voxel "memory tree" + context node-box graph, in HydraSentry noir.
  *
  * Echoes HydraDB.com's signature hero, a tree built from thousands of small
  * square cells, a thick trunk splitting into branches that splay up and to the
@@ -25,7 +25,7 @@ interface MemoryTreeProps {
  * cooler/outer cells fade to dim gray (#5F6875) and low opacity. No hue, ever
  * danger is intensity, not colour (the project's hard brand law).
  *
- * The rightward graph tells Constellan's story: node-boxes labelled `policy
+ * The rightward graph tells HydraSentry's story: node-boxes labelled `policy
  * v2`, `mem_poison_047`, `tool_action`, `MCP BLOCK`, and the bright `87 / RISK`.
  * The chain poison -> action -> RISK is the TAINTED PATH: brightest, heavier,
  * with a perpetual traveling dash + soft pulse. Other edges are faint dashed.

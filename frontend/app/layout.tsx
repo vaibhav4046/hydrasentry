@@ -6,7 +6,7 @@ import { MotionProvider } from "@/components/noir/MotionProvider";
 import { DemoDataPill } from "@/components/shared/DemoDataPill";
 import { RunStoreHydrator } from "@/components/shared/RunStoreHydrator";
 
-// Constellan type system — a deliberate, harmonious three-part mix (no serif):
+// HydraSentry type system — a deliberate, harmonious three-part mix (no serif):
 //   DISPLAY  Space Grotesk (--font-display): a sleek geometric grotesk with real
 //            character (single-story a, angular t, distinctive g). Drives the
 //            hero masthead AND the major cockpit titles + big-number metrics so
@@ -42,9 +42,9 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Constellan, Context Integrity for HydraDB Agents",
+  title: "HydraSentry, Memory Integrity for HydraDB Agents",
   description:
-    "Constellan replays agent tasks against clean and poisoned HydraDB context, visualizes the graph path that caused failure, blocks unsafe memory through MCP, and exports evidence reports.",
+    "HydraSentry replays agent tasks against clean and poisoned HydraDB context, traces the exact graph path that carried the poison, blocks the unsafe action through MCP, and seals every replay into a Memory Integrity Certificate. Graph-native proof, not prompt vibes.",
   icons: {
     icon: [{ url: "/brand/favicon.svg", type: "image/svg+xml" }],
   },

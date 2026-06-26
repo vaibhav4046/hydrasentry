@@ -27,7 +27,7 @@ const MCP_CALLS = [
 ];
 
 /**
- * The hero centerpiece: a faux Constellan command-center dashboard composited
+ * The hero centerpiece: a faux HydraSentry command-center dashboard composited
  * from the real primitives, a mission header, the RiskGauge at 87/CRITICAL, a
  * clean-vs-poisoned replay diff, a small tainted context graph, a live MCP tool
  * call strip, a SkillMake alert, and a "report ready" chip. Decorative but

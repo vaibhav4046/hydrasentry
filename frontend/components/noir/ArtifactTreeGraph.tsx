@@ -1,386 +1,753 @@
 "use client";
 
-import type React from "react";
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { useReducedMotion } from "framer-motion";
+import { useEffect, useRef, useState } from "react";
+import { m } from "framer-motion";
 import { cn } from "@/lib/cn";
-import { usePauseOffscreen } from "@/hooks/usePauseOffscreen";
-import { usePointerField } from "@/hooks/usePointerField";
-import { GraphNodeLabel } from "./GraphNodeLabel";
-import type { InspectorNode } from "./NodeInspectorPreview";
-import type { Graph, GraphNode } from "@/lib/types";
-import { NeuralMemoryCore } from "./NeuralMemoryCore";
-import {
-  DEMO_BADGES,
-  DEMO_TAINTED_PATH,
-  MAX_STAGE,
-  STAGE_COUNT,
-  VB_H,
-  VB_W,
-  type DemoBadge,
-} from "./artifactTreeData";
-import {
-  CORE,
-  DEMO_CONNECTIONS,
-  buildRealConnections,
-  type Connection,
-  type Pt,
-} from "./neuralCoreData";
+import { EASE_OUT_EXPO } from "@/lib/motion";
+import { useReducedMotionSafe } from "@/hooks/useReducedMotionSafe";
+
+/**
+ * ArtifactTreeGraph, the signature animated memory graph behind the homepage
+ * hero. A crisp, retina SVG (viewBox-scaled, vector-everything, no canvas) that
+ * draws the memory_poisoning_refund scenario as a small directed graph: the user
+ * task at the crown, the clean policy spine on the left, the poisoned memory
+ * branch on the right, the query_path that carried the poison, the MCP firewall
+ * that severs it, and the Memory Integrity Certificate at the foot.
+ *
+ * STAGE MODEL. The component is driven by a single `stage` prop on a 0..100
+ * scale so the demo controller (next build stage) can scrub it linearly:
+ *
+ *   0   INIT         depth grid + concentric rings only (calm scaffold)
+ *   15  SEED         the trunk/spine draws up from the task
+ *   30  RETRIEVE     context nodes (memory/policy/document/skill/tool/chunk) reveal
+ *   45  PATHS        the clean retrieval path glows (query_path established)
+ *   60  POISON       the poisoned memory node surfaces (intensity, not hue)
+ *   75  RISK         the tainted path intensifies (conflict -> path -> action)
+ *   90  BLOCK        the MCP firewall blocks the unsafe action
+ *   100 CERTIFICATE  the Memory Integrity Certificate node appears
+ *
+ * Each node/edge carries its own `at` threshold; it is "live" once
+ * `stage >= at`. Live edges draw (pathLength) + glow; the tainted active path
+ * gets an animated dashed overlay. Dim hairlines otherwise. Danger is always
+ * intensity (brightness/weight/glow), never colour, monochrome end to end.
+ *
+ * DEFAULT (no `stage`): a calm LIVING IDLE graph, the full composition is shown
+ * at rest (NOT blank) with gentle node breathing and a slow dashed crawl on the
+ * tainted path. It is never empty and never depends on a run.
+ *
+ * REDUCED MOTION: renders the fully-composed end-ish state statically and fully
+ * visible, every node and edge at final opacity, no entrance, no dashed crawl,
+ * no breathing. No critical content is ever hidden behind opacity:0 and no text
+ * is gradient-clipped (labels are solid-fill SVG text).
+ *
+ * The component is purely decorative (aria-hidden); the hero copy carries the
+ * accessible content. Self-contained: it owns its own node/edge data and shares
+ * nothing with the older WebGL hero data module.
+ */
+
+const VB_W = 920;
+const VB_H = 660;
+
+/** Stage thresholds, the public contract the demo controller scrubs over. */
+export const ATG_STAGES = {
+  INIT: 0,
+  SEED: 15,
+  RETRIEVE: 30,
+  PATHS: 45,
+  POISON: 60,
+  RISK: 75,
+  BLOCK: 90,
+  CERTIFICATE: 100,
+} as const;
+
+export const ATG_MAX_STAGE = 100;
+
+type NodeKind =
+  | "task"
+  | "memory"
+  | "policy"
+  | "document"
+  | "skill"
+  | "tool"
+  | "conflict"
+  | "path"
+  | "chunk"
+  | "firewall"
+  | "certificate";
+
+interface TreeNode {
+  id: string;
+  kind: NodeKind;
+  /** Eyebrow shown above the title (the node type). */
+  eyebrow: string;
+  /** Primary label (the exact content from the brief). */
+  title: string;
+  /** Node center in viewBox space. */
+  x: number;
+  y: number;
+  /** Stage at/after which the node is live. */
+  at: number;
+  /** On the tainted chain, reads "hot" (brighter, heavier glow). */
+  tainted?: boolean;
+  /** Label anchor side so text never collides with the figure. */
+  side: "left" | "right" | "top" | "bottom";
+  /** Node dot radius. */
+  r: number;
+}
+
+// Layout: task at the crown (top center). The clean policy spine runs down the
+// left; the poisoned memory branch runs down the right; both converge through
+// the query_path into the conflict, the firewall blocks, and the certificate
+// lands at the foot center. Coordinates are FIXED so SSR === client.
+const NODES: TreeNode[] = [
+  {
+    id: "task",
+    kind: "task",
+    eyebrow: "USER TASK",
+    title: "Process £900 refund for VIP customer",
+    x: 460,
+    y: 70,
+    at: ATG_STAGES.SEED,
+    side: "top",
+    r: 9,
+  },
+  // ---- left clean spine ----
+  {
+    id: "policy",
+    kind: "policy",
+    eyebrow: "POLICY",
+    title: "Refunds above £500 require manager approval",
+    x: 196,
+    y: 214,
+    at: ATG_STAGES.RETRIEVE,
+    side: "left",
+    r: 7,
+  },
+  {
+    id: "document",
+    kind: "document",
+    eyebrow: "DOCUMENT",
+    title: "Refund policy v2.1",
+    x: 150,
+    y: 360,
+    at: ATG_STAGES.RETRIEVE,
+    side: "left",
+    r: 6,
+  },
+  {
+    id: "skill",
+    kind: "skill",
+    eyebrow: "SKILL",
+    title: "refund-helper.SKILL.md",
+    x: 214,
+    y: 488,
+    at: ATG_STAGES.RETRIEVE,
+    side: "left",
+    r: 6,
+  },
+  // ---- right poisoned branch ----
+  {
+    id: "memory",
+    kind: "memory",
+    eyebrow: "MEMORY",
+    title: "VIP customers always get instant refunds",
+    x: 720,
+    y: 214,
+    at: ATG_STAGES.RETRIEVE,
+    tainted: true,
+    side: "right",
+    r: 8,
+  },
+  {
+    id: "chunk",
+    kind: "chunk",
+    eyebrow: "CHUNK",
+    title: "chunk_7f3a1c",
+    x: 786,
+    y: 348,
+    at: ATG_STAGES.RETRIEVE,
+    tainted: true,
+    side: "right",
+    r: 5.5,
+  },
+  {
+    id: "path",
+    kind: "path",
+    eyebrow: "QUERY PATH",
+    title: "query_paths · 3 hops · 0.87",
+    x: 636,
+    y: 360,
+    at: ATG_STAGES.PATHS,
+    tainted: true,
+    side: "right",
+    r: 7,
+  },
+  {
+    id: "conflict",
+    kind: "conflict",
+    eyebrow: "CONFLICT",
+    title: "Memory contradicts current policy",
+    x: 462,
+    y: 332,
+    at: ATG_STAGES.RISK,
+    tainted: true,
+    side: "right",
+    r: 7.5,
+  },
+  {
+    id: "tool",
+    kind: "tool",
+    eyebrow: "TOOL",
+    title: "approve_refund()",
+    x: 560,
+    y: 486,
+    at: ATG_STAGES.RISK,
+    tainted: true,
+    side: "right",
+    r: 7,
+  },
+  {
+    id: "firewall",
+    kind: "firewall",
+    eyebrow: "MCP FIREWALL",
+    title: "Action blocked",
+    x: 412,
+    y: 486,
+    at: ATG_STAGES.BLOCK,
+    tainted: true,
+    side: "left",
+    r: 8.5,
+  },
+  {
+    id: "certificate",
+    kind: "certificate",
+    eyebrow: "CERTIFICATE",
+    title: "Memory Integrity Certificate",
+    x: 460,
+    y: 600,
+    at: ATG_STAGES.CERTIFICATE,
+    side: "bottom",
+    r: 9,
+  },
+];
+
+const NODE_BY_ID = new Map(NODES.map((n) => [n.id, n]));
+
+interface TreeEdge {
+  from: string;
+  to: string;
+  at: number;
+  /** On the tainted active path, draws + crawls + glows hottest. */
+  tainted?: boolean;
+}
+
+const EDGES: TreeEdge[] = [
+  // task seeds both spines
+  { from: "task", to: "policy", at: ATG_STAGES.SEED },
+  { from: "task", to: "memory", at: ATG_STAGES.SEED, tainted: true },
+  // clean policy provenance
+  { from: "policy", to: "document", at: ATG_STAGES.RETRIEVE },
+  { from: "policy", to: "skill", at: ATG_STAGES.RETRIEVE },
+  // poisoned branch provenance + retrieval
+  { from: "memory", to: "chunk", at: ATG_STAGES.RETRIEVE, tainted: true },
+  { from: "memory", to: "path", at: ATG_STAGES.PATHS, tainted: true },
+  // the tainted active path: path -> conflict -> tool -> firewall
+  { from: "path", to: "conflict", at: ATG_STAGES.RISK, tainted: true },
+  { from: "policy", to: "conflict", at: ATG_STAGES.RISK },
+  { from: "conflict", to: "tool", at: ATG_STAGES.RISK, tainted: true },
+  { from: "tool", to: "firewall", at: ATG_STAGES.BLOCK, tainted: true },
+  // firewall logs the certificate
+  { from: "firewall", to: "certificate", at: ATG_STAGES.CERTIFICATE },
+];
+
+/** A gentle quadratic curve between two node centers (slight vertical bow). */
+function edgePath(from: TreeNode, to: TreeNode): string {
+  const mx = (from.x + to.x) / 2;
+  const my = (from.y + to.y) / 2;
+  // bow the control point a touch perpendicular to the segment for an organic arc
+  const dx = to.x - from.x;
+  const dy = to.y - from.y;
+  const len = Math.hypot(dx, dy) || 1;
+  const nx = -dy / len;
+  const ny = dx / len;
+  const bow = Math.min(34, len * 0.12);
+  const cx = mx + nx * bow;
+  const cy = my + ny * bow;
+  return `M ${from.x} ${from.y} Q ${cx} ${cy} ${to.x} ${to.y}`;
+}
 
 interface ArtifactTreeGraphProps {
-  /** Drive a specific stage 0..7 (overrides autoplay). */
-  stage?: number;
-  /** Cycle stages slowly (hero default). Ignored if `stage` set. */
-  autoplay?: boolean;
-  /** Loop the autoplay cycle (default true when autoplay). */
-  loop?: boolean;
-  /** Real run graph; when present, renders its nodes/edges instead of the demo. */
-  graph?: Graph | null;
-  /** Which badge id is force-highlighted as the selected tainted path. */
-  selectedPathId?: string | null;
-  onNodeClick?: (node: InspectorNode) => void;
-  onNodeHover?: (node: InspectorNode | null) => void;
-  onPathSelect?: (id: string) => void;
   /**
-   * Optional override for the visual FIELD layer behind the badges. Defaults to
-   * the lightweight 2D NeuralMemoryCore (used by /graph, /results, /replay). The
-   * LANDING hero injects the WebGL2 GPU field here instead. Receives the resolved
-   * stage + currently-hovered node id so it can light branches by stage/hover.
+   * Drive a specific stage on the 0..100 scale (15/30/45/60/75/90/100 are the
+   * meaningful breakpoints). When omitted, the graph shows a calm living idle
+   * composition (full graph at rest, NOT blank).
    */
-  renderField?: (args: { stage: number; hoveredNodeId: string | null }) => React.ReactNode;
+  stage?: number;
   className?: string;
 }
 
-// Autoplay pacing (ms the build spends per stage, then a long idle hold).
-const STAGE_HOLD_MS = 1150;
-const IDLE_HOLD_MS = 3400;
-
-/**
- * The signature monochrome hero, now a DPR-scaled NEURAL MEMORY CORE canvas: a
- * luminous breathing core with elegant curved synaptic connections radiating to
- * the labelled context-node badges, light pulses travelling them like memories.
- * Geometry is precomputed once (seeded, SSR-safe); the canvas runs ONE rAF loop
- * with additive-bloom sprites, parked offscreen / when hidden. No per-frame React
- * state. The tainted path (memory -> conflict -> risk -> firewall) burns brighter
- * and pulses hotter/faster, danger is intensity, never hue.
- *
- * Public props are unchanged so /graph, /results and /replay keep working. When
- * a real `graph` is passed, its edges become the core-and-spokes web and its
- * nodes drive the badge overlay (same visual language as the demo).
- */
-export function ArtifactTreeGraph({
-  stage,
-  autoplay = false,
-  loop = true,
-  graph = null,
-  selectedPathId = null,
-  onNodeClick,
-  onNodeHover,
-  onPathSelect,
-  renderField,
-  className,
-}: ArtifactTreeGraphProps) {
-  const prefersReduced = useReducedMotion();
-  // Pause the rAF loop when the tree is offscreen or the tab is hidden (the
-  // canvas reads the host's data-anim attribute set here).
-  const pauseRef = usePauseOffscreen<HTMLDivElement>("200px 0px");
-  // Spring-smoothed pointer field driving canvas parallax + attraction.
-  const { hostRef: pointerHostRef, field: pointerField } =
-    usePointerField<HTMLDivElement>();
-  // Attach BOTH behaviours to the one host div via a merged callback ref.
-  const setHostRef = useCallback(
-    (el: HTMLDivElement | null) => {
-      pauseRef.current = el;
-      pointerHostRef.current = el;
-    },
-    [pauseRef, pointerHostRef],
-  );
-
-  // Which node is hovered (lifts + illuminates its canvas edges). Forwarded to
-  // any external onNodeHover too so /graph etc. keep their inspector behaviour.
-  const [hoveredId, setHoveredId] = useState<string | null>(null);
-  const handleHover = useCallback(
-    (node: InspectorNode | null) => {
-      setHoveredId(node?.id ?? null);
-      onNodeHover?.(node);
-    },
-    [onNodeHover],
-  );
-
-  // ---- resolve the active stage ---------------------------------------------
+export function ArtifactTreeGraph({ stage, className }: ArtifactTreeGraphProps) {
+  // Hydration-safe read: the server (and the client's first render) see `false`,
+  // so the SSR markup and the initial client markup agree. Using framer-motion's
+  // raw useReducedMotion() here seeded `idleStage` differently on server vs client
+  // under Reduced Motion (stage 0 vs composed end-state), which renders different
+  // node labels and triggers React hydration error #418. The store settles to the
+  // live preference on the next commit; reduced-motion users still skip the sweep
+  // and land on the composed graph, just one commit later, never blank.
+  const prefersReduced = useReducedMotionSafe();
   const controlled = stage != null;
-  const [autoStage, setAutoStage] = useState<number>(
-    prefersReduced ? MAX_STAGE : 0,
+
+  // Idle autoplay: when no `stage` is supplied AND motion is allowed, sweep the
+  // graph 0 -> 100 once, then hold the composed end-state and breathe. This gives
+  // a "living" hero on first paint without ever blanking. Reduced motion skips
+  // straight to the composed state.
+  const [idleStage, setIdleStage] = useState<number>(
+    prefersReduced || controlled ? ATG_MAX_STAGE : 0,
   );
+  const rafRef = useRef<number | null>(null);
 
-  // Autoplay walks 0 -> MAX_STAGE on a timer then holds, then loops. Reduced
-  // motion freezes on the final frame. Stage updates only fire on transitions
-  // (a handful per cycle), they re-gate voxel layers + badges, no per-frame work.
   useEffect(() => {
-    if (controlled || !autoplay || prefersReduced) return;
-    // One tracked timer id: every scheduling point cancels the prior timer
-    // before reassigning, so at most one timeout is ever live and cleanup
-    // always reaches it (no leaked setState-after-unmount on any branch).
-    let timer: ReturnType<typeof setTimeout>;
-    let current = 0;
-    const schedule = (fn: () => void, ms: number) => {
-      clearTimeout(timer);
-      timer = setTimeout(fn, ms);
+    if (controlled || prefersReduced) return;
+    let start: number | null = null;
+    const DURATION = 5200; // ms for the full 0 -> 100 idle build
+    const step = (ts: number) => {
+      if (start == null) start = ts;
+      const t = Math.min(1, (ts - start) / DURATION);
+      setIdleStage(Math.round(t * ATG_MAX_STAGE));
+      if (t < 1) rafRef.current = requestAnimationFrame(step);
     };
-    const tick = () => {
-      if (current < MAX_STAGE) {
-        current += 1;
-        setAutoStage(current);
-        schedule(tick, STAGE_HOLD_MS);
-      } else if (loop) {
-        schedule(() => {
-          current = 0;
-          setAutoStage(0);
-          schedule(tick, STAGE_HOLD_MS);
-        }, IDLE_HOLD_MS);
-      }
+    rafRef.current = requestAnimationFrame(step);
+    return () => {
+      if (rafRef.current != null) cancelAnimationFrame(rafRef.current);
     };
-    schedule(() => {
-      setAutoStage(0);
-      schedule(tick, STAGE_HOLD_MS);
-    }, 0);
-    return () => clearTimeout(timer);
-  }, [controlled, autoplay, loop, prefersReduced]);
+  }, [controlled, prefersReduced]);
 
+  // Resolve the active stage: controlled -> prop; reduced -> end; else idle sweep.
   const activeStage = controlled
     ? clampStage(stage as number)
     : prefersReduced
-      ? MAX_STAGE
-      : autoStage;
+      ? ATG_MAX_STAGE
+      : idleStage;
 
+  // Once the composed graph is reached (idle finished, controlled at 100, or
+  // reduced motion), let the tainted path crawl + nodes breathe.
+  const composed = activeStage >= ATG_MAX_STAGE;
   const isAnimated = !prefersReduced;
 
-  // ---- demo vs real graph ---------------------------------------------------
-  const useReal = graph != null && graph.nodes.length > 0;
-  const realModel = useMemo(
-    () => (useReal ? buildRealModel(graph as Graph) : null),
-    [useReal, graph],
-  );
-
-  // Synaptic web: demo by default; build the real graph's core-and-spokes web
-  // when present (its edges + a core hub spoke to every node).
-  const connections: Connection[] = useMemo(() => {
-    if (useReal && realModel) {
-      const centers = new Map<string, Pt>();
-      centers.set("core", CORE);
-      for (const b of realModel.badges) centers.set(b.id, { x: b.x, y: b.y });
-      return buildRealConnections(graph as Graph, centers);
-    }
-    return DEMO_CONNECTIONS;
-  }, [useReal, realModel, graph]);
-
-  const badges = useReal && realModel ? realModel.badges : DEMO_BADGES;
-
   return (
     <div
-      ref={setHostRef}
-      className={cn("relative w-full select-none", className)}
       aria-hidden="true"
+      className={cn("relative w-full select-none", className)}
     >
-      {/* The FIELD layer. By default the lightweight 2D NeuralMemoryCore (used by
-          /graph, /results, /replay). The landing hero injects the WebGL2 GPU
-          field via renderField, it owns its own pointer/pause hooks, so this
-          host's pointerField simply goes unused in that case. Both draw their own
-          volumetric core light + vignette + grain, so no CSS spotlight layers. */}
-      {renderField ? (
-        renderField({ stage: activeStage, hoveredNodeId: hoveredId })
-      ) : (
-        <NeuralMemoryCore
-          connections={connections}
-          stage={activeStage}
-          staticFrame={!isAnimated}
-          pointer={pointerField}
-          hoveredNodeId={hoveredId}
-        />
-      )}
+      <svg
+        viewBox={`0 0 ${VB_W} ${VB_H}`}
+        width="100%"
+        height="100%"
+        role="presentation"
+        // shapeRendering geometricPrecision keeps strokes crisp at any DPR.
+        style={{ display: "block", shapeRendering: "geometricPrecision" }}
+      >
+        <defs>
+          {/* soft white glow for active edges + node halos */}
+          <filter id="atg-glow" x="-60%" y="-60%" width="220%" height="220%">
+            <feGaussianBlur stdDeviation="3.2" result="b" />
+            <feMerge>
+              <feMergeNode in="b" />
+              <feMergeNode in="SourceGraphic" />
+            </feMerge>
+          </filter>
+          <filter id="atg-glow-hard" x="-80%" y="-80%" width="260%" height="260%">
+            <feGaussianBlur stdDeviation="5.5" result="b" />
+            <feMerge>
+              <feMergeNode in="b" />
+              <feMergeNode in="SourceGraphic" />
+            </feMerge>
+          </filter>
+          {/* radial node fill, bright core fading to glass */}
+          <radialGradient id="atg-node" cx="50%" cy="42%" r="62%">
+            <stop offset="0%" stopColor="rgba(255,255,255,0.96)" />
+            <stop offset="55%" stopColor="rgba(217,222,231,0.30)" />
+            <stop offset="100%" stopColor="rgba(255,255,255,0.04)" />
+          </radialGradient>
+          <radialGradient id="atg-node-dim" cx="50%" cy="42%" r="62%">
+            <stop offset="0%" stopColor="rgba(217,222,231,0.55)" />
+            <stop offset="60%" stopColor="rgba(217,222,231,0.12)" />
+            <stop offset="100%" stopColor="rgba(255,255,255,0.02)" />
+          </radialGradient>
+        </defs>
 
-      {/* node badges as HTML overlay (real lucide icons + hover/click) */}
-      <div className="pointer-events-none absolute inset-0">
-        {badges.map((badge) => (
-          <BadgeOverlay
-            key={badge.id}
-            badge={badge}
-            activeStage={activeStage}
-            isAnimated={isAnimated}
-            selectedPathId={selectedPathId}
-            onNodeClick={onNodeClick}
-            onNodeHover={handleHover}
-            onPathSelect={onPathSelect}
-          />
-        ))}
-      </div>
+        {/* ---- INIT scaffold: depth grid + concentric rings (always visible) ---- */}
+        <DepthScaffold animated={isAnimated} />
+
+        {/* ---- edges ---- */}
+        <g fill="none" strokeLinecap="round">
+          {EDGES.map((e) => {
+            const from = NODE_BY_ID.get(e.from)!;
+            const to = NODE_BY_ID.get(e.to)!;
+            const live = activeStage >= e.at;
+            return (
+              <EdgeView
+                key={`${e.from}-${e.to}`}
+                d={edgePath(from, to)}
+                live={live}
+                tainted={Boolean(e.tainted)}
+                composed={composed}
+                isAnimated={isAnimated}
+              />
+            );
+          })}
+        </g>
+
+        {/* ---- nodes (dots + glow) ---- */}
+        <g>
+          {NODES.map((n) => {
+            const live = activeStage >= n.at;
+            // poisoned memory only reads "hot" once POISON surfaces it
+            const hot =
+              Boolean(n.tainted) &&
+              (activeStage >= ATG_STAGES.POISON || n.kind === "firewall");
+            return (
+              <NodeDot
+                key={n.id}
+                node={n}
+                live={live}
+                hot={hot}
+                isAnimated={isAnimated}
+                composed={composed}
+              />
+            );
+          })}
+        </g>
+
+        {/* ---- labels (solid-fill SVG text, never gradient-clipped) ---- */}
+        <g>
+          {NODES.map((n) => {
+            const live = activeStage >= n.at;
+            const hot =
+              Boolean(n.tainted) &&
+              (activeStage >= ATG_STAGES.POISON || n.kind === "firewall");
+            return (
+              <NodeLabel
+                key={`label-${n.id}`}
+                node={n}
+                live={live}
+                hot={hot}
+                isAnimated={isAnimated}
+              />
+            );
+          })}
+        </g>
+      </svg>
     </div>
   );
 }
 
-// ---- helpers ----------------------------------------------------------------
+// ---------------------------------------------------------------------------
+
 function clampStage(s: number): number {
   if (!Number.isFinite(s)) return 0;
-  return Math.max(0, Math.min(MAX_STAGE, Math.round(s)));
+  return Math.max(0, Math.min(ATG_MAX_STAGE, Math.round(s)));
 }
 
-const pct = (v: number, total: number) => `${(v / total) * 100}%`;
-
-// ---- HTML badge overlay (positioned from viewBox coords) --------------------
-function BadgeOverlay({
-  badge,
-  activeStage,
-  isAnimated,
-  selectedPathId,
-  onNodeClick,
-  onNodeHover,
-  onPathSelect,
-}: {
-  badge: DemoBadge;
-  activeStage: number;
-  isAnimated: boolean;
-  selectedPathId: string | null;
-  onNodeClick?: (node: InspectorNode) => void;
-  onNodeHover?: (node: InspectorNode | null) => void;
-  onPathSelect?: (id: string) => void;
-}) {
-  const shown = activeStage >= badge.appearStage;
-  if (!shown) return null;
-
-  const pathSelected = isPathSelected(selectedPathId);
-  // A tainted badge reads "hot" once CONFLICT surfaces or the risky path is on.
-  const hot = badge.tainted && (activeStage >= 4 || pathSelected);
-  const align = badge.column === "right" ? "left" : "right";
-
-  const node: InspectorNode = {
-    id: badge.id,
-    title: badge.title,
-    type: badge.type,
-    sourceChunkId: badge.sourceChunkId ?? null,
-    tenant: badge.tenant ?? null,
-    subTenant: badge.subTenant ?? null,
-    relevancy: badge.relevancy ?? null,
-    status: badge.status ?? null,
-    riskReason: badge.riskReason ?? null,
-    tainted: badge.tainted,
-  };
-
-  const Icon = badge.Icon;
-  const translate =
-    badge.column === "top"
-      ? "translate(-50%, -50%)"
-      : badge.column === "left"
-        ? "translate(0, -50%)"
-        : "translate(-100%, -50%)";
-
+/** The INIT scaffold: a faint dot grid + concentric depth rings around the core. */
+function DepthScaffold({ animated }: { animated: boolean }) {
+  const cx = 460;
+  const cy = 330;
+  const rings = [120, 200, 280];
+  // a sparse dot grid for "depth"
+  const dots: { x: number; y: number }[] = [];
+  for (let gx = 60; gx < VB_W; gx += 76) {
+    for (let gy = 60; gy < VB_H; gy += 76) {
+      dots.push({ x: gx, y: gy });
+    }
+  }
   return (
-    <div
-      className="pointer-events-auto absolute"
-      style={{
-        left: pct(badge.x, VB_W),
-        top: pct(badge.y, VB_H),
-        transform: translate,
-      }}
-    >
-      <GraphNodeLabel
-        icon={<Icon className="h-[18px] w-[18px]" strokeWidth={1.7} />}
-        title={badge.title}
-        sub={badge.sub}
-        tainted={hot}
-        animate={isAnimated}
-        align={align}
-        onClick={onNodeClick ? () => onNodeClick(node) : undefined}
-        onHoverStart={onNodeHover ? () => onNodeHover(node) : undefined}
-        onHoverEnd={onNodeHover ? () => onNodeHover(null) : undefined}
+    <g>
+      <g fill="rgba(255,255,255,0.05)">
+        {dots.map((d, i) => (
+          <circle key={i} cx={d.x} cy={d.y} r={0.9} />
+        ))}
+      </g>
+      <g fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth={1}>
+        {rings.map((r, i) =>
+          animated ? (
+            <m.circle
+              key={r}
+              cx={cx}
+              cy={cy}
+              r={r}
+              initial={{ opacity: 0.3 }}
+              animate={{ opacity: [0.18, 0.42, 0.18] }}
+              transition={{
+                duration: 6 + i * 1.4,
+                ease: "easeInOut",
+                repeat: Infinity,
+              }}
+            />
+          ) : (
+            <circle key={r} cx={cx} cy={cy} r={r} opacity={0.3} />
+          ),
+        )}
+      </g>
+      {/* core glow at the heart of the rings */}
+      <circle
+        cx={cx}
+        cy={cy}
+        r={6}
+        fill="rgba(255,255,255,0.5)"
+        filter="url(#atg-glow)"
       />
-      {badge.tainted && onPathSelect && (
-        <button
-          aria-hidden
-          tabIndex={-1}
-          className="sr-only"
-          onClick={() => onPathSelect(badge.id)}
-        />
-      )}
-    </div>
+    </g>
   );
 }
 
-function isPathSelected(selectedPathId: string | null): boolean {
-  return selectedPathId != null && DEMO_TAINTED_PATH.includes(selectedPathId);
+/** One edge: a dim hairline always, drawing + glowing when live; tainted-active
+ *  edges get an animated dashed crawl once composed. */
+function EdgeView({
+  d,
+  live,
+  tainted,
+  composed,
+  isAnimated,
+}: {
+  d: string;
+  live: boolean;
+  tainted: boolean;
+  composed: boolean;
+  isAnimated: boolean;
+}) {
+  const stroke = live
+    ? tainted
+      ? "rgba(255,255,255,0.96)"
+      : "rgba(217,222,231,0.6)"
+    : "rgba(255,255,255,0.1)";
+  const width = live ? (tainted ? 2.1 : 1.4) : 1;
+
+  return (
+    <g>
+      {/* the base edge (dim hairline -> bright when live) */}
+      {isAnimated ? (
+        <m.path
+          d={d}
+          stroke={stroke}
+          strokeWidth={width}
+          initial={false}
+          animate={{
+            pathLength: live ? 1 : 0.001,
+            opacity: live ? 1 : 0.5,
+          }}
+          transition={{ duration: 0.7, ease: EASE_OUT_EXPO }}
+          filter={live && tainted ? "url(#atg-glow)" : undefined}
+        />
+      ) : (
+        <path
+          d={d}
+          stroke={stroke}
+          strokeWidth={width}
+          opacity={live ? 1 : 0.5}
+          filter={live && tainted ? "url(#atg-glow)" : undefined}
+        />
+      )}
+
+      {/* animated dashed crawl on the tainted ACTIVE path once composed */}
+      {tainted && live && composed && isAnimated && (
+        <path
+          d={d}
+          stroke="rgba(255,255,255,0.95)"
+          strokeWidth={2.2}
+          strokeDasharray="7 13"
+          filter="url(#atg-glow)"
+          className="atg-travel"
+        />
+      )}
+    </g>
+  );
 }
 
-// ---- build a layout from a real run graph -----------------------------------
-interface RealModel {
-  badges: DemoBadge[];
-}
+/** A node dot: glass/radial fill, white-hot ring + breathing halo when hot. */
+function NodeDot({
+  node,
+  live,
+  hot,
+  isAnimated,
+  composed,
+}: {
+  node: TreeNode;
+  live: boolean;
+  hot: boolean;
+  isAnimated: boolean;
+  composed: boolean;
+}) {
+  const fill = hot
+    ? "url(#atg-node)"
+    : live
+      ? "url(#atg-node)"
+      : "url(#atg-node-dim)";
+  const ring = hot
+    ? "rgba(255,255,255,0.96)"
+    : live
+      ? "rgba(217,222,231,0.55)"
+      : "rgba(255,255,255,0.16)";
 
-// Lays real nodes into the same top/left/right column rhythm so the visual
-// language matches the demo tree. Tainted membership comes from tainted_path.
-function buildRealModel(graph: Graph): RealModel {
-  const taint = new Set(graph.tainted_path ?? []);
-  const COLUMN_FOR: Record<string, "top" | "left" | "right"> = {
-    user_task: "top",
-    report: "top",
-    clean_policy: "left",
-    poisoned_memory: "left",
-    query_path: "right",
-    policy_conflict: "right",
-    unsafe_tool_action: "right",
-    mcp_firewall: "right",
-  };
+  const dot = (
+    <>
+      {/* breathing halo: hot nodes pulse hardest, live nodes breathe gently */}
+      {isAnimated && live && composed && (
+        <m.circle
+          cx={node.x}
+          cy={node.y}
+          r={node.r + 5}
+          fill="none"
+          stroke="rgba(255,255,255,0.4)"
+          strokeWidth={1}
+          animate={{
+            opacity: hot ? [0.3, 0.75, 0.3] : [0.12, 0.32, 0.12],
+            scale: hot ? [1, 1.25, 1] : [1, 1.12, 1],
+          }}
+          style={{ transformOrigin: `${node.x}px ${node.y}px` }}
+          transition={{
+            duration: hot ? 2.4 : 3.6,
+            ease: "easeInOut",
+            repeat: Infinity,
+          }}
+        />
+      )}
+      <circle
+        cx={node.x}
+        cy={node.y}
+        r={node.r}
+        fill={fill}
+        stroke={ring}
+        strokeWidth={hot ? 1.6 : 1.1}
+        filter={hot ? "url(#atg-glow-hard)" : live ? "url(#atg-glow)" : undefined}
+      />
+      {/* firewall gets a small severing tick across the incoming limb */}
+      {node.kind === "firewall" && live && (
+        <line
+          x1={node.x - 13}
+          y1={node.y - 13}
+          x2={node.x + 13}
+          y2={node.y + 13}
+          stroke="rgba(255,255,255,0.96)"
+          strokeWidth={2}
+          filter="url(#atg-glow)"
+        />
+      )}
+      {/* certificate gets an inner ring so it reads as a seal */}
+      {node.kind === "certificate" && live && (
+        <circle
+          cx={node.x}
+          cy={node.y}
+          r={node.r - 3.5}
+          fill="none"
+          stroke="rgba(255,255,255,0.85)"
+          strokeWidth={1}
+        />
+      )}
+    </>
+  );
 
-  const left: GraphNode[] = [];
-  const right: GraphNode[] = [];
-  const top: GraphNode[] = [];
-  for (const n of graph.nodes) {
-    const col =
-      COLUMN_FOR[n.type] ?? (left.length <= right.length ? "left" : "right");
-    if (col === "top") top.push(n);
-    else if (col === "left") left.push(n);
-    else right.push(n);
+  if (!isAnimated) {
+    return <g opacity={live ? 1 : 0.4}>{dot}</g>;
   }
 
-  const place = (
-    list: GraphNode[],
-    x: number,
-    column: "top" | "left" | "right",
-  ): DemoBadge[] =>
-    list.map((n, i) => {
-      const span = list.length > 1 ? 520 : 0;
-      const y =
-        column === "top" ? 70 : 150 + (i * span) / Math.max(1, list.length - 1);
-      const tainted = taint.has(n.id) || n.trust === "poisoned";
-      return {
-        id: n.id,
-        title: n.label.toUpperCase(),
-        sub: n.status || n.type,
-        Icon: iconForType(n.type),
-        x: column === "top" ? 500 : x,
-        y,
-        column,
-        tainted,
-        appearStage: 2,
-        type: n.type,
-        sourceChunkId: n.source_chunk_id ?? undefined,
-        tenant: n.tenant_id ?? undefined,
-        subTenant: n.sub_tenant_id ?? undefined,
-        status: n.status,
-        riskReason: n.risk_reason ?? undefined,
-      };
-    });
-
-  const badges = [
-    ...place(top, 500, "top"),
-    ...place(left, 150, "left"),
-    ...place(right, 850, "right"),
-  ];
-
-  return { badges };
+  return (
+    <m.g
+      initial={false}
+      animate={{ opacity: live ? 1 : 0.4, scale: live ? 1 : 0.7 }}
+      style={{ transformOrigin: `${node.x}px ${node.y}px` }}
+      transition={{ duration: 0.55, ease: EASE_OUT_EXPO }}
+    >
+      {dot}
+    </m.g>
+  );
 }
 
-function iconForType(type: string) {
-  const map = DEMO_BADGES.find((b) => b.type === type);
-  return map ? map.Icon : DEMO_BADGES[0].Icon;
-}
+/** A node's two-line label (eyebrow + title), solid-fill SVG text. Positioned
+ *  on the node's anchor side so it never overlaps the figure. */
+function NodeLabel({
+  node,
+  live,
+  hot,
+  isAnimated,
+}: {
+  node: TreeNode;
+  live: boolean;
+  hot: boolean;
+  isAnimated: boolean;
+}) {
+  // anchor offsets by side
+  const gap = node.r + 12;
+  let tx = node.x;
+  let ty = node.y;
+  let anchor: "start" | "middle" | "end" = "middle";
+  let eyebrowDy = -gap - 8;
+  let titleDy = -gap + 6;
 
-export { STAGE_COUNT };
+  if (node.side === "left") {
+    tx = node.x - gap;
+    anchor = "end";
+    eyebrowDy = -7;
+    titleDy = 9;
+  } else if (node.side === "right") {
+    tx = node.x + gap;
+    anchor = "start";
+    eyebrowDy = -7;
+    titleDy = 9;
+  } else if (node.side === "top") {
+    ty = node.y - gap;
+    anchor = "middle";
+    eyebrowDy = -15;
+    titleDy = 1;
+  } else {
+    // bottom
+    ty = node.y + gap;
+    anchor = "middle";
+    eyebrowDy = 8;
+    titleDy = 23;
+  }
+
+  const titleColor = hot
+    ? "rgba(245,247,250,1)"
+    : live
+      ? "rgba(217,222,231,0.92)"
+      : "rgba(217,222,231,0.4)";
+  const eyebrowColor = live ? "rgba(159,164,175,0.95)" : "rgba(95,104,117,0.6)";
+
+  const content = (
+    <>
+      <text
+        x={tx}
+        y={ty + eyebrowDy}
+        textAnchor={anchor}
+        className="atg-eyebrow"
+        fill={eyebrowColor}
+      >
+        {node.eyebrow}
+      </text>
+      <text
+        x={tx}
+        y={ty + titleDy}
+        textAnchor={anchor}
+        className="atg-title"
+        fill={titleColor}
+      >
+        {node.title}
+      </text>
+    </>
+  );
+
+  if (!isAnimated) {
+    return <g opacity={live ? 1 : 0.5}>{content}</g>;
+  }
+
+  return (
+    <m.g
+      initial={false}
+      animate={{ opacity: live ? 1 : 0.45 }}
+      transition={{ duration: 0.5, ease: EASE_OUT_EXPO, delay: 0.12 }}
+    >
+      {content}
+    </m.g>
+  );
+}

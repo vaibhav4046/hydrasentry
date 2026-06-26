@@ -1,5 +1,5 @@
 /**
- * Barrel export for the Constellan noir component library. The dashboard
+ * Barrel export for the HydraSentry noir component library. The dashboard
  * agent can import any primitive from "@/components/noir". Types for variant
  * props are re-exported alongside their components.
  */
@@ -18,6 +18,11 @@ export { ContextGraphPreview } from "./ContextGraphPreview";
 export { MemoryTree } from "./MemoryTree";
 export { ArtifactTreeGraph } from "./ArtifactTreeGraph";
 export { ArtifactTreeHero } from "./ArtifactTreeHero";
+export { JudgeDemoController } from "./JudgeDemoController";
+export { GraphPathInspector } from "./GraphPathInspector";
+export { MemoryCertificatePanel } from "./MemoryCertificatePanel";
+export { CertificateReportModal } from "./CertificateReportModal";
+export { HeroCertificateSection } from "./HeroCertificateSection";
 export { HeroMemoryField } from "./HeroMemoryField";
 export { WebGLMemoryFieldPoster } from "./WebGLMemoryFieldPoster";
 export { GraphNodeLabel } from "./GraphNodeLabel";

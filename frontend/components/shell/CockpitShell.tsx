@@ -35,7 +35,7 @@ export function CockpitShell({ title, actions, children }: CockpitShellProps) {
 
   const meta = ROUTE_META[pathname] ?? findMeta(pathname);
   const resolvedTitle = title ?? meta?.title ?? "Command";
-  const crumb = meta?.crumb ?? "CONSTELLAN / OPERATIONS";
+  const crumb = meta?.crumb ?? "HYDRASENTRY / OPERATIONS";
 
   return (
     <div

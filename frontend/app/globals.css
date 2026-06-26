@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 /* ============================================================
-   Constellan design tokens, Castellan Cockpit cool silver-blue noir.
+   HydraSentry design tokens, Castellan Cockpit cool silver-blue noir.
    Color law: backgrounds are near-black; all "color" is white/silver
    at varying opacity. Danger/safe communicated via brightness, border,
    icon, label, and motion, never hue. Values ported 1:1 from the
@@ -646,6 +646,23 @@
   );
 }
 
+/* ArtifactTreeGraph SVG label type. Solid-fill <text> (never gradient-clipped),
+   crisp at any DPR. Eyebrow = mono caps; title = display, tight. Sizes are in
+   viewBox user units (the SVG scales them with the figure). */
+.atg-eyebrow {
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 10.5px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  font-weight: 500;
+}
+.atg-title {
+  font-family: var(--font-display), "Space Grotesk", system-ui, sans-serif;
+  font-size: 13.5px;
+  font-weight: 500;
+  letter-spacing: -0.005em;
+}
+
 /* Traveling-dash along the tainted edges, a single GPU-cheap CSS keyframe on
    stroke-dashoffset (no per-frame JS). Pair with .atg-travel on a <line>/<path>
    that sets stroke-dasharray. Compositor-friendly: only dashoffset animates. */
@@ -755,7 +772,7 @@
 }
 
 /* ==========================================================
-   Constellan, Memory Observatory homepage (/).
+   HydraSentry, Memory Observatory homepage (/).
    The star-atlas direction: sleek Space Grotesk display masthead, a live canvas
    star-chart plate, cartographic mono detailing, hairline-framed legend
    grids. Scoped under .observatory-landing so the cockpit is untouched.
@@ -1025,14 +1042,18 @@
   .observatory-landing .obs-grid-3 {
     grid-template-columns: 1fr 1fr !important;
   }
+  .observatory-landing .obs-grid-5 {
+    grid-template-columns: 1fr 1fr 1fr !important;
+  }
   .observatory-landing .obs-method {
     grid-template-columns: 1fr 1fr 1fr !important;
   }
 }
 @media (max-width: 600px) {
   .observatory-landing .obs-grid-4,
-  .observatory-landing .obs-grid-3 {
-    grid-template-columns: 1fr !important;
+  .observatory-landing .obs-grid-3,
+  .observatory-landing .obs-grid-5 {
+    grid-template-columns: 1fr 1fr !important;
   }
   .observatory-landing .obs-method {
     grid-template-columns: 1fr 1fr !important;

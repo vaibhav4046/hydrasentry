@@ -1,12 +1,16 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
+import { FileText } from "lucide-react";
 import { PageShell } from "@/components/shared/PageShell";
 import { GraphSourceBadge } from "@/components/graph/GraphSourceBadge";
+import { MemoryCertificatePanel } from "@/components/noir/MemoryCertificatePanel";
+import { CertificateReportModal } from "@/components/noir/CertificateReportModal";
 import { useRunDemo } from "@/hooks/useRunDemo";
 import { useDemoMode } from "@/hooks/useDemoMode";
 import { getReportMarkdown } from "@/lib/api";
 import { downloadText } from "@/lib/format";
+import { buildCertificate } from "@/lib/memoryCertificate";
 import { deriveCockpit, C } from "@/lib/cockpit/derive";
 import type { RunArtifact } from "@/lib/types";
 
@@ -46,8 +50,13 @@ export default function ResultsPage() {
   const v = useMemo(() => deriveCockpit(run, { isRunning }), [run, isRunning]);
   const p = v.poisoned;
   const nextScan = nextScanClock(run);
+  const [certOpen, setCertOpen] = useState(false);
 
   const metrics = resultMetrics(run, p, nextScan);
+  // MIC mount point (b): only when a run exists and the firewall actually
+  // blocked (poisoned posture) — never claim a certificate before the finding.
+  const certificate = useMemo(() => buildCertificate(run), [run]);
+  const reportMarkdown = run?.report_markdown ?? "";
 
   async function downloadReport() {
     const id = run?.run_id ?? "judge-demo";
@@ -247,7 +256,48 @@ export default function ResultsPage() {
             </button>
           </div>
         </div>
+
+        {/* MIC mount point (b): the Memory Integrity Certificate, shown only
+            once a poisoned finding exists, with a "View report" control opening
+            the final report modal. Honest: no certificate before a finding. */}
+        {run && p && (
+          <MemoryCertificatePanel
+            certificate={certificate}
+            action={
+              <button
+                type="button"
+                onClick={() => setCertOpen(true)}
+                style={{
+                  cursor: "pointer",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 8,
+                  fontFamily: "inherit",
+                  fontSize: 13,
+                  fontWeight: 600,
+                  color: "#0A0A0A",
+                  padding: "10px 16px",
+                  border: "1px solid rgba(255,255,255,0.65)",
+                  borderRadius: 12,
+                  background: "linear-gradient(180deg,#FFFFFF,#C9CED8)",
+                  boxShadow: "0 12px 30px -14px rgba(220,228,240,0.6)",
+                }}
+              >
+                <FileText width={15} height={15} strokeWidth={1.8} />
+                View report
+              </button>
+            }
+          />
+        )}
       </div>
+
+      <CertificateReportModal
+        open={certOpen}
+        onClose={() => setCertOpen(false)}
+        certificate={certificate}
+        markdown={reportMarkdown}
+        onDownload={() => void downloadReport()}
+      />
     </PageShell>
   );
 }

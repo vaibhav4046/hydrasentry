@@ -1,5 +1,5 @@
 /**
- * Bundled demo fixtures for Constellan.
+ * Bundled demo fixtures for HydraSentry.
  *
  * `fixtures/demo.json` is a STATIC SNAPSHOT captured from the FastAPI backend
  * running in demo mode (POST /runs/judge-demo, GET /scenarios, /results/summary,

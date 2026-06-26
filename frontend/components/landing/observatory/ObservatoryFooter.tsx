@@ -1,7 +1,7 @@
 import { CastellanEmblem } from "../castellan/CastellanEmblem";
 
 /**
- * Observatory footer, a hairline-topped bar with the Constellan wordmark on the
+ * Observatory footer, a hairline-topped bar with the HydraSentry wordmark on the
  * left and a mono coordinate/atlas tagline on the right. Restrained, monochrome.
  */
 export function ObservatoryFooter() {
@@ -32,7 +32,7 @@ export function ObservatoryFooter() {
           className="mono"
           style={{ fontSize: "10px", letterSpacing: "0.16em", color: "#5F6875" }}
         >
-CONSTELLAN · GRAPH-NATIVE CONTEXT INTEGRITY FOR HYDRADB AGENTS
+HYDRASENTRY · GRAPH-NATIVE PROOF, NOT PROMPT VIBES · HYDRADB AGENTS
         </div>
       </div>
     </footer>

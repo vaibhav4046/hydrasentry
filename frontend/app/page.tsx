@@ -1,12 +1,13 @@
 import { ObservatoryBackground } from "@/components/landing/observatory/ObservatoryBackground";
 import { ObservatoryNav } from "@/components/landing/observatory/ObservatoryNav";
-import { ObservatoryHero } from "@/components/landing/observatory/ObservatoryHero";
+import { ArtifactTreeHero } from "@/components/noir/ArtifactTreeHero";
+import { HeroCertificateSection } from "@/components/noir/HeroCertificateSection";
 import { ObservatorySections } from "@/components/landing/observatory/ObservatorySections";
 import { ObservatoryFinalCta } from "@/components/landing/observatory/ObservatoryFinalCta";
 import { ObservatoryFooter } from "@/components/landing/observatory/ObservatoryFooter";
 
 /**
- * Landing page (/), "Constellan: The Memory Observatory".
+ * Landing page (/), "HydraSentry: The Memory Observatory".
  *
  * A deliberate anti-AI-template direction: the homepage is a precision celestial
  * star-atlas / observatory console. The agent's memory is charted as a sparse
@@ -19,9 +20,9 @@ import { ObservatoryFooter } from "@/components/landing/observatory/ObservatoryF
  *
  * Layered like the cockpit: a fixed void background (ObservatoryBackground, z-0)
  * behind a relative content column (z-2). Order: coordinate announcement + nav,
- * editorial hero with the star-chart plate, the below-fold observatory sections
- * (instrument legend, observation log, instruments, reduction method), the
- * closing observation band, footer.
+ * the editorial ArtifactTreeHero (animated memory-graph fold), the below-fold
+ * observatory sections (instrument legend, observation log, instruments,
+ * reduction method), the closing observation band, footer.
  *
  * The announcement / nav / hero / final-CTA "Run Judge Demo" CTAs all fire the
  * real backend via runJudgeDemo() (bundled-demo fallback) and route into the
@@ -55,7 +56,13 @@ export default function LandingPage() {
           padding: "0 28px",
         }}
       >
-        <ObservatoryHero />
+        <ArtifactTreeHero />
+
+        {/* MIC mount point (a): the hero's "View Memory Certificate" CTA scrolls
+            here. Renders the Memory Integrity Certificate as a sealed document
+            plus a "View report" control that opens the final report modal. */}
+        <HeroCertificateSection anchorId="memory-certificate" />
+
         <ObservatorySections />
         <ObservatoryFinalCta />
       </main>

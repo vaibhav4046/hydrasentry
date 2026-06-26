@@ -137,11 +137,25 @@ export function ObservatoryHero() {
             </m.span>
           </h1>
 
+          {/* tagline lead-in */}
+          <m.p
+            variants={mastheadLine}
+            style={{
+              marginTop: "24px",
+              fontSize: "clamp(15px,1.3vw,18px)",
+              lineHeight: 1.4,
+              color: "#EAF0FA",
+              fontWeight: 500,
+            }}
+          >
+            Graph-native proof, not prompt vibes.
+          </m.p>
+
           {/* subcopy */}
           <m.p
             variants={mastheadLine}
             style={{
-              marginTop: "26px",
+              marginTop: "14px",
               maxWidth: "52ch",
               fontSize: "clamp(14px,1.15vw,16px)",
               lineHeight: 1.62,
@@ -149,7 +163,7 @@ export function ObservatoryHero() {
               textWrap: "pretty",
             }}
           >
-            Constellan is the context-integrity layer for AI agents. It replays a
+            HydraSentry is the context-integrity layer for AI agents. It replays a
             task against clean and poisoned HydraDB context, maps the exact{" "}
             <span className="mono" style={{ color: "#D9DEE7", fontSize: "0.92em" }}>
               query_paths

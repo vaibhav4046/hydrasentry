@@ -1,10 +1,12 @@
-# Constellan
+# HydraSentry
 
-**A context-integrity harness for AI agents that run on HydraDB.**
+**A context-integrity harness for AI agents that run on HydraDB. Graph-native proof, not prompt vibes.**
 
-> Repo: `hydrasentry`. The product is **Constellan**; the directory and some internal identifiers (tenant ids, the report header, a few code strings) keep the original `hydrasentry` name on purpose, so technical ids stay stable across the rebrand.
+> Repo and product are both `hydrasentry` / **HydraSentry**. Internal identifiers (tenant ids, the report header, the `python -m constellan` CLI module, a few code strings) keep their original names on purpose, so technical ids stay stable.
 
-Constellan red-teams the *memory and knowledge layer* of an agent, not just its prompt. It seeds an owned HydraDB tenant with a clean policy, injects a poisoned memory, replays the agent against both, and then shows you the **graph anatomy** of how the poisoned context travelled through HydraDB's retrieval paths into an unsafe tool action. It blocks that action through an MCP gateway, verifies SkillMake skills for hidden instructions, and runs the whole loop as a continuous, scheduled posture.
+**Replay the attack. Trace the path. Block the action. Certify the fix.** HydraSentry red-teams the *memory and knowledge layer* of an agent, not just its prompt. It seeds an owned HydraDB tenant with a clean policy, injects a poisoned memory, replays the agent against both, and then shows you the **graph anatomy** of how the poisoned context travelled through HydraDB's retrieval paths into an unsafe tool action. It blocks that action through an MCP gateway, verifies SkillMake skills for hidden instructions, seals every replay into a **Memory Integrity Certificate**, and runs the whole loop as a continuous, scheduled posture.
+
+Prompt scanners tell you something failed. HydraSentry shows you *how poisoned context reached the agent*, which chunk, via which retrieval relation, overriding which policy, driving which tool call, and stops it before the agent acts.
 
 Built for the HydraDB Build Blitz hackathon.
 
@@ -43,7 +45,7 @@ python -m constellan scan examples/refund_memories.json
 Expected output (trimmed):
 
 ```text
-Constellan local scan (no HydraDB key required)
+HydraSentry local scan (no HydraDB key required)
 ------------------------------------------------------------
 Task           : Process a £900 refund for this customer.
 Graph source   : local_graph  (local heuristic graph, NOT real HydraDB)
@@ -68,7 +70,7 @@ Flagged findings:
 
 Point it at your own JSON. A memories file is `{task?, policy?, memories: [{id?, text, trust?, relations?}, ...]}` (or a bare list of memories); mark a memory `"trust": "poisoned"` to flag it as the injected one. Add `--json` for the full machine-readable result. The same scan is also exposed over HTTP as `POST /scan/local` once the backend is running. This maps to **OWASP ASI06 (Memory Poisoning)** in the Agentic Security Initiative threat taxonomy.
 
-> HydraDB stays the **flagship** backend. The local adapter is a zero-setup way to try Constellan instantly; for graph-native `query_paths` evidence, run with a HydraDB key (`APP_MODE=real`). See [Adapters](#adapters).
+> HydraDB stays the **flagship** backend. The local adapter is a zero-setup way to try HydraSentry instantly; for graph-native `query_paths` evidence, run with a HydraDB key (`APP_MODE=real`). See [Adapters](#adapters).
 
 ---
 
@@ -82,11 +84,11 @@ These are not prompt bugs. They are **retrieval-graph bugs**, and prompt-testing
 - **PoisonedRAG** demonstrates that injecting a small number of crafted texts into a retrieval corpus reliably steers RAG systems to attacker-chosen answers. (USENIX Security 2025) https://www.usenix.org/conference/usenixsecurity25/presentation/zou
 - **Palo Alto Networks Unit 42** published a live proof-of-concept that poisons the persistent memory of an Amazon Bedrock Agent so the injected instruction survives across sessions. (Oct 2025) https://unit42.paloaltonetworks.com/agentic-ai-memory-security/
 - **CVE-2025-54136 ("MCPoison")** is an MCP tool-poisoning flaw: a previously approved MCP server configuration can be swapped for a malicious command that then runs silently on every reuse. It affected Cursor. https://nvd.nist.gov/vuln/detail/CVE-2025-54136
-- **OWASP Top 10 for LLM Applications 2025** added **LLM08: Vector and Embedding Weaknesses**, covering exactly the retrieval/RAG-layer poisoning class Constellan targets. https://genai.owasp.org/llmrisk/llm082025-vector-and-embedding-weaknesses/
+- **OWASP Top 10 for LLM Applications 2025** added **LLM08: Vector and Embedding Weaknesses**, covering exactly the retrieval/RAG-layer poisoning class HydraSentry targets. https://genai.owasp.org/llmrisk/llm082025-vector-and-embedding-weaknesses/
 
-The strongest true value proposition: **agents on graph memory inherit a blind spot that prompt-testing tools cannot see** — a retrieved memory silently overriding policy. Constellan replays clean vs poisoned HydraDB context, traces the exact `query_paths` the poison travelled, scores it deterministically, and blocks it at an MCP gateway before the agent acts, with honest REAL-vs-DERIVED provenance labelling.
+The strongest true value proposition: **agents on graph memory inherit a blind spot that prompt-testing tools cannot see**, a retrieved memory silently overriding policy. HydraSentry replays clean vs poisoned HydraDB context, traces the exact `query_paths` the poison travelled, scores it deterministically, and blocks it at an MCP gateway before the agent acts, with honest REAL-vs-DERIVED provenance labelling.
 
-### Constellan's five scenarios, mapped to OWASP LLM 2025
+### HydraSentry's five scenarios, mapped to OWASP LLM 2025
 
 | Scenario | Attack class | OWASP LLM 2025 |
 |----------|--------------|----------------|
@@ -98,27 +100,27 @@ The strongest true value proposition: **agents on graph memory inherit a blind s
 
 ## Why not just Promptfoo / Garak / PyRIT?
 
-Those tools test *prompts in isolation*. You give them an input, they give you a pass/fail on the output. That is useful, and Constellan is not trying to replace LLM red-teaming.
+Those tools test *prompts in isolation*. You give them an input, they give you a pass/fail on the output. That is useful, and HydraSentry is not trying to replace LLM red-teaming.
 
-What they do not do is explain **how poisoned data reached the model through the datastore**. When a HydraDB-backed agent misbehaves, the interesting question is not "did this prompt fail" — it is "which chunk, in which tenant, via which retrieval relation, overrode which policy, and drove which tool call." Constellan answers that:
+What they do not do is explain **how poisoned data reached the model through the datastore**. When a HydraDB-backed agent misbehaves, the interesting question is not "did this prompt fail", it is "which chunk, in which tenant, via which retrieval relation, overrode which policy, and drove which tool call." HydraSentry answers that:
 
 - It runs a **baseline vs. poisoned replay** so the behavior change is concrete, not asserted.
-- It renders the **context graph** — nodes and `query_paths` triplets — and taints the path from the poisoned source chunk to the unsafe action.
+- It renders the **context graph**, nodes and `query_paths` triplets, and taints the path from the poisoned source chunk to the unsafe action.
 - It **blocks** that action through an MCP gateway an agent host can actually call.
 - It **verifies skills** (SkillMake `SKILL.md` files) statically for hidden instructions before they are ever loaded.
 - It runs **autonomously** on a schedule and self-refines its detection patterns.
 
-Promptfoo tells you a prompt failed. Constellan shows you the graph anatomy of how poisoned context reached the agent, and stops it.
+Promptfoo tells you a prompt failed. HydraSentry shows you the graph anatomy of how poisoned context reached the agent, and stops it.
 
 ## Why HydraDB, and why `query_paths` matter
 
-HydraDB is not a flat vector store. Its query response carries a `graph_context` with `query_paths` — the relational triplets (`source --relation--> target`) that connect the chunks a query traversed. That is exactly the evidence Constellan needs: it lets the product show the *route* a poisoned chunk took, not just the fact that it was retrieved. The whole product is built around treating those `query_paths` as first-class forensic evidence.
+HydraDB is not a flat vector store. Its query response carries a `graph_context` with `query_paths`, the relational triplets (`source --relation--> target`) that connect the chunks a query traversed. That is exactly the evidence HydraSentry needs: it lets the product show the *route* a poisoned chunk took, not just the fact that it was retrieved. The whole product is built around treating those `query_paths` as first-class forensic evidence.
 
-When real HydraDB `query_paths` are present, the graph is labelled **REAL HYDRADB QUERY_PATHS**. When they are not (demo mode, or a query that returned no paths), Constellan renders a **DERIVED SCENARIO GRAPH FALLBACK** and labels it as such. The product never presents derived data as real HydraDB output. This honesty is enforced in code (`graph_extractor.py`) and in the report (`report.py`).
+When real HydraDB `query_paths` are present, the graph is labelled **REAL HYDRADB QUERY_PATHS**. When they are not (demo mode, or a query that returned no paths), HydraSentry renders a **DERIVED SCENARIO GRAPH FALLBACK** and labels it as such. The product never presents derived data as real HydraDB output. This honesty is enforced in code (`graph_extractor.py`) and in the report (`report.py`).
 
 ## Adapters
 
-The integrity engine talks to its context store through a single interface — the `HydraAdapter` ABC in `backend/hydra_client.py`. The taint/risk pipeline (`scenario_engine` -> `graph_extractor` -> `risk_engine` -> `report`) depends only on that interface and a normalized query-result shape, never on any one backend's specifics. That seam is what lets multiple backends drive the identical loop, and it is documented as a contract in the ABC docstring for anyone adding a new one.
+The integrity engine talks to its context store through a single interface, the `HydraAdapter` ABC in `backend/hydra_client.py`. The taint/risk pipeline (`scenario_engine` -> `graph_extractor` -> `risk_engine` -> `report`) depends only on that interface and a normalized query-result shape, never on any one backend's specifics. That seam is what lets multiple backends drive the identical loop, and it is documented as a contract in the ABC docstring for anyone adding a new one.
 
 | Adapter | Status | Graph source label | Setup |
 |---------|--------|--------------------|-------|
@@ -127,11 +129,22 @@ The integrity engine talks to its context store through a single interface — t
 | **Demo** (`DemoHydraAdapter`) | Bundled | `derived_scenario_graph` | None. Deterministic fixture graph powering the canonical judge demo. |
 | **Neo4j / Memgraph** | Roadmap | (planned) | Property-graph backends behind the same ABC. |
 
-HydraDB is the hero: it is the only backend that returns genuine graph `query_paths`, which is the whole reason Constellan can show the *route* a poisoned chunk travelled rather than just the fact it was retrieved. The Local adapter exists so a newcomer can run the full detection -> taint-trace -> score loop on their own data in about a minute, then graduate to HydraDB for real graph evidence. Provenance is always labelled honestly; derived and local graphs can never be presented as real HydraDB output.
+HydraDB is the hero: it is the only backend that returns genuine graph `query_paths`, which is the whole reason HydraSentry can show the *route* a poisoned chunk travelled rather than just the fact it was retrieved. The Local adapter exists so a newcomer can run the full detection -> taint-trace -> score loop on their own data in about a minute, then graduate to HydraDB for real graph evidence. Provenance is always labelled honestly; derived and local graphs can never be presented as real HydraDB output.
 
 ## Why MCP
 
-The whole point is to *act*, not just report. Constellan exposes an **MCP-inspired HTTP gateway** so an agent host can call `scan_context`, `replay_attack`, `verify_skill`, `quarantine_memory`, `generate_report`, and `schedule_scan` as tools, and read findings/reports/policies as resources. Write actions are guarded by a shared secret. This is what turns Constellan from a dashboard into a control surface.
+The whole point is to *act*, not just report. HydraSentry exposes an **MCP-inspired HTTP gateway** so an agent host can call `scan_context`, `replay_attack`, `verify_skill`, `quarantine_memory`, `generate_report`, and `schedule_scan` as tools, and read findings/reports/policies as resources. Write actions are guarded by a shared secret. This is what turns HydraSentry from a dashboard into a control surface.
+
+## The Memory Integrity Certificate (MIC)
+
+Prompt injection is transient; **memory poisoning persists**. Once a poisoned memory is retrieved, it reads as trusted context unless the system tracks provenance, replay behavior, and graph path evidence. The MIC is HydraSentry's answer: when the firewall severs a poisoned action, the run is sealed into a portable certificate that records, for one replay:
+
+- **What changed**: the baseline-vs-poisoned behavior diff and the deterministic risk score / band.
+- **Which node carried it**: the tainted source chunk and the `query_paths` triplets it travelled.
+- **Which tool would have fired**: the unsafe action the poisoned context was steering toward.
+- **What rule now prevents it**: the firewall decision plus the regression rule the finding becomes.
+
+**Every accepted finding becomes a regression rule**, so the same poisoned memory can never reach the agent twice. The certificate is rendered in the UI (hero, Results Center, report modal) from a single source of truth and is **provenance-honest**: a derived/demo run is labelled "derived scenario · demo data" and never claims a real HydraDB `query_paths` result.
 
 ---
 
@@ -139,20 +152,20 @@ The whole point is to *act*, not just report. Constellan exposes an **MCP-inspir
 
 [skillmake.xyz](https://skillmake.xyz) is a **HydraDB-powered** marketplace of agent `SKILL.md` files. Its own guidance is that installed skills are **not sandboxed** and should be inspected by hand before use. There is no SDK: a skill is installed by fetching its public install URL, `GET skillmake.xyz/i/<slug>`, which returns the raw `SKILL.md`.
 
-Constellan turns that manual "inspect it yourself" step into an automated pre-install check:
+HydraSentry turns that manual "inspect it yourself" step into an automated pre-install check:
 
-- `POST /skillmake/scan-url` takes a marketplace slug or install URL, pulls the real `SKILL.md` from `skillmake.xyz/i/<slug>` server-side, and runs it through the same static safety scanner used by `POST /skillmake/scan` and the `verify_skill` MCP tool. The result is a deterministic score, band, and per-line findings — the exact pre-install review skillmake.xyz tells you to do by hand.
-- **HydraDB powers both sides:** skillmake.xyz is built on HydraDB, and Constellan's harness is built on HydraDB, so the marketplace and the guard sit on the same substrate.
+- `POST /skillmake/scan-url` takes a marketplace slug or install URL, pulls the real `SKILL.md` from `skillmake.xyz/i/<slug>` server-side, and runs it through the same static safety scanner used by `POST /skillmake/scan` and the `verify_skill` MCP tool. The result is a deterministic score, band, and per-line findings: the exact pre-install review skillmake.xyz tells you to do by hand.
+- **HydraDB powers both sides:** skillmake.xyz is built on HydraDB, and HydraSentry's harness is built on HydraDB, so the marketplace and the guard sit on the same substrate.
 
-**Honest scope:** Constellan consumes skillmake.xyz's **public install URL** (`/i/<slug>`); this is not a documented, supported API, so the integration treats it as a best-effort fetch. The live pull is **opt-in**; when it is off or the network is unavailable, Constellan scans an **offline cached copy** of a skill so the demo never depends on a remote call. The scanner itself is fully deterministic either way.
+**Honest scope:** HydraSentry consumes skillmake.xyz's **public install URL** (`/i/<slug>`); this is not a documented, supported API, so the integration treats it as a best-effort fetch. The live pull is **opt-in**; when it is off or the network is unavailable, HydraSentry scans an **offline cached copy** of a skill so the demo never depends on a remote call. The scanner itself is fully deterministic either way.
 
 ---
 
 ## Architecture (monorepo)
 
 ```
-hydrasentry/            (product: Constellan)
-├── backend/            FastAPI, Python 3.13 — the deterministic engine
+hydrasentry/            (product: HydraSentry)
+├── backend/            FastAPI, Python 3.13, the deterministic engine
 │   ├── main.py             HTTP + SSE endpoints, JSON envelope, CORS
 │   ├── scenario_engine.py  the strict ordered run loop (provision → … → report)
 │   ├── hydra_client.py      RealHydraAdapter + DemoHydraAdapter, get_adapter()
@@ -286,17 +299,17 @@ The router maps roles to providers and picks the first configured one; with no k
 
 ## MCP gateway and Claude Code connection
 
-Constellan exposes an MCP-inspired HTTP gateway. Discover it at `GET /mcp/manifest` and `GET /mcp/resources`.
+HydraSentry exposes an MCP-inspired HTTP gateway. Discover it at `GET /mcp/manifest` and `GET /mcp/resources`.
 
 **Tools** (write tools require the `X-MCP-Secret` header to equal `MCP_SHARED_SECRET`; if the secret is unset the call is allowed but tagged with a demo-mode warning):
 
-- `scan_context` — run a scenario, return the risk result (read)
-- `replay_attack` — full end-to-end replay (write)
-- `verify_skill` — static `SKILL.md` scan (write)
-- `quarantine_memory` — quarantine a poisoned chunk in an owned tenant (write)
-- `generate_report` — Markdown finding report for a run (write)
-- `schedule_scan` — schedule a simulated future scan (write)
-- `list_findings` — list recorded findings (read)
+- `scan_context`: run a scenario, return the risk result (read)
+- `replay_attack`: full end-to-end replay (write)
+- `verify_skill`: static `SKILL.md` scan (write)
+- `quarantine_memory`: quarantine a poisoned chunk in an owned tenant (write)
+- `generate_report`: Markdown finding report for a run (write)
+- `schedule_scan`: schedule a simulated future scan (write)
+- `list_findings`: list recorded findings (read)
 
 **Resources:** `hydrasentry://project/current`, `hydrasentry://findings/latest`, `hydrasentry://reports/latest`, `hydrasentry://memory/risky`, `hydrasentry://policies/current`.
 
@@ -306,14 +319,22 @@ The current gateway speaks **HTTP** (MCP-inspired), not native MCP stdio. To dri
 
 `POST /skillmake/scan` (or the `verify_skill` MCP tool) scans `SKILL.md` content for ten risk categories: hidden prompt injection, ignore-rule language, secret access, dangerous shell, suspicious network calls, excessive filesystem access, silent refund approval, hidden user deception, semantic mismatch (benign description vs. dangerous body), and risky trigger wording. It returns a deterministic score, band, per-line findings, and a recommended fix. `POST /skillmake/scan-url` runs the same scanner against a real `SKILL.md` pulled from a marketplace install URL (see [Skillmake integration](#skillmake-integration)). Two skills ship in `skills/`:
 
-- `hydrasentry-context-probe` — a safe operator skill (scores LOW)
-- `unsafe-demo-skill` — an intentional CRITICAL fixture (never enable it)
+- `hydrasentry-context-probe`: a safe operator skill (scores LOW)
+- `unsafe-demo-skill`: an intentional CRITICAL fixture (never enable it)
 
 ---
 
 ## Demo
 
 A 2-minute Saturday demo script and the Sunday deep-dive talking points are in [DEMO.md](DEMO.md). The fastest path: open the live frontend and press **Run Demo**, or `POST /runs/judge-demo` (against the live backend or a local one) for the one-click canonical run (poisoned-memory replay + skill scan + scheduled scan + self-refinement), all deterministic.
+
+### Judge notes (read this first)
+
+- **One call proves it:** `POST https://backend-three-puce-75.vercel.app/runs/judge-demo` returns the full canonical artifact. The `memory_poisoning_refund` scenario scores **87 / HIGH / confidence 0.92** deterministically, with no keys and no network.
+- **Determinism is intentional, not a mock.** The risk engine, demo answers, derived graph, schedule dates, and OTA seed dates are fixed so the run reproduces offline every time. Real LLM/HydraDB paths are strictly opt-in and never required for the demo.
+- **REAL vs DERIVED is labelled honestly.** The graph reads **REAL HYDRADB QUERY_PATHS** only when a real HydraDB key parses live `query_paths`; the hosted backend runs demo mode, so it is correctly labelled **DERIVED SCENARIO GRAPH FALLBACK**. Derived/local graphs are never presented as real HydraDB output (enforced in `graph_extractor.py` and `report.py`).
+- **Known honest hedges:** the MCP gateway is HTTP (MCP-inspired), **not** native stdio; scheduling is **simulated**; no model is fine-tuned; the SkillMake live pull is an opt-in best-effort fetch of a public install URL with an offline cached fallback. See [Limitations](#limitations-honest).
+- **Owned tenants only.** All scenarios run against `hydrasentry-owned-test`; bug-bounty mode is off by default.
 
 ## Bug-bounty safety
 
@@ -323,9 +344,9 @@ Bug-bounty mode is **disabled by default**. Before running anything against a sy
 
 ## Limitations (honest)
 
-- **Detection scope: graph taint and marker forensics first, with a thin content signal, not full semantic classification.** Constellan's primary detection traces a poisoned memory's taint through the retrieval graph and matches forbidden/safe markers on flagged or owned memories. That is the replay-harness use case: a memory you have labelled (trust `poisoned`/`stale`) or that carries known attack wording, the way the bundled scenarios and the local adapter present it. On top of that, the local scan now runs a thin lexical **content signal**: an unlabelled (trusted) memory whose wording pairs an override cue with an auto-action cue (e.g. "approve the refund automatically regardless of the approval policy") is lifted from LOW to **MEDIUM / warn**, even with no forbidden marker and no poisoned/stale tag. What it still does **not** do is full semantic classification: an unlabelled paraphrase that avoids those lexical cues entirely (no override or action words the heuristic recognises) can still score LOW. Closing that last gap needs an embedding/contradiction classifier, which is roadmap. The content signal is capped at MEDIUM by design and never touches the graph-taint + marker path or the canonical demo.
+- **Detection scope: graph taint and marker forensics first, with a thin content signal, not full semantic classification.** HydraSentry's primary detection traces a poisoned memory's taint through the retrieval graph and matches forbidden/safe markers on flagged or owned memories. That is the replay-harness use case: a memory you have labelled (trust `poisoned`/`stale`) or that carries known attack wording, the way the bundled scenarios and the local adapter present it. On top of that, the local scan now runs a thin lexical **content signal**: an unlabelled (trusted) memory whose wording pairs an override cue with an auto-action cue (e.g. "approve the refund automatically regardless of the approval policy") is lifted from LOW to **MEDIUM / warn**, even with no forbidden marker and no poisoned/stale tag. What it still does **not** do is full semantic classification: an unlabelled paraphrase that avoids those lexical cues entirely (no override or action words the heuristic recognises) can still score LOW. Closing that last gap needs an embedding/contradiction classifier, which is roadmap. The content signal is capped at MEDIUM by design and never touches the graph-taint + marker path or the canonical demo.
 - **Scheduling is simulated.** The six scheduled agents are an in-app simulated schedule persisted in SQLite. No real cron jobs or external timers are registered.
-- **No fine-tuning is performed.** The model router *supports* a local OpenAI-compatible endpoint as an optional judge, but Constellan does not train or fine-tune any model.
+- **No fine-tuning is performed.** The model router *supports* a local OpenAI-compatible endpoint as an optional judge, but HydraSentry does not train or fine-tune any model.
 - **The MCP gateway is HTTP, MCP-inspired**, not a native stdio MCP server.
 - **The SkillMake live pull consumes a public install URL** (`skillmake.xyz/i/<slug>`), not a documented API. It is opt-in, with an offline cached fallback so the demo never depends on a remote call.
 - **The hosted backend runs in demo mode.** Its graph is correctly labelled DERIVED SCENARIO GRAPH FALLBACK; REAL HYDRADB QUERY_PATHS appear only when a real HydraDB key drives a live query. Real HydraDB / LLM paths are strictly opt-in and never required.
@@ -341,5 +362,5 @@ Bug-bounty mode is **disabled by default**. Before running anything against a sy
 
 ### Deployment
 
-- **Frontend (Vercel) — live** at https://frontend-nu-ochre-z41mw3z0l5.vercel.app, built from `frontend/`. Set `NEXT_PUBLIC_BACKEND_URL` to the backend URL in the Vercel project settings.
-- **Backend (Vercel) — live** at https://backend-three-puce-75.vercel.app, running `APP_MODE=demo`. `render.yaml` is also provided as a Render Blueprint alternative (build `pip install -r requirements.txt`, start `uvicorn main:app --host 0.0.0.0 --port $PORT`, health-check `/health`). Provider and HydraDB keys are set in the host dashboard only for real mode. SQLite and `runs/*.json` are ephemeral on serverless/default filesystems.
+- **Frontend (Vercel), live** at https://frontend-nu-ochre-z41mw3z0l5.vercel.app, built from `frontend/`. Set `NEXT_PUBLIC_BACKEND_URL` to the backend URL in the Vercel project settings.
+- **Backend (Vercel), live** at https://backend-three-puce-75.vercel.app, running `APP_MODE=demo`. `render.yaml` is also provided as a Render Blueprint alternative (build `pip install -r requirements.txt`, start `uvicorn main:app --host 0.0.0.0 --port $PORT`, health-check `/health`). Provider and HydraDB keys are set in the host dashboard only for real mode. SQLite and `runs/*.json` are ephemeral on serverless/default filesystems.

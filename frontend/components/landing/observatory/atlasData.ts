@@ -1,5 +1,5 @@
 /**
- * Constellan, Memory Observatory star-atlas data.
+ * HydraSentry, Memory Observatory star-atlas data.
  *
  * The homepage centerpiece is a precision celestial chart (not a glowing neural
  * blob): the agent's memory rendered as a sparse constellation. Each star is a

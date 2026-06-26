@@ -1,6 +1,6 @@
-"""Constellan zero-setup CLI.
+"""HydraSentry zero-setup CLI.
 
-Run the full Constellan pipeline on your OWN memories with no HydraDB key, no
+Run the full HydraSentry pipeline on your OWN memories with no HydraDB key, no
 account, and no network:
 
     python -m constellan scan examples/refund_memories.json
@@ -51,7 +51,7 @@ def _render(result: dict[str, Any]) -> str:
     """Render the scan result as readable plain text for the terminal."""
     risk = result["risk"]
     lines: list[str] = []
-    lines.append("Constellan local scan (no HydraDB key required)")
+    lines.append("HydraSentry local scan (no HydraDB key required)")
     lines.append(_RULE)
     lines.append(f"Task           : {result['task']}")
     lines.append(f"Graph source   : {result['graph_source']}  "
@@ -118,7 +118,7 @@ def _cmd_scan(args: argparse.Namespace) -> int:
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="constellan",
-        description="Constellan: context-integrity harness for AI agent memory. "
+        description="HydraSentry: context-integrity harness for AI agent memory. "
                     "Run a poisoned-memory scan on your own data with no HydraDB key.",
     )
     sub = parser.add_subparsers(dest="command", required=True)

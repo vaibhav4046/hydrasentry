@@ -28,9 +28,18 @@ export interface DemoState {
   currentRun: RunArtifact | null;
   isRunning: boolean;
   stage: string | null;
+  /**
+   * A monotonically-increasing nonce bumped each time an on-page "Run Judge
+   * Demo" trigger fires (hero CTA, header button). The homepage JudgeDemo
+   * controller watches this to start its visible in-place 6-stage sequence
+   * without a route change. Transient (never persisted); zero is "no run yet".
+   */
+  judgeRunNonce: number;
   setRun: (run: RunArtifact | null) => void;
   setRunning: (isRunning: boolean) => void;
   setStage: (stage: string | null) => void;
+  /** Bump the nonce to ask the on-page controller to play the sequence. */
+  triggerJudgeRun: () => void;
   reset: () => void;
 }
 
@@ -43,10 +52,14 @@ export const useDemoStore = create<DemoState>()(
       currentRun: null,
       isRunning: false,
       stage: null,
+      judgeRunNonce: 0,
       setRun: (run) => set({ currentRun: run }),
       setRunning: (isRunning) => set({ isRunning }),
       setStage: (stage) => set({ stage }),
-      reset: () => set({ currentRun: null, isRunning: false, stage: null }),
+      triggerJudgeRun: () =>
+        set((s) => ({ judgeRunNonce: s.judgeRunNonce + 1 })),
+      reset: () =>
+        set({ currentRun: null, isRunning: false, stage: null }),
     }),
     {
       name: STORAGE_KEY,

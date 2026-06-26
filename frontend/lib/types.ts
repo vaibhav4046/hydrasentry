@@ -1,5 +1,5 @@
 /**
- * TypeScript contract for the Constellan backend RUN ARTIFACT and related
+ * TypeScript contract for the HydraSentry backend RUN ARTIFACT and related
  * payloads. These mirror the FastAPI responses (see backend/scenario_engine.py
  * and backend/main.py). String-literal unions reflect the documented contract;
  * where the live engine emits looser values (e.g. firewall mode strings,

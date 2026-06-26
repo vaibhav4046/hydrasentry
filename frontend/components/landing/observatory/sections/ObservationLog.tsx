@@ -16,7 +16,7 @@ import {
  *
  * Replaces the old tall vertical timeline with a COMPACT, animated "transit"
  * diagram (roughly one viewport, no long scroll): the poisoned memory crosses
- * the Constellan pipeline like a body transiting a sensor meridian. Nine real
+ * the HydraSentry pipeline like a body transiting a sensor meridian. Nine real
  * stations sit on a single responsive SVG track.
  *
  *   wide  (>= 640px): a serpentine meridian, row 1 left->right, U-turn, row 2
@@ -252,9 +252,9 @@ export function ObservationLog() {
           variants={mastheadLine}
           style={{ maxWidth: "40ch", fontSize: "13.5px", lineHeight: 1.62, color: "#8B94A1" }}
         >
-          Most tools tell you a prompt failed. Constellan traces the exact graph
-          path poisoned context took toward the agent, nine recorded steps, one
-          blocked at the firewall.
+          Prompt scanners tell you something failed. HydraSentry shows how
+          poisoned context reached the agent, nine recorded steps along the exact
+          graph path, one blocked at the firewall.
         </m.p>
       </div>
 
@@ -275,7 +275,7 @@ export function ObservationLog() {
           viewBox={`0 0 ${L.vbW} ${L.vbH}`}
           className="obs-transit-svg"
           role="img"
-          aria-label="How a poisoned memory moves through the Constellan pipeline: seed clean context, baseline replay (safe), inject poison, poisoned replay (compromised), score risk 87 high, extract the tainted query_paths graph, block at the MCP firewall, quarantine, and export the evidence report."
+          aria-label="How a poisoned memory moves through the HydraSentry pipeline: seed clean context, baseline replay (safe), inject poison, poisoned replay (compromised), score risk 87 high, extract the tainted query_paths graph, block at the MCP firewall, quarantine, and export the evidence report."
           style={{ width: "100%", height: "auto", display: "block", overflow: "visible" }}
         >
           {/* base track (dim hairline) */}

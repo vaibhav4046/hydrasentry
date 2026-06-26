@@ -1,7 +1,7 @@
 /**
- * Deterministic particle-field model for the Constellan hero, a monochrome
+ * Deterministic particle-field model for the HydraSentry hero, a monochrome
  * "guarded memory graph". HydraDB renders its graph as a luminous voxel tree of
- * thousands of heat-mapped dots that grow and shimmer; Constellan renders the
+ * thousands of heat-mapped dots that grow and shimmer; HydraSentry renders the
  * same DNA in STRICT MONOCHROME: a dense breathing CORE cluster with synaptic
  * EDGES built from streams of silver particles that flow core -> node like
  * memories. Danger is intensity (brighter / faster / denser white), never hue.

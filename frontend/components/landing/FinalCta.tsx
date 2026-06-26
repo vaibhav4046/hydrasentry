@@ -32,7 +32,7 @@ export function FinalCta() {
           </h2>
           <p className="max-w-xl text-pretty text-[17px] leading-relaxed text-muted">
             Fire the end-to-end judge demo against the live backend and watch
-            Constellan replay, score, block, and report a memory-poisoning
+            HydraSentry replay, score, block, and report a memory-poisoning
             attack in seconds.
           </p>
           <RunDemoButton label="Run Judge Demo" size="lg" />

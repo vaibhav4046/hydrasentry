@@ -2,15 +2,20 @@
 
 import { useEffect, useState } from "react";
 import { CastellanEmblem } from "../castellan/CastellanEmblem";
-import { useRunJudgeDemo } from "../castellan/useRunJudgeDemo";
+import { useDemoStore } from "@/store/useDemoStore";
 
 /**
  * Observatory announcement bar + sticky nav. Reskins the cockpit run-demo flow
  * into the atlas language: a hairline coordinate announcement strip, the
- * Constellan emblem/wordmark, mono small-caps nav links, and a refined transit
+ * HydraSentry emblem/wordmark, mono small-caps nav links, and a refined transit
  * button (sharp 2px, not a rounded gradient pill). The nav fades to glass past
- * 24px of scroll. The announcement and the button both fire the real backend
- * judge demo via runJudgeDemo() (bundled fallback) → cockpit at /results.
+ * 24px of scroll.
+ *
+ * The announcement and the "Run Judge Demo" button both drive the visible
+ * in-place 6-stage sequence on the homepage: they bump `judgeRunNonce` in the
+ * shared demo store, which the hero's JudgeDemoController watches to play the
+ * sequence and scroll the hero into view (no route change). The controller fires
+ * the real backend in parallel to persist the canonical artifact.
  */
 
 const NAV_LINKS: { label: string; href: string }[] = [
@@ -46,7 +51,9 @@ function btnDrop(e: React.MouseEvent<HTMLElement>) {
 
 export function ObservatoryNav() {
   const [scrolled, setScrolled] = useState(false);
-  const { run, isRunning } = useRunJudgeDemo();
+  const triggerJudgeRun = useDemoStore((s) => s.triggerJudgeRun);
+  const isRunning = useDemoStore((s) => s.isRunning);
+  const run = triggerJudgeRun;
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 24);
@@ -97,7 +104,7 @@ export function ObservatoryNav() {
             color: "#8B94A1",
           }}
         >
-          Watch Constellan catch a poisoned memory in one click ·{" "}
+          Watch HydraSentry catch a poisoned memory in one click ·{" "}
           <span style={{ color: "#D9DEE7" }}>
             {isRunning ? "running…" : "run it"}
           </span>

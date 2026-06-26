@@ -344,7 +344,7 @@ export default function SkillMakePage() {
             }}
           >
             Skills sourced live from skillmake.xyz; semantic search powered by
-            HydraDB. Constellan is the pre-install safety check skillmake.xyz
+            HydraDB. HydraSentry is the pre-install safety check skillmake.xyz
             tells you to run by hand.
           </div>
         </div>

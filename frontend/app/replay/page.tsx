@@ -62,7 +62,7 @@ export default function ReplayPage() {
   // judge-demo run (so a real run flips it to 87/HIGH/poisoned). Every other tab
   // renders that scenario's real, distinct baseline/poisoned answers from the
   // loaded scenario data, with a representative "attack caught" posture (the
-  // poisoned reply is the unsafe behavior Constellan flags). No fake sameness.
+  // poisoned reply is the unsafe behavior HydraSentry flags). No fake sameness.
   const view = scenarioView({ isCanonical, v, selected });
   const p = view.poisoned;
 
@@ -318,7 +318,7 @@ type ReplayView = Pick<
  * real run flips it to 87/HIGH/poisoned). Every other tab renders that
  * scenario's real, distinct baseline_answer / poisoned_answer with a
  * representative "attack caught" posture: the poisoned reply IS the unsafe
- * behavior Constellan flags, so the cards show UNSAFE / HIGH honestly rather
+ * behavior HydraSentry flags, so the cards show UNSAFE / HIGH honestly rather
  * than repeating the refund scenario's text.
  */
 function scenarioView({

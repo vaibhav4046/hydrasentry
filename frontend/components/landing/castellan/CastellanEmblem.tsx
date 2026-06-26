@@ -1,10 +1,10 @@
 /**
- * Constellan emblem + wordmark lockup for the homepage nav/footer. Matches the
+ * HydraSentry emblem + wordmark lockup for the homepage nav/footer. Matches the
  * reference renders (hero2/hero3.png): a small circular "memory node" emblem, a
  * bright core dot inside a faint orbit ring with a tick, next to the wordmark
  * where "Hydra" is muted silver and "Sentry" is white. Pure vector, monochrome
  * (silver/white only), sharp at any size. The source's CASTELLAN dot-mark is
- * reinterpreted as the Constellan emblem the reference renders show.
+ * reinterpreted as the HydraSentry emblem the reference renders show.
  */
 interface CastellanEmblemProps {
   /** Pixel size of the round emblem; the wordmark scales alongside it. */
@@ -31,7 +31,7 @@ export function CastellanEmblem({
         height={size}
         viewBox="0 0 28 28"
         role="img"
-        aria-label="Constellan"
+        aria-label="HydraSentry"
         style={{ display: "block", overflow: "visible" }}
       >
         {/* faint orbit ring */}
@@ -67,8 +67,8 @@ export function CastellanEmblem({
             letterSpacing: "-0.01em",
           }}
         >
-          <span style={{ fontWeight: 500, color: "#AEB6C2" }}>Con</span>
-          <span style={{ fontWeight: 700, color: "#fff" }}>stellan</span>
+          <span style={{ fontWeight: 500, color: "#AEB6C2" }}>Hydra</span>
+          <span style={{ fontWeight: 700, color: "#fff" }}>Sentry</span>
         </span>
       )}
     </span>

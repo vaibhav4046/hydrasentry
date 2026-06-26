@@ -1,7 +1,7 @@
 /**
  * Ground-truth landing content, ported 1:1 from the Castellan design source
- * (docs/castellan_import/Constellan.dc.html, the renderVals() data block).
- * The brand reads "Constellan" (the reference renders show the Constellan
+ * (docs/castellan_import/HydraSentry.dc.html, the renderVals() data block).
+ * The brand reads "HydraSentry" (the reference renders show the HydraSentry
  * wordmark over the Castellan layout); every other string is verbatim from the
  * source so the homepage stays same-to-same. Used by the homepage sections.
  */
@@ -9,7 +9,7 @@
 export const ANNOUNCEMENT = {
   pill: "NEW",
   // The source mono token is rendered inline inside the sentence.
-  lead: "Constellan scans HydraDB",
+  lead: "HydraSentry scans HydraDB",
   token: "query_paths",
   rest: ", SkillMake skills, and MCP context before agents act",
 } as const;
@@ -25,7 +25,7 @@ export const HERO = {
   kicker: "HYDRADB NATIVE · CONTEXT INTEGRITY · MCP SECURITY",
   headline: "Secure the memory layer before your agent acts.",
   subcopy:
-    "Constellan replays agent tasks against clean and poisoned HydraDB context, visualizes the exact graph path that caused failure, blocks unsafe memory through MCP, verifies SkillMake skills, and exports evidence reports.",
+    "HydraSentry replays agent tasks against clean and poisoned HydraDB context, visualizes the exact graph path that caused failure, blocks unsafe memory through MCP, verifies SkillMake skills, and exports evidence reports.",
 } as const;
 
 export interface PrimitiveDef {

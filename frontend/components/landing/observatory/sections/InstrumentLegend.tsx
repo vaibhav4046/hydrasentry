@@ -16,7 +16,23 @@ import { mastheadLine } from "@/lib/motion";
 export function InstrumentLegend() {
   return (
     <RevealSection id="product" style={{ padding: "72px 0 28px" }}>
-      <SectionMarker index="00" label="WHAT CONSTELLAN DOES" />
+      <SectionMarker index="00" label="WHAT HYDRASENTRY DOES" />
+      <m.p
+        variants={mastheadLine}
+        style={{
+          marginTop: "18px",
+          maxWidth: "52ch",
+          fontSize: "15px",
+          lineHeight: 1.5,
+          color: "#C9D2E0",
+          fontWeight: 500,
+        }}
+      >
+        Replay the attack. Trace the path. Block the action. Certify the fix.{" "}
+        <span style={{ color: "#8B94A1", fontWeight: 400 }}>
+          Graph-native proof, not prompt vibes.
+        </span>
+      </m.p>
       <m.div
         variants={mastheadLine}
         className="obs-grid-4"

@@ -38,7 +38,7 @@ const DEFAULT_AGENTS: AgentDef[] = [
 ];
 
 /**
- * Grid of the eight Constellan agents. Each tile is a glass card with a
+ * Grid of the eight HydraSentry agents. Each tile is a glass card with a
  * monochrome line icon, name, and one-line role. Staggered reveal + hover lift.
  */
 export function AgentCrew({ agents = DEFAULT_AGENTS, className }: AgentCrewProps) {

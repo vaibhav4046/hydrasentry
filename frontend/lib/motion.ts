@@ -1,5 +1,5 @@
 /**
- * Shared Framer Motion variants for Constellan.
+ * Shared Framer Motion variants for HydraSentry.
  *
  * House style: slow, cinematic, never bouncy. Durations 0.45–0.8s,
  * ease [0.22, 1, 0.36, 1]. Reveal motion leans on opacity + small y +
@@ -81,16 +81,6 @@ export const graphEdgeReveal: Variants = {
     opacity: 1,
     transition: { duration: 0.9, ease: EASE_OUT_EXPO },
   },
-};
-
-/**
- * Risk count-up easing for animated numerics. The numeric tween itself is
- * driven by the component (animate/useMotionValue); this exports the shared
- * transition so all counters feel identical.
- */
-export const riskCountUp: Transition = {
-  duration: 1.1,
-  ease: EASE_OUT_EXPO,
 };
 
 /** Per-line terminal reveal. Stagger with `staggerContainer` on the parent. */
