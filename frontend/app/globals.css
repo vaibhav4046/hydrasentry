@@ -85,7 +85,7 @@
   body {
     background: var(--hs-bg-base);
     color: var(--hs-text-primary);
-    font-family: var(--font-geist-sans), "Inter Tight", system-ui, sans-serif;
+    font-family: var(--font-geist-sans), system-ui, sans-serif;
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
     /* Castellan tabular figures across the whole surface. */
@@ -757,12 +757,12 @@
    This is the deliberate anti-template type: a high-contrast literary serif
    instead of Inter/Geist bold. Optical sizing pinned large; ligatures on. */
 .observatory-landing .obs-display {
-  font-family: var(--font-display), "Fraunces", Georgia, "Times New Roman", serif;
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
   font-optical-sizing: auto;
   font-feature-settings: "liga" 1, "dlig" 1;
 }
 .observatory-landing .obs-display-italic {
-  font-family: var(--font-display), "Fraunces", Georgia, serif;
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
 }
 
 /* data-reveal entrance is inherited from .castellan-landing (page.tsx keeps

@@ -118,7 +118,7 @@ export function ObservatoryHero() {
                 className="obs-display-italic"
                 style={{
                   display: "inline-block",
-                  fontStyle: "italic",
+                  fontStyle: "normal",
                   fontWeight: 400,
                   color: "#EAF0FA",
                 }}

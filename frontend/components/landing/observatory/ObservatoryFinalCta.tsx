@@ -95,7 +95,7 @@ export function ObservatoryFinalCta() {
             Observe the attack before
             <br />
             your users{" "}
-            <em style={{ fontStyle: "italic", fontWeight: 400, color: "#EAF0FA" }}>
+            <em style={{ fontStyle: "normal", fontWeight: 400, color: "#EAF0FA" }}>
               ever do.
             </em>
           </h2>

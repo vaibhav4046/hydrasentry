@@ -47,7 +47,7 @@ export function ObservationLog() {
             }}
           >
             The transit of a{" "}
-            <em style={{ fontStyle: "italic", fontWeight: 400, color: "#EAF0FA" }}>
+            <em style={{ fontStyle: "normal", fontWeight: 400, color: "#EAF0FA" }}>
               poisoned memory
             </em>
           </m.h2>
