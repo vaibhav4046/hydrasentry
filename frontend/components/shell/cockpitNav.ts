@@ -30,7 +30,7 @@ export const COCKPIT_NAV: CockpitNavGroup[] = [
   {
     label: "OPERATIONS",
     items: [
-      { label: "Mission Control", href: "/mission", icon: "mission" },
+      { label: "Observatory", href: "/mission", icon: "mission" },
       { label: "Replay Lab", href: "/replay", icon: "replay", badge: "5" },
       { label: "Context Graph", href: "/graph", icon: "graph" },
     ],

@@ -9,7 +9,7 @@ const MONO = "var(--font-geist-mono), 'JetBrains Mono', monospace";
 const AUTONOMY = ["Manual", "Copilot", "Autopilot"];
 
 /**
- * Command (Mission Control) — the flagship cockpit surface, ported 1:1 from the
+ * Command (Observatory) — the flagship cockpit surface, ported 1:1 from the
  * Castellan source. An ACTIVE MISSION banner with a Manual/Copilot/Autopilot
  * segmented toggle, a row of four big-number metric cards, the eight-agent crew,
  * and a live activity log. All values are wired to the REAL run via
