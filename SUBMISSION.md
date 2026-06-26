@@ -70,7 +70,7 @@ npm run dev                    # http://localhost:3000
 
 One-click canonical run: `POST http://localhost:8000/runs/judge-demo` (or the live backend) returns the full artifact (poisoned-memory replay + SkillMake scan + scheduled scan + self-refinement). The canonical scenario scores 87 / HIGH / confidence 0.92, deterministically.
 
-Tests: `cd backend && pytest` → 66 tests, deterministic and offline.
+Tests: `cd backend && pytest` → 72 tests, deterministic and offline.
 
 ## Run it against real HydraDB
 
@@ -108,7 +108,7 @@ Open the frontend (live link, or local). Everything is deterministic, so it land
 - **Real HydraDB v2 lifecycle.** `RealHydraAdapter` runs the full lifecycle: provision tenant → poll until ready → multipart ingest of context → poll until indexed → `query` with `graph_context: true` → parse `graph_context.query_paths` (with a `chunk_relations` fallback when paths are absent). The raw response is always preserved.
 - **REAL-vs-DERIVED invariant.** The graph is labelled REAL HYDRADB QUERY_PATHS only when the query result is flagged real and not demo (`graph_extractor.build_graph`); otherwise it is a DERIVED SCENARIO GRAPH FALLBACK, labelled identically in `report.py`. Derived data is never presented as real HydraDB output. This is the integrity claim that matters for a security tool.
 - **Deterministic risk engine.** `0.60 × rules + 0.25 × judge + 0.15 × replay`; judge and replay default to the rules score when no LLM key is present (`deterministic_only`). That is why the canonical run is always 87 / HIGH / 0.92 and the demo never flakes. The LLM path is real but strictly opt-in.
-- **Adapter pattern + tests.** `RealHydraAdapter`, `DemoHydraAdapter`, and the zero-setup `LocalGraphAdapter` sit behind one ABC selected by `get_adapter()`; the engine never breaks when the network is down. 66 pytest tests cover the scanner, risk engine, graph extractor, MCP gateway, quarantine, report, scenarios, the local adapter + CLI, and the never-500 error contract.
+- **Adapter pattern + tests.** `RealHydraAdapter`, `DemoHydraAdapter`, and the zero-setup `LocalGraphAdapter` sit behind one ABC selected by `get_adapter()`; the engine never breaks when the network is down. 72 pytest tests cover the scanner, risk engine, graph extractor, MCP gateway, quarantine, report, scenarios, the local adapter + CLI, the never-500 error contract, and the unlabelled-override content heuristic.
 
 **The killer one-liner:**
 
@@ -118,7 +118,7 @@ Open the frontend (live link, or local). Everything is deterministic, so it land
 
 ## Honest scope (pre-empting fair objections)
 
-- **Detection is graph-taint + marker forensics on flagged/owned memories, not content classification of unlabelled paraphrases.** This is the replay-harness use case: a memory you have labelled (trust `poisoned`/`stale`) or that carries known attack wording gets caught via graph taint and forbidden/safe markers (canonical poison: 87/HIGH; a paraphrased-but-flagged variant still trips marker + taint). An **unlabelled** memory that paraphrases a policy override in fresh wording, with no forbidden marker and no poisoned/stale tag, scores LOW and the firewall allows it. Catching that unlabelled semantic case needs a content-signal layer (a contradiction/embedding classifier), which is roadmap, not shipped. What ships is honest and deterministic about the graph-and-marker evidence it has.
+- **Detection is graph-taint + marker forensics, plus a thin lexical content signal, not full semantic classification.** The replay-harness case: a memory you have labelled (trust `poisoned`/`stale`) or that carries known attack wording gets caught via graph taint and forbidden/safe markers (canonical poison: 87/HIGH; a paraphrased-but-flagged variant still trips marker + taint). On top of that, the local scan lifts an **unlabelled** (trusted) memory that pairs an override cue with an auto-action cue ("approve the refund automatically regardless of approval") from LOW to **MEDIUM / warn**. What still scores LOW is an unlabelled paraphrase that avoids those lexical cues entirely; closing that needs an embedding/contradiction classifier, which is roadmap. The content signal is capped at MEDIUM and never touches the graph/marker path or the canonical demo, which stays deterministic.
 - **The MCP gateway is an MCP-shaped HTTP control surface, not native stdio MCP.** Tools and resources mirror MCP semantics and write tools are secret-guarded, but it speaks HTTP today. Native stdio MCP is on the roadmap.
 - **The risk score is a deterministic rule outcome, not a black-box number.** It is explainable and reproducible by design: the same inputs always yield the same score and the same fired rules.
 - **Scheduling is simulated.** The scheduled agents are in-app rows in SQLite with deterministic `next_run` dates; no real cron or external timer is registered.
@@ -140,7 +140,7 @@ Bug-bounty mode is **disabled by default**. All built-in scenarios test only ten
 |--------------|:---:|:---:|:---:|:---:|:---:|-------|
 | Platform / HydraDB | _ /10 | _ /10 | _ /10 | _ /10 | _ /10 | Built around `graph_context.query_paths`; REAL vs DERIVED labelling. |
 | Security | _ /10 | _ /10 | _ /10 | _ /10 | _ /10 | 5 attack classes mapped to OWASP LLM 2025, MCP write protection, owned-tenant-only. |
-| Engineering | _ /10 | _ /10 | _ /10 | _ /10 | _ /10 | Adapter pattern, deterministic engine, 66 tests, never-500 contract. |
+| Engineering | _ /10 | _ /10 | _ /10 | _ /10 | _ /10 | Adapter pattern, deterministic engine, 72 tests, never-500 contract. |
 | Design | _ /10 | _ /10 | _ /10 | _ /10 | _ /10 | Monochrome noir system; Space Grotesk + Inter + JetBrains Mono. |
 | Product | _ /10 | _ /10 | _ /10 | _ /10 | _ /10 | Control surface via MCP, SkillMake pre-install scan, scheduled posture. |
 

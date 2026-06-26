@@ -132,5 +132,5 @@ No. Every scenario is scoped to `hydrasentry-owned-test`. The cross-subtenant le
 - [ ] HydraDB reachable: the warm-and-query loop in section 2 returns `source= real_query_paths`.
 - [ ] Public demo UI loads and runs `memory_poisoning_refund` to 87 / HIGH.
 - [ ] `POST .../runs/judge-demo` returns 87 / HIGH (the one-click fallback).
-- [ ] `pytest -q` in `backend/` is green (66 passed).
+- [ ] `pytest -q` in `backend/` is green (72 passed).
 - [ ] Pre-warm the run ~60 to 90s before going live (optionally with a fresh `sub_tenant` per section 2), and confirm the warm call printed `source= real_query_paths`.
