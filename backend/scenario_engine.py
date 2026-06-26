@@ -12,6 +12,7 @@ demo mode.
 from __future__ import annotations
 
 import logging
+import time
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
@@ -78,6 +79,45 @@ def _poison_memory_id(scenario: dict[str, Any]) -> str | None:
     return poison[0].get("chunk_id") if poison else None
 
 
+# Bounded retry for the REAL HydraDB query. Graph extraction trails indexing by
+# a few seconds, so the first /query can come back without graph triplets; we
+# re-issue it a handful of times before accepting the derived fallback. Sized so
+# the worst case (no real graph ever) costs ~45s, comfortably under typical
+# request budgets, and the best case (real on the first try) costs nothing.
+_QUERY_RETRY_ATTEMPTS = 4
+_QUERY_RETRY_INTERVAL = 5.0
+
+
+def _query_with_retry(
+    adapter: Any, tenant: str, sub: str, task: str,
+) -> dict[str, Any]:
+    """Query HydraDB, retrying only in the REAL path until real triplets land.
+
+    Demo mode is unchanged: the demo adapter never reports ``real`` true, so it
+    is queried exactly once and the loop returns immediately. In the real path
+    the query is polled up to ``_QUERY_RETRY_ATTEMPTS`` times at
+    ``_QUERY_RETRY_INTERVAL`` spacing; the first result carrying real triplets
+    wins, otherwise the last result is returned and the caller derives a graph.
+    """
+    result = adapter.query(tenant, sub, task)
+    if not getattr(adapter, "is_real", False):
+        return result
+    if result.get("real"):
+        logger.info("real query returned triplets on attempt 1 basis=%s",
+                    result.get("graph_basis"))
+        return result
+    for attempt in range(2, _QUERY_RETRY_ATTEMPTS + 1):
+        time.sleep(_QUERY_RETRY_INTERVAL)
+        result = adapter.query(tenant, sub, task)
+        if result.get("real"):
+            logger.info("real query returned triplets on attempt %d basis=%s",
+                        attempt, result.get("graph_basis"))
+            return result
+    logger.info("real query yielded no triplets after %d attempts; "
+                "falling back to derived graph", _QUERY_RETRY_ATTEMPTS)
+    return result
+
+
 def run_scenario(
     scenario_id: str,
     quarantine_enabled: bool = True,
@@ -137,7 +177,12 @@ def run_scenario(
     diff = agent_runner.behavior_diff(baseline["answer"], poisoned["answer"], scenario)
 
     # 7. parse graph (real query_paths if present, else derived)
-    query_result = adapter.query(tenant, sub, scenario["task"])
+    # In the REAL path graph/relation extraction can trail indexing by a few
+    # seconds, so a single query sometimes returns an empty graph even though
+    # the data is there. Retry the query a bounded number of times until HydraDB
+    # returns real triplets, then fall through to the derived graph. Demo mode
+    # is untouched: the demo adapter never reports real, so it queries once.
+    query_result = _query_with_retry(adapter, tenant, sub, scenario["task"])
     graph = graph_extractor.build_graph(query_result, scenario)
     stage("extracting_graph")
 

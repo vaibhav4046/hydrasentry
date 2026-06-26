@@ -22,8 +22,23 @@ _REQUEST_TIMEOUT = 8.0
 # Bounded polling for async tenant provisioning / context indexing.
 _POLL_INTERVAL = 1.5
 _POLL_MAX_SECONDS = 25.0
-# Statuses from GET /context/status that mean a source is queryable.
-_READY_STATUSES = {"graph_creation", "completed"}
+# Indexing is polled over a longer window, so it uses a slightly slower interval
+# to keep API chatter down while still catching the "completed" flip promptly.
+_INDEX_POLL_INTERVAL = 3.0
+# Freshly ingested memories reach "completed" ~35s after ingest (and the graph
+# is empty until then), so the indexing wait gets a much longer cap than the
+# tenant-readiness wait. This is the single biggest reliability lever for the
+# real path: querying before relations are searchable returns an empty graph.
+_INDEX_POLL_MAX_SECONDS = 75.0
+# Statuses from GET /context/status. The relation graph is only actually
+# queryable at "completed"; "graph_creation" means extraction is still running
+# (observed: sources sit in graph_creation for ~25-35s with an EMPTY graph, then
+# flip to completed and the relations appear). So we wait for "completed" and
+# treat "graph_creation" as in-progress, not ready. "queued"/"processing" are
+# also in-progress. This closes the race where the old code returned at the
+# first graph_creation flip and queried before any triplet existed.
+_GRAPH_READY_STATUSES = {"completed"}
+_IN_PROGRESS_STATUSES = {"queued", "processing", "graph_creation"}
 _TERMINAL_BAD = {"errored", "failed"}
 
 
@@ -388,28 +403,44 @@ class RealHydraAdapter(HydraAdapter):
                 "real": True}
 
     def wait_indexed(self, tenant_id, sub_tenant_id):
-        """Poll GET /context/status for the ids returned at ingest until every
-        source is searchable (graph_creation/completed) or the window expires."""
+        """Poll GET /context/status until every source reaches ``completed``.
+
+        Waiting for ``completed`` (not the earlier ``graph_creation`` flip) is the
+        core race fix: ``graph_creation`` means relation extraction is still
+        running and the graph is empty, so returning then makes the subsequent
+        query come back with no triplets. Sources observed flipping
+        queued -> graph_creation (~9s) -> completed (~35s); only at completed do
+        the relations become queryable.
+
+        Uses the longer ``_INDEX_POLL_MAX_SECONDS`` window. If the window expires
+        while sources are still in progress (slow extraction), this returns a
+        soft-OK ``partial`` rather than a hard failure, because the scenario
+        engine's bounded query-retry can still pick up the graph as it lands."""
         key = f"{tenant_id}:{sub_tenant_id}"
         ids = [i for i in self._source_ids.get(key, []) if i]
         if not ids:
             return {"ok": True, "indexed": True, "note": "no source ids tracked",
                     "real": True}
-        deadline = time.monotonic() + _POLL_MAX_SECONDS
+        deadline = time.monotonic() + _INDEX_POLL_MAX_SECONDS
         last = {}
+        states: list[Optional[str]] = []
         while time.monotonic() < deadline:
             res = self._get("/context/status", {"ids": ids, "tenant_id": tenant_id,
                                                 "sub_tenant_id": sub_tenant_id})
             last = res
             statuses = (res["data"] or {}).get("statuses") or []
             states = [s.get("indexing_status") for s in statuses]
-            if states and all(st in _READY_STATUSES for st in states):
+            if states and all(st in _GRAPH_READY_STATUSES for st in states):
                 return {"ok": True, "indexed": True, "states": states, "real": True}
             if any(st in _TERMINAL_BAD for st in states):
                 return {"ok": False, "indexed": False, "states": states, "real": True}
-            time.sleep(_POLL_INTERVAL)
-        return {"ok": False, "indexed": False, "status": last.get("status", 0),
-                "real": True}
+            if states and all(st in _GRAPH_READY_STATUSES | _IN_PROGRESS_STATUSES
+                              for st in states):
+                logger.info("hydra indexing in progress states=%s", states)
+            time.sleep(_INDEX_POLL_INTERVAL)
+        # Window expired mid-extraction: soft-OK so the query-retry still runs.
+        return {"ok": True, "indexed": False, "partial": True,
+                "states": states, "status": last.get("status", 0), "real": True}
 
     def list_context(self, tenant_id, sub_tenant_id):
         chunks = self._store.get(f"{tenant_id}:{sub_tenant_id}", [])

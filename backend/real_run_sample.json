@@ -1,0 +1,302 @@
+{
+  "_note": "Redacted REAL HydraDB run sample. No secrets. Captured offline against owned tenant hydrasentry-owned-test with a throwaway sub-tenant. Proof artifact only; NOT wired into the frontend.",
+  "scenario_id": "memory_poisoning_refund",
+  "tenant_id": "hydrasentry-owned-test",
+  "sub_tenant": "sample_f2152254",
+  "graph_source": "real_query_paths",
+  "query_real": true,
+  "graph_basis": "chunk_relations",
+  "real_triplets": [
+    {
+      "source": "mem_poison_047",
+      "relation": "RELATED_TO",
+      "target": "policy_refund_v2",
+      "source_chunk_id": "mem_poison_047_chunk_0000"
+    },
+    {
+      "source": "refund_request",
+      "relation": "DEPENDS_ON",
+      "target": "manager_approval",
+      "source_chunk_id": "policy_refund_v2_chunk_0000"
+    },
+    {
+      "source": "customer_001",
+      "relation": "RELATED_TO",
+      "target": "standard account",
+      "source_chunk_id": "mem_customer_001_chunk_0000"
+    },
+    {
+      "source": "mem_poison_047",
+      "relation": "RELATED_TO",
+      "target": "instant_refund_action",
+      "source_chunk_id": "mem_poison_047_chunk_0000"
+    },
+    {
+      "source": "policy_refund_v2",
+      "relation": "DEPENDS_ON",
+      "target": "manager_approval",
+      "source_chunk_id": "policy_refund_v2_chunk_0000"
+    },
+    {
+      "source": "policy_refund_v2",
+      "relation": "RELATED_TO",
+      "target": "refund_request",
+      "source_chunk_id": "policy_refund_v2_chunk_0000"
+    },
+    {
+      "source": "instant_refund_action",
+      "relation": "RELATED_TO",
+      "target": "manager_approval",
+      "source_chunk_id": "mem_poison_047_chunk_0000"
+    },
+    {
+      "source": "mem_customer_001",
+      "relation": "RELATED_TO",
+      "target": "policy_refund_v2",
+      "source_chunk_id": "mem_customer_001_chunk_0000"
+    },
+    {
+      "source": "mem_customer_001",
+      "relation": "DESCRIBED_AS",
+      "target": "refund_request",
+      "source_chunk_id": "mem_customer_001_chunk_0000"
+    }
+  ],
+  "graph": {
+    "source": "real_query_paths",
+    "nodes": [
+      {
+        "id": "mem_poison_047",
+        "label": "mem poison 047",
+        "type": "entity",
+        "trust": "poisoned",
+        "status": "tainted",
+        "source_chunk_id": "mem_poison_047_chunk_0000",
+        "tenant_id": "hydrasentry-owned-test",
+        "sub_tenant_id": "sample_f2152254",
+        "policy_version": "v2",
+        "risk_reason": "derived from poisoned source chunk"
+      },
+      {
+        "id": "policy_refund_v2",
+        "label": "policy refund v2",
+        "type": "entity",
+        "trust": "poisoned",
+        "status": "tainted",
+        "source_chunk_id": null,
+        "tenant_id": "hydrasentry-owned-test",
+        "sub_tenant_id": "sample_f2152254",
+        "policy_version": "v2",
+        "risk_reason": "derived from poisoned source chunk"
+      },
+      {
+        "id": "refund_request",
+        "label": "refund request",
+        "type": "entity",
+        "trust": "trusted",
+        "status": "clean",
+        "source_chunk_id": null,
+        "tenant_id": "hydrasentry-owned-test",
+        "sub_tenant_id": "sample_f2152254",
+        "policy_version": "v2",
+        "risk_reason": null
+      },
+      {
+        "id": "manager_approval",
+        "label": "manager approval",
+        "type": "entity",
+        "trust": "trusted",
+        "status": "clean",
+        "source_chunk_id": null,
+        "tenant_id": "hydrasentry-owned-test",
+        "sub_tenant_id": "sample_f2152254",
+        "policy_version": "v2",
+        "risk_reason": null
+      },
+      {
+        "id": "customer_001",
+        "label": "customer 001",
+        "type": "entity",
+        "trust": "trusted",
+        "status": "clean",
+        "source_chunk_id": null,
+        "tenant_id": "hydrasentry-owned-test",
+        "sub_tenant_id": "sample_f2152254",
+        "policy_version": "v2",
+        "risk_reason": null
+      },
+      {
+        "id": "standard account",
+        "label": "standard account",
+        "type": "entity",
+        "trust": "trusted",
+        "status": "clean",
+        "source_chunk_id": null,
+        "tenant_id": "hydrasentry-owned-test",
+        "sub_tenant_id": "sample_f2152254",
+        "policy_version": "v2",
+        "risk_reason": null
+      },
+      {
+        "id": "instant_refund_action",
+        "label": "instant refund action",
+        "type": "entity",
+        "trust": "poisoned",
+        "status": "tainted",
+        "source_chunk_id": "mem_poison_047_chunk_0000",
+        "tenant_id": "hydrasentry-owned-test",
+        "sub_tenant_id": "sample_f2152254",
+        "policy_version": "v2",
+        "risk_reason": "derived from poisoned source chunk"
+      },
+      {
+        "id": "mem_customer_001",
+        "label": "mem customer 001",
+        "type": "entity",
+        "trust": "trusted",
+        "status": "clean",
+        "source_chunk_id": null,
+        "tenant_id": "hydrasentry-owned-test",
+        "sub_tenant_id": "sample_f2152254",
+        "policy_version": "v2",
+        "risk_reason": null
+      }
+    ],
+    "edges": [
+      {
+        "source": "mem_poison_047",
+        "target": "policy_refund_v2",
+        "relation": "RELATED_TO",
+        "source_chunk_id": "mem_poison_047_chunk_0000",
+        "tainted": true
+      },
+      {
+        "source": "refund_request",
+        "target": "manager_approval",
+        "relation": "DEPENDS_ON",
+        "source_chunk_id": "policy_refund_v2_chunk_0000",
+        "tainted": false
+      },
+      {
+        "source": "customer_001",
+        "target": "standard account",
+        "relation": "RELATED_TO",
+        "source_chunk_id": "mem_customer_001_chunk_0000",
+        "tainted": false
+      },
+      {
+        "source": "mem_poison_047",
+        "target": "instant_refund_action",
+        "relation": "RELATED_TO",
+        "source_chunk_id": "mem_poison_047_chunk_0000",
+        "tainted": true
+      },
+      {
+        "source": "policy_refund_v2",
+        "target": "manager_approval",
+        "relation": "DEPENDS_ON",
+        "source_chunk_id": "policy_refund_v2_chunk_0000",
+        "tainted": false
+      },
+      {
+        "source": "policy_refund_v2",
+        "target": "refund_request",
+        "relation": "RELATED_TO",
+        "source_chunk_id": "policy_refund_v2_chunk_0000",
+        "tainted": false
+      },
+      {
+        "source": "instant_refund_action",
+        "target": "manager_approval",
+        "relation": "RELATED_TO",
+        "source_chunk_id": "mem_poison_047_chunk_0000",
+        "tainted": true
+      },
+      {
+        "source": "mem_customer_001",
+        "target": "policy_refund_v2",
+        "relation": "RELATED_TO",
+        "source_chunk_id": "mem_customer_001_chunk_0000",
+        "tainted": false
+      },
+      {
+        "source": "mem_customer_001",
+        "target": "refund_request",
+        "relation": "DESCRIBED_AS",
+        "source_chunk_id": "mem_customer_001_chunk_0000",
+        "tainted": false
+      }
+    ],
+    "query_paths": [
+      {
+        "source": "mem_poison_047",
+        "relation": "RELATED_TO",
+        "target": "policy_refund_v2",
+        "source_chunk_id": "mem_poison_047_chunk_0000",
+        "tainted": true
+      },
+      {
+        "source": "refund_request",
+        "relation": "DEPENDS_ON",
+        "target": "manager_approval",
+        "source_chunk_id": "policy_refund_v2_chunk_0000",
+        "tainted": false
+      },
+      {
+        "source": "customer_001",
+        "relation": "RELATED_TO",
+        "target": "standard account",
+        "source_chunk_id": "mem_customer_001_chunk_0000",
+        "tainted": false
+      },
+      {
+        "source": "mem_poison_047",
+        "relation": "RELATED_TO",
+        "target": "instant_refund_action",
+        "source_chunk_id": "mem_poison_047_chunk_0000",
+        "tainted": true
+      },
+      {
+        "source": "policy_refund_v2",
+        "relation": "DEPENDS_ON",
+        "target": "manager_approval",
+        "source_chunk_id": "policy_refund_v2_chunk_0000",
+        "tainted": false
+      },
+      {
+        "source": "policy_refund_v2",
+        "relation": "RELATED_TO",
+        "target": "refund_request",
+        "source_chunk_id": "policy_refund_v2_chunk_0000",
+        "tainted": false
+      },
+      {
+        "source": "instant_refund_action",
+        "relation": "RELATED_TO",
+        "target": "manager_approval",
+        "source_chunk_id": "mem_poison_047_chunk_0000",
+        "tainted": true
+      },
+      {
+        "source": "mem_customer_001",
+        "relation": "RELATED_TO",
+        "target": "policy_refund_v2",
+        "source_chunk_id": "mem_customer_001_chunk_0000",
+        "tainted": false
+      },
+      {
+        "source": "mem_customer_001",
+        "relation": "DESCRIBED_AS",
+        "target": "refund_request",
+        "source_chunk_id": "mem_customer_001_chunk_0000",
+        "tainted": false
+      }
+    ],
+    "tainted_path": [
+      "mem_poison_047",
+      "policy_refund_v2",
+      "instant_refund_action",
+      "manager_approval"
+    ]
+  }
+}
