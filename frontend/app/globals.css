@@ -753,16 +753,19 @@
    never hue.
    ========================================================== */
 
-/* Editorial display face, Fraunces (loaded via next/font as --font-display).
-   This is the deliberate anti-template type: a high-contrast literary serif
-   instead of Inter/Geist bold. Optical sizing pinned large; ligatures on. */
+/* Editorial display face, Instrument Serif (loaded via next/font as
+   --font-display). The deliberate anti-template masthead type: a high-contrast
+   editorial serif instead of Inter/Geist bold, on-theme with the observatory
+   "instrument". Ligatures on; its true italic carries the accent clause. Body
+   and cockpit stay on Space Grotesk; labels stay on JetBrains Mono. */
 .observatory-landing .obs-display {
-  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-family: var(--font-display), Georgia, "Times New Roman", serif;
   font-optical-sizing: auto;
   font-feature-settings: "liga" 1, "dlig" 1;
 }
 .observatory-landing .obs-display-italic {
-  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-family: var(--font-display), Georgia, "Times New Roman", serif;
+  font-style: italic;
 }
 
 /* data-reveal entrance is inherited from .castellan-landing (page.tsx keeps

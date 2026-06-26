@@ -15,7 +15,7 @@ import {
 /**
  * Observatory hero, the deliberate anti-template fold. Instead of a centred
  * gradient headline over a glowing blob, this is an editorial, asymmetric
- * spread: a left-set Fraunces masthead with an italic accent, a coordinate
+ * spread: a left-set Instrument Serif masthead with an italic accent, a coordinate
  * eyebrow, subcopy and refined hairline CTAs on the left; the live star-chart
  * plate set off-axis on the right; cartographic readouts living in the margins.
  *
@@ -94,7 +94,7 @@ export function ObservatoryHero() {
             </span>
           </m.div>
 
-          {/* Fraunces masthead, left-set, revealed line by line */}
+          {/* Instrument Serif masthead, left-set, revealed line by line */}
           <h1
             className="obs-display"
             style={{
@@ -102,7 +102,7 @@ export function ObservatoryHero() {
               fontSize: "clamp(40px, 5.6vw, 78px)",
               lineHeight: 0.98,
               letterSpacing: "-0.018em",
-              fontWeight: 500,
+              fontWeight: 400,
               color: "#F3F6FB",
               textWrap: "balance",
             }}
@@ -118,7 +118,7 @@ export function ObservatoryHero() {
                 className="obs-display-italic"
                 style={{
                   display: "inline-block",
-                  fontStyle: "normal",
+                  fontStyle: "italic",
                   fontWeight: 400,
                   color: "#EAF0FA",
                 }}
