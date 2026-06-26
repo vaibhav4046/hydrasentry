@@ -114,7 +114,10 @@ export default function GraphPage() {
           >
             NODE INSPECTOR
           </div>
-          <div style={{ marginTop: 10, fontSize: 17, fontWeight: 700, color: inspColor }}>
+          <div
+            className="cockpit-display"
+            style={{ marginTop: 10, fontSize: 18, fontWeight: 600, letterSpacing: "-0.02em", color: inspColor }}
+          >
             {insp?.type ?? "·"}
           </div>
           <div style={{ fontFamily: MONO, fontSize: 11, color: C.muted, marginTop: 2 }}>

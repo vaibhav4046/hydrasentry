@@ -47,7 +47,7 @@ export function SectionHeader({
       )}
       <m.h2
         variants={fadeUp}
-        className="text-balance text-3xl font-semibold tracking-tight text-ink sm:text-4xl md:text-[2.75rem] md:leading-[1.05]"
+        className="cockpit-display text-balance text-3xl font-semibold text-ink sm:text-4xl md:text-[2.75rem] md:leading-[1.05]"
       >
         {title}
       </m.h2>

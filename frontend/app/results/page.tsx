@@ -73,11 +73,12 @@ export default function ResultsPage() {
                 {m.label}
               </div>
               <div
+                className="cockpit-display"
                 style={{
                   marginTop: 8,
                   fontSize: 30,
-                  fontWeight: 700,
-                  letterSpacing: "-0.02em",
+                  fontWeight: 600,
+                  letterSpacing: "-0.025em",
                   color: m.hot ? "#fff" : C.silver,
                 }}
               >

@@ -94,37 +94,46 @@ export function ObservatoryHero() {
             </span>
           </m.div>
 
-          {/* Instrument Serif masthead, left-set, revealed line by line */}
+          {/* Space Grotesk display masthead, left-set, revealed line by line.
+              Confident weight + tight tracking so it reads premium; the accent
+              clause is a tonal/weight emphasis (brighter, lighter), not italic. */}
           <h1
             className="obs-display"
             style={{
               margin: 0,
-              fontSize: "clamp(40px, 5.6vw, 78px)",
-              lineHeight: 0.98,
-              letterSpacing: "-0.018em",
-              fontWeight: 400,
+              fontSize: "clamp(40px, 5.4vw, 74px)",
+              lineHeight: 1.0,
+              letterSpacing: "-0.035em",
+              fontWeight: 600,
               color: "#F3F6FB",
               textWrap: "balance",
             }}
           >
-            <m.span variants={mastheadLine} style={{ display: "block" }}>
+            <m.span
+              variants={mastheadLine}
+              className="obs-display-grad"
+              style={{ display: "block" }}
+            >
               Chart the constellation
             </m.span>
-            <m.span variants={mastheadLine} style={{ display: "block" }}>
+            <m.span
+              variants={mastheadLine}
+              className="obs-display-grad"
+              style={{ display: "block" }}
+            >
               of your agent&apos;s memory
-              <span style={{ color: "#7E8794" }}>, </span>
-              <m.em
+              <span style={{ color: "#7E8794", WebkitTextFillColor: "#7E8794" }}>, </span>
+              <m.span
                 variants={mastheadAccent}
-                className="obs-display-italic"
+                className="obs-display-accent"
                 style={{
                   display: "inline-block",
-                  fontStyle: "italic",
                   fontWeight: 400,
                   color: "#EAF0FA",
                 }}
               >
                 and guard it.
-              </m.em>
+              </m.span>
             </m.span>
           </h1>
 

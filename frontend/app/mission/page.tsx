@@ -47,7 +47,10 @@ export default function MissionPage() {
             <div style={{ fontFamily: MONO, fontSize: 10, letterSpacing: "0.16em", color: C.faint }}>
               ACTIVE MISSION
             </div>
-            <div style={{ marginTop: 6, fontSize: 19, fontWeight: 700, color: C.ink }}>
+            <div
+              className="cockpit-display"
+              style={{ marginTop: 6, fontSize: 20, fontWeight: 600, color: C.ink, letterSpacing: "-0.02em" }}
+            >
               Protect refund agent from poisoned memory and unsafe skills
             </div>
           </div>
@@ -101,11 +104,12 @@ export default function MissionPage() {
                 {m.label}
               </div>
               <div
+                className="cockpit-display"
                 style={{
                   marginTop: 8,
-                  fontSize: 28,
-                  fontWeight: 700,
-                  letterSpacing: "-0.02em",
+                  fontSize: 30,
+                  fontWeight: 600,
+                  letterSpacing: "-0.025em",
                   color: m.color,
                 }}
               >

@@ -85,10 +85,11 @@ export function CockpitTopBar({ title, crumb, actions, onMenu }: CockpitTopBarPr
           {crumb}
         </div>
         <div
+          className="cockpit-display"
           style={{
-            fontSize: 17,
-            fontWeight: 700,
-            letterSpacing: "-0.01em",
+            fontSize: 18,
+            fontWeight: 600,
+            letterSpacing: "-0.02em",
             marginTop: 2,
             whiteSpace: "nowrap",
             overflow: "hidden",

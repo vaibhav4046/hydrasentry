@@ -39,9 +39,9 @@ export function InstrumentsGrid() {
             style={{
               marginTop: "18px",
               fontSize: "clamp(26px,3.4vw,42px)",
-              lineHeight: 1.02,
-              letterSpacing: "-0.015em",
-              fontWeight: 500,
+              lineHeight: 1.04,
+              letterSpacing: "-0.025em",
+              fontWeight: 600,
               color: "#F3F6FB",
             }}
           >

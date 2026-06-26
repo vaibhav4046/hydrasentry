@@ -13,9 +13,9 @@ import { ObservatoryFooter } from "@/components/landing/observatory/ObservatoryF
  * constellation on a live canvas star-chart (azimuth ring, RA/Dec ticks, named
  * stars of varying magnitude, a slow sentinel sweep, and the tainted memory
  * collapsing into a dark crossed-out star), the opposite of the centered
- * gradient-headline + glowing neural blob cliché. The masthead is set left in an
- * editorial Fraunces serif (the unexpected display face), the chart sits
- * off-axis, and cartographic mono labels live in the margins.
+ * gradient-headline + glowing neural blob cliché. The masthead is set left in a
+ * sleek Space Grotesk display face (the unexpected non-serif display), the chart
+ * sits off-axis, and cartographic mono labels live in the margins.
  *
  * Layered like the cockpit: a fixed void background (ObservatoryBackground, z-0)
  * behind a relative content column (z-2). Order: coordinate announcement + nav,

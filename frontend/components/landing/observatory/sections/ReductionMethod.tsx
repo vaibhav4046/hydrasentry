@@ -29,8 +29,8 @@ export function ReductionMethod() {
           maxWidth: "20ch",
           fontSize: "clamp(24px,3.2vw,38px)",
           lineHeight: 1.04,
-          letterSpacing: "-0.015em",
-          fontWeight: 500,
+          letterSpacing: "-0.025em",
+          fontWeight: 600,
           color: "#F3F6FB",
         }}
       >

@@ -6,7 +6,7 @@ import { CONSTELLATION, COORD_TICKS } from "./atlasData";
 /**
  * The framed observation plate: the live StarChart canvas inside an engraved
  * atlas frame, with HTML-rendered cartographic overlays positioned over the
- * deterministic star coordinates. Rendering the labels as DOM (mono / Fraunces)
+ * deterministic star coordinates. Rendering the labels as DOM (mono / display)
  * rather than on the canvas keeps the text crisp at any DPR and lets the named
  * stars carry real typographic character.
  *

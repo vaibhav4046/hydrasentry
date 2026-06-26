@@ -371,6 +371,16 @@
     font-feature-settings: "tnum" 1, "ss01" 1;
   }
 
+  /* DISPLAY face for the cockpit so it shares the homepage masthead system:
+     page/command titles and big-number metrics. Inter (--font-geist-sans) stays
+     the body/UI text; this is the deliberate display counterweight. Tabular
+     figures keep the big numbers aligned. */
+  .cockpit-display {
+    font-family: var(--font-display), "Space Grotesk", system-ui, sans-serif;
+    font-feature-settings: "tnum" 1;
+    letter-spacing: -0.02em;
+  }
+
   /* ==========================================================
      Castellan Cockpit layer, a left-sidebar command console.
      Premium, minimal, Linear/Vercel-grade. Monochrome only: all
@@ -746,26 +756,43 @@
 
 /* ==========================================================
    Constellan, Memory Observatory homepage (/).
-   The star-atlas direction: editorial Fraunces masthead, a live canvas
+   The star-atlas direction: sleek Space Grotesk display masthead, a live canvas
    star-chart plate, cartographic mono detailing, hairline-framed legend
    grids. Scoped under .observatory-landing so the cockpit is untouched.
    Pure monochrome (cool silver/white on void), danger via brightness,
    never hue.
    ========================================================== */
 
-/* Editorial display face, Instrument Serif (loaded via next/font as
-   --font-display). The deliberate anti-template masthead type: a high-contrast
-   editorial serif instead of Inter/Geist bold, on-theme with the observatory
-   "instrument". Ligatures on; its true italic carries the accent clause. Body
-   and cockpit stay on Space Grotesk; labels stay on JetBrains Mono. */
+/* Display face, Space Grotesk (loaded via next/font as --font-display). The
+   deliberate non-serif masthead type: a sleek geometric grotesk with character
+   (single-story a, angular t, distinctive g), on-theme with the observatory
+   "instrument" and harmonized with the mono. Body/UI stay on Inter
+   (--font-geist-sans); labels stay on JetBrains Mono. The same face carries the
+   major cockpit titles + big-number metrics (see .cockpit-display) so the
+   homepage and cockpit read as one system. */
 .observatory-landing .obs-display {
-  font-family: var(--font-display), Georgia, "Times New Roman", serif;
+  font-family: var(--font-display), "Space Grotesk", system-ui, sans-serif;
   font-optical-sizing: auto;
-  font-feature-settings: "liga" 1, "dlig" 1;
 }
-.observatory-landing .obs-display-italic {
-  font-family: var(--font-display), Georgia, "Times New Roman", serif;
-  font-style: italic;
+/* Hero masthead: a soft white -> cool-grey vertical gradient clipped to the
+   glyphs for a premium, dimensional read (top brighter than the descenders).
+   The accent span re-asserts its own solid bright ink so it still pops. */
+.observatory-landing .obs-display-grad {
+  background: linear-gradient(180deg, #ffffff 12%, #f3f6fb 46%, #aeb6c2 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+}
+.observatory-landing .obs-display-grad .obs-display-accent {
+  -webkit-text-fill-color: #eaf0fa;
+  color: #eaf0fa;
+}
+/* The headline accent ("and guard it."). Display is a sans now, so the accent is
+   a tonal/weight emphasis (brighter ink, lighter weight), never a serif italic. */
+.observatory-landing .obs-display-accent {
+  font-family: var(--font-display), "Space Grotesk", system-ui, sans-serif;
+  font-style: normal;
 }
 
 /* data-reveal entrance is inherited from .castellan-landing (page.tsx keeps

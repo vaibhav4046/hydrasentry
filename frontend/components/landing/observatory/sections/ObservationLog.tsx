@@ -216,9 +216,9 @@ export function ObservationLog() {
             style={{
               marginTop: "18px",
               fontSize: "clamp(28px,3.8vw,46px)",
-              lineHeight: 1.02,
-              letterSpacing: "-0.015em",
-              fontWeight: 500,
+              lineHeight: 1.04,
+              letterSpacing: "-0.025em",
+              fontWeight: 600,
               color: "#F3F6FB",
             }}
           >

@@ -7,7 +7,7 @@ import { scaleIn } from "@/lib/motion";
 
 /**
  * Closing observation band. A framed plate (coordinate corners, a faint
- * meridian arc) with a Fraunces masthead and the two refined CTAs. Restrained,
+ * meridian arc) with a Space Grotesk masthead and the two refined CTAs. Restrained,
  * monochrome, no glowing radial blob. The plate surfaces from the dark on
  * scroll (framer-motion scaleIn, once). The primary fires the real judge demo.
  */
@@ -87,8 +87,8 @@ export function ObservatoryFinalCta() {
               marginTop: "20px",
               fontSize: "clamp(28px,4.4vw,52px)",
               lineHeight: 1.02,
-              letterSpacing: "-0.016em",
-              fontWeight: 500,
+              letterSpacing: "-0.026em",
+              fontWeight: 600,
               color: "#F3F6FB",
             }}
           >

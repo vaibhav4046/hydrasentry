@@ -1,22 +1,35 @@
 import type { Metadata, Viewport } from "next";
-import { Space_Grotesk, JetBrains_Mono, Instrument_Serif } from "next/font/google";
+import { Space_Grotesk, Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { NoirBackground } from "@/components/noir/NoirBackground";
 import { MotionProvider } from "@/components/noir/MotionProvider";
 import { DemoDataPill } from "@/components/shared/DemoDataPill";
 
-// Constellan type system. Space Grotesk drives all body + cockpit UI (a sleek
-// geometric grotesk); JetBrains Mono carries labels, IDs, badges, logs,
-// query_paths and model ids. The hero masthead alone gets a distinctive display
-// face: Instrument Serif (--font-display), a high-contrast editorial serif whose
-// true italic powers the "...memory, and guard it." accent and whose name echoes
-// the observatory instrument theme. Chosen over Fraunces (heavier, more generic),
-// Bricolage (sans-on-sans, no contrast with the body) and Anton (loud all-caps,
-// no italic). All self-hosted via next/font (no FOUT/CLS).
-const spaceGrotesk = Space_Grotesk({
+// Constellan type system — a deliberate, harmonious three-part mix (no serif):
+//   DISPLAY  Space Grotesk (--font-display): a sleek geometric grotesk with real
+//            character (single-story a, angular t, distinctive g). Drives the
+//            hero masthead AND the major cockpit titles + big-number metrics so
+//            the homepage and the cockpit read as one system. Its technical
+//            geometry echoes the cartographic / instrument star-atlas brand.
+//   TEXT     Inter (--font-geist-sans): the neutral, highly-legible workhorse for
+//            body copy, UI chrome, captions and nav. Deliberately plainer than the
+//            display so the pairing reads intentional (character vs neutral).
+//   MONO     JetBrains Mono (--font-geist-mono): labels, IDs, query_paths, logs,
+//            badges, coordinates, keycaps.
+// Display chosen over Sora/Outfit (cleaner but generic) and Bricolage (quirkier,
+// competes with the mono). Text uses Inter over Inter Tight for steadier
+// legibility at 10-13px cockpit sizes. All self-hosted via next/font (no FOUT/CLS).
+const inter = Inter({
   variable: "--font-geist-sans",
   subsets: ["latin"],
-  weight: ["300", "400", "500", "600", "700"],
+  weight: ["400", "500", "600", "700"],
+  display: "swap",
+});
+
+const spaceGrotesk = Space_Grotesk({
+  variable: "--font-display",
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
   display: "swap",
 });
 
@@ -24,15 +37,6 @@ const jetbrainsMono = JetBrains_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
   weight: ["400", "500", "600"],
-  display: "swap",
-});
-
-// Hero masthead display face only. Single 400 weight + true italic.
-const instrumentSerif = Instrument_Serif({
-  variable: "--font-display",
-  subsets: ["latin"],
-  weight: ["400"],
-  style: ["normal", "italic"],
   display: "swap",
 });
 
@@ -57,7 +61,7 @@ export default function RootLayout({
     <html
       lang="en"
       data-scroll-behavior="smooth"
-      className={`${spaceGrotesk.variable} ${jetbrainsMono.variable} ${instrumentSerif.variable} h-full antialiased`}
+      className={`${inter.variable} ${spaceGrotesk.variable} ${jetbrainsMono.variable} h-full antialiased`}
     >
       <body className="min-h-full">
         <NoirBackground />

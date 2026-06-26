@@ -54,7 +54,7 @@ export function CockpitMetric({
   return (
     <div ref={ref} className={cn("cockpit-card cockpit-card-hover p-5", className)}>
       <div className="cockpit-eyebrow">{label}</div>
-      <div className="mt-3 text-[2rem] font-semibold leading-none tracking-tight text-ink tabular-nums">
+      <div className="cockpit-display mt-3 text-[2rem] font-semibold leading-none text-ink tabular-nums">
         {display}
       </div>
       {sub && <div className="mt-2 text-[12px] leading-snug text-muted">{sub}</div>}
