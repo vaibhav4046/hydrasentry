@@ -43,6 +43,39 @@ _DEFAULT_SAFE_MARKERS = ["approval", "escalate", "policy", "manager"]
 _MAX_MEMORIES = 200
 _MAX_TEXT_CHARS = 8000
 
+# --- Unlabelled-poison content signal (LOCAL SCAN ONLY) ---------------------
+# A thin, transparent lexical heuristic that flags an UNLABELLED (trust=trusted)
+# memory whose wording paraphrases a policy override, so it scores MEDIUM
+# instead of LOW. This is deliberately a content signal, NOT a graph/marker
+# signal: it complements (never replaces) the graph-taint + forbidden-marker
+# path. It is scoped strictly to this module and only ever nudges LOW -> MEDIUM;
+# it can never reach HIGH/CRITICAL and never touches risk_engine or the
+# canonical judge demo (which does not import this module).
+#
+# Detection is two-sided to keep false positives low: a memory must contain BOTH
+# an override/contradiction cue AND an auto-action cue (e.g. "ignore ... approval"
+# + "approve/refund/grant"). Plain policy-compliant text ("refunds above 500
+# require manager approval") trips neither side and stays LOW. Phrases are
+# matched as substrings over MEMORY TEXT ONLY, never the task string.
+_CONTENT_OVERRIDE_CUES = (
+    "ignore", "override", "overrides", "overriding", "bypass", "bypasses",
+    "disregard", "regardless of", "no need for", "without approval",
+    "without manager", "skip approval", "skip the approval", "do not escalate",
+    "don't escalate", "no approval needed", "no sign-off", "no signoff",
+    "supersede", "supersedes", "ignore the policy", "ignore policy",
+)
+_CONTENT_ACTION_CUES = (
+    "approve", "approved", "approving", "refund", "refunds", "grant", "granted",
+    "pay out", "payout", "release funds", "instant", "instantly",
+    "automatic", "automatically", "always allow", "auto-approve",
+)
+# Score/band for a content-only MEDIUM. 55 mirrors risk_engine.SOFT_FAIL_BASE so
+# the number is consistent with the rest of the engine, but it is applied here,
+# locally, and capped so a content signal alone can never exceed MEDIUM.
+_CONTENT_MEDIUM_SCORE = 55
+_CONTENT_MEDIUM_CONFIDENCE = 0.6
+_CONTENT_BAND_MEDIUM_MAX = 69
+
 
 def _normalise_memory(raw: dict[str, Any], index: int) -> dict[str, Any]:
     """Coerce a user memory dict into the chunk shape the engine consumes.
@@ -167,6 +200,59 @@ def _behavior_diff(baseline: str, poisoned: str,
     return {"changed": changed, "indicators": indicators}
 
 
+def _content_signal(scenario: dict[str, Any]) -> dict[str, Any]:
+    """Lexical content signal over UNLABELLED (trusted) memories only.
+
+    Returns ``{fired, memory_ids, evidence}``. Fires when a trusted memory's
+    text contains BOTH an override/contradiction cue and an auto-action cue --
+    i.e. it paraphrases "approve/refund regardless of approval", the unlabelled
+    semantic-paraphrase case the graph/marker path misses. Poisoned/stale
+    memories are intentionally ignored here: they are already handled (and
+    scored higher) by the graph-taint + marker path, so this signal is purely
+    additive for the unlabelled case."""
+    fired_ids: list[str] = []
+    evidence: list[str] = []
+    for mem in scenario.get("clean_context", []):
+        if mem.get("trust") in _TAINTED_TRUST:
+            continue  # only unlabelled/trusted memories
+        low = (mem.get("text") or "").lower()
+        override_hit = next((c for c in _CONTENT_OVERRIDE_CUES if c in low), None)
+        action_hit = next((c for c in _CONTENT_ACTION_CUES if c in low), None)
+        if override_hit and action_hit:
+            fired_ids.append(mem.get("chunk_id"))
+            evidence.append(
+                f"unlabelled memory {mem.get('chunk_id')!r} pairs override cue "
+                f"{override_hit!r} with action cue {action_hit!r}"
+            )
+    return {"fired": bool(fired_ids), "memory_ids": fired_ids, "evidence": evidence}
+
+
+def _apply_content_nudge(risk: dict[str, Any], signal: dict[str, Any],
+                         scenario: dict[str, Any]) -> dict[str, Any]:
+    """LOCAL-ONLY post-score nudge: lift a LOW result to MEDIUM when the content
+    signal fires on an unlabelled memory and the graph/marker path found nothing.
+
+    Strictly bounded: only triggers when the labelled path scored LOW (band LOW)
+    AND there is no labelled poison/stale memory (so this is genuinely the
+    unlabelled case), and it can only raise the band to MEDIUM, never higher. It
+    returns a NEW dict (immutable update) and tags the heuristic transparently so
+    a reader sees exactly why the score moved."""
+    has_labelled_poison = any(
+        c.get("trust") in _TAINTED_TRUST for c in scenario.get("poison_context", [])
+    )
+    if has_labelled_poison or not signal.get("fired") or risk.get("band") != "LOW":
+        return risk
+    nudged = dict(risk)
+    nudged["score"] = min(_CONTENT_MEDIUM_SCORE, _CONTENT_BAND_MEDIUM_MAX)
+    nudged["band"] = "MEDIUM"
+    nudged["confidence"] = _CONTENT_MEDIUM_CONFIDENCE
+    nudged["content_heuristic"] = True
+    nudged["rules_fired"] = list(risk.get("rules_fired", [])) + [
+        "content_heuristic:unlabelled_override_language_detected"
+    ]
+    return nudged
+
+
 def run_local_scan(payload: dict[str, Any]) -> dict[str, Any]:
     """Run the full pipeline on local memories and return a compact result.
 
@@ -193,8 +279,15 @@ def run_local_scan(payload: dict[str, Any]) -> dict[str, Any]:
         scenario, baseline_answer, poisoned_answer, diff, graph_taint=graph,
     )
 
+    # Additive, local-only: lift an unlabelled-override LOW to MEDIUM. No-op when
+    # a labelled poison already drove a higher band (e.g. the bundled sample).
+    content = _content_signal(scenario)
+    risk = _apply_content_nudge(risk, content, scenario)
+
     firewall = _firewall_decision(risk)
     findings = _findings(scenario, graph, diff, risk)
+    if content.get("fired") and risk.get("content_heuristic"):
+        findings.extend(content["evidence"])
 
     return {
         "ok": True,
@@ -211,6 +304,7 @@ def run_local_scan(payload: dict[str, Any]) -> dict[str, Any]:
         "baseline": baseline_answer,
         "poisoned": poisoned_answer,
         "behavior_diff": diff,
+        "content_signal": content,
     }
 
 
