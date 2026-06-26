@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { m, useInView, useReducedMotion } from "framer-motion";
+import { m, useInView } from "framer-motion";
+import { useReducedMotionSafe } from "@/hooks/useReducedMotionSafe";
 import { SectionMarker } from "./SectionMarker";
 import { sectionContainer, mastheadLine, EASE_OUT_EXPO } from "@/lib/motion";
 import {
@@ -171,7 +172,11 @@ function lightDelay(L: Layout, idx: number): number {
 
 export function ObservationLog() {
   const ref = useRef<HTMLDivElement>(null);
-  const reduce = useReducedMotion();
+  const sectionRef = useRef<HTMLElement>(null);
+  // Hydration-safe: false on SSR + first paint (matches server markup), then the
+  // real preference after mount. Prevents React #418 when Reduced Motion is on,
+  // since `play` below feeds framer-motion variants that set initial style attrs.
+  const reduce = useReducedMotionSafe();
   const inView = useInView(ref, { once: true, margin: "-110px" });
 
   // Responsive layout: pick serpentine (wide) vs vertical (narrow). Driven by a
@@ -186,17 +191,31 @@ export function ObservationLog() {
     return () => mq.removeEventListener("change", apply);
   }, []);
 
+  // Hash-load-safe reveal: if /#flow lands this section already in view (or
+  // reduced motion is on), show it on the first commit instead of waiting for
+  // the IntersectionObserver, which can miss an already-in-view element after a
+  // scroll-into-view and leave the whole section at opacity:0 (blank).
+  const [mountedInView, setMountedInView] = useState(false);
+  useEffect(() => {
+    const el = sectionRef.current;
+    if (!el) return;
+    const r = el.getBoundingClientRect();
+    const vh = window.innerHeight || document.documentElement.clientHeight;
+    if (r.top < vh && r.bottom > 0) setMountedInView(true);
+  }, []);
+
   const L = useMemo(() => (narrow ? narrowLayout() : wideLayout()), [narrow]);
-  const play = reduce ? "done" : inView ? "run" : "idle";
+  const reveal = reduce || inView || mountedInView;
+  const play = reduce || mountedInView ? "done" : inView ? "run" : "idle";
 
   return (
     <m.section
+      ref={sectionRef}
       id="flow"
       style={{ padding: "60px 0 40px" }}
       variants={sectionContainer}
-      initial="hidden"
-      whileInView="show"
-      viewport={{ once: true, margin: "-90px" }}
+      initial={false}
+      animate={reveal ? "show" : "hidden"}
     >
       <div
         className="obs-flow-head"

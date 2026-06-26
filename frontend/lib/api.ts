@@ -23,6 +23,7 @@ import type {
   HealthStatus,
   McpManifest,
   McpResources,
+  MarketplaceSkillScan,
   McpToolResult,
   ProviderStatus,
   ProviderTestResult,
@@ -36,6 +37,7 @@ import type {
 import {
   demoConfigStatus,
   demoFindings,
+  demoMarketplaceScan,
   demoMcpManifest,
   demoMcpResources,
   demoProviders,
@@ -426,6 +428,28 @@ export async function scanSkill(
       body: { content, name },
     }),
     demoSkillScan,
+  );
+}
+
+/**
+ * Pull a real SKILL.md from the skillmake.xyz marketplace by slug and scan it
+ * server-side (the browser cannot fetch skillmake.xyz directly owing to CORS).
+ * Mirrors scanSkill: returns the no-throw ApiResult envelope and never throws.
+ *
+ * The backend fails closed (a clean JSON error, never a 500) and itself falls
+ * back to a shipped offline fixture. If the WHOLE backend is unreachable, the
+ * client falls back to a bundled real fixture (firecrawl-mcp) scored offline,
+ * with source "cache", so the standalone demo still shows a genuine pull.
+ */
+export async function scanSkillFromMarketplace(
+  name: string,
+): Promise<ApiResult<MarketplaceSkillScan>> {
+  return withFallback(
+    await request<MarketplaceSkillScan>("/skillmake/scan-url", {
+      method: "POST",
+      body: { name },
+    }),
+    () => demoMarketplaceScan(name),
   );
 }
 

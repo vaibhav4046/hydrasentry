@@ -1,6 +1,8 @@
-# CLAUDE.md — HydraSentry
+# CLAUDE.md — Constellan
 
-Guide for future Claude Code sessions on this repo. HydraSentry is a context-integrity harness for AI agents on HydraDB (HydraDB Build Blitz hackathon). Read `README.md` for the product pitch and `docs/ARCHITECTURE.md` for the engine.
+Guide for future Claude Code sessions on this repo. The product is **Constellan**, a context-integrity harness for AI agents on HydraDB (HydraDB Build Blitz hackathon). The repo/directory is `hydrasentry` and some internal ids (tenant ids, the report header, a few code strings) keep that original name on purpose, so technical ids stay stable. Read `README.md` for the product pitch and `docs/ARCHITECTURE.md` for the engine.
+
+**Live:** frontend (public) https://frontend-nu-ochre-z41mw3z0l5.vercel.app, backend https://backend-three-puce-75.vercel.app (runs `APP_MODE=demo`). One-click: `POST https://backend-three-puce-75.vercel.app/runs/judge-demo`. Do not present the vanity `constellan.vercel.app` host as live; it is SSO-gated and stale. Use the `frontend-nu-ochre` URL.
 
 ## Repo map
 
@@ -71,16 +73,20 @@ pytest             # 44 tests, ~85% coverage
 - **`backend/.env.example`** ships with every value blank — copy it to `.env` and fill in locally.
 - Keys are server-side only. `config.py:key_status()` exposes a key to the UI/API solely as `sha256:<first10hex>` + length — the raw value is never returned. `frontend/.env.local` only holds `NEXT_PUBLIC_BACKEND_URL`.
 
+## Naming and live status (keep consistent)
+
+The product is **Constellan**; the repo, directory, tenant ids (`hydrasentry-owned-test`), the finding-report header, and a few code strings keep the original `hydrasentry` name on purpose. Present Constellan as the product and note "repo: hydrasentry" once. The frontend and backend are both deployed (URLs at the top of this file); do not reintroduce any "not deployed / no live URLs" claim. The hosted backend runs in demo mode, so its graph is honestly labelled DERIVED SCENARIO GRAPH FALLBACK. Frontend type system: Space Grotesk (display), Inter (body), JetBrains Mono (code/data).
+
 ## GateGuard note (Windows file writes)
 
-This environment runs the ECC harness with GateGuard. The `Write` tool works cleanly here for `.md` files. If a file write is ever blocked, either set `$env:ECC_GATEGUARD="off"` for the session, or fall back to a shell write: `Set-Content -Encoding utf8 <path>` (PowerShell) — use UTF-8 so the BOM-tolerant loaders (`utf-8-sig` in `config.py`, `scenario_loader.py`, `ota.py`) stay happy.
+This environment runs the ECC harness with GateGuard. The `Write` tool works cleanly here for `.md` files. If a file write is ever blocked, either set `$env:ECC_GATEGUARD="off"` for the session, or fall back to a shell write: `[IO.File]::WriteAllText(path, content, (New-Object System.Text.UTF8Encoding $false))` (PowerShell) — use UTF-8 (no BOM) so the BOM-tolerant loaders (`utf-8-sig` in `config.py`, `scenario_loader.py`, `ota.py`) stay happy.
 
 ## Guardrails (do not break these)
 
 1. **Do not commit secrets.** `.env` stays gitignored; never paste a real key into any tracked file. `.env.example` stays blank.
 2. **Do not claim real HydraDB unless parsed.** The graph is labelled REAL HYDRADB QUERY_PATHS only when `query_result["real"]` is true and not demo (`graph_extractor.build_graph`). Demo/derived data must always be labelled DERIVED SCENARIO GRAPH FALLBACK. Never present derived data as real HydraDB output — this is enforced in `graph_extractor.py` and `report.py` and must stay that way.
 3. **Scheduling is simulated.** `scheduler.py` persists agent rows and computes deterministic `next_run` dates; it registers no real cron or external timers. Keep it labelled "simulated" in any UI/docs.
-4. **No fine-tuning.** The model router (`model_router.py` / `config.py`) supports an optional local OpenAI-compatible judge endpoint, but HydraSentry trains/fine-tunes nothing. Do not add claims of fine-tuning.
+4. **No fine-tuning.** The model router (`model_router.py` / `config.py`) supports an optional local OpenAI-compatible judge endpoint, but Constellan trains/fine-tunes nothing. Do not add claims of fine-tuning.
 5. **Determinism is a feature.** The risk engine, demo answers, derived graph, schedule dates, and OTA seed dates are fixed so the judge demo is reproducible offline. The canonical `memory_poisoning_refund` run must stay 87 / HIGH / `memory_poisoning` / 0.92. Real LLM/HydraDB paths are strictly opt-in and must never be required for the demo.
 6. **Owned tenants only.** All scenarios use `hydrasentry-owned-test`; the cross-subtenant test creates both subtenants itself. Bug-bounty mode is disabled by default — see `BOUNTY_SCOPE.md`.
 

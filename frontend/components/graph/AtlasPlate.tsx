@@ -194,6 +194,14 @@ function CornerMarks() {
   );
 }
 
+/**
+ * Honest, NON-INTERACTIVE graph-source label. Previously this rendered two
+ * pills (REAL / DERIVED) which read as a dead segmented toggle. It is a status
+ * indicator, not a control, so it now shows a SINGLE badge reflecting the actual
+ * source: "REAL HYDRADB QUERY_PATHS" only when the backend parsed real HydraDB
+ * query_paths, otherwise "DERIVED SCENARIO GRAPH FALLBACK". A leading dot +
+ * "SOURCE" label make it unmistakably a readout. (pointerEvents:none.)
+ */
 function SourceBadge({ isReal }: { isReal: boolean }) {
   return (
     <div
@@ -202,37 +210,37 @@ function SourceBadge({ isReal }: { isReal: boolean }) {
         top: 14,
         right: 16,
         display: "flex",
-        gap: 7,
+        alignItems: "center",
+        gap: 8,
         pointerEvents: "none",
+        padding: "4px 10px",
+        borderRadius: 999,
+        border: `1px solid ${isReal ? "rgba(234,240,250,0.3)" : "rgba(255,255,255,0.12)"}`,
+        background: isReal ? "rgba(234,240,250,0.05)" : "rgba(255,255,255,0.02)",
       }}
     >
       <span
-        className="mono"
+        aria-hidden
         style={{
-          fontSize: "9px",
-          letterSpacing: "0.1em",
-          color: isReal ? "#EAF0FA" : "#5F6875",
-          border: `1px solid ${isReal ? "rgba(234,240,250,0.3)" : "rgba(255,255,255,0.1)"}`,
-          borderRadius: 999,
-          padding: "4px 9px",
-          background: isReal ? "rgba(234,240,250,0.05)" : "transparent",
+          width: 6,
+          height: 6,
+          borderRadius: "50%",
+          background: isReal ? "#EAF0FA" : "#5F6875",
+          boxShadow: isReal ? "0 0 7px #EAF0FA" : "none",
         }}
-      >
-        REAL HYDRADB QUERY_PATHS
+      />
+      <span className="mono" style={{ fontSize: "8.5px", letterSpacing: "0.16em", color: "#5F6875" }}>
+        SOURCE
       </span>
       <span
         className="mono"
         style={{
           fontSize: "9px",
           letterSpacing: "0.1em",
-          color: isReal ? "#5F6875" : "#EAF0FA",
-          border: `1px solid ${isReal ? "rgba(255,255,255,0.1)" : "rgba(234,240,250,0.3)"}`,
-          borderRadius: 999,
-          padding: "4px 9px",
-          background: isReal ? "transparent" : "rgba(234,240,250,0.05)",
+          color: isReal ? "#EAF0FA" : "#9BA3AF",
         }}
       >
-        DERIVED SCENARIO GRAPH
+        {isReal ? "REAL HYDRADB QUERY_PATHS" : "DERIVED SCENARIO GRAPH FALLBACK"}
       </span>
     </div>
   );

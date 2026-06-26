@@ -3,11 +3,14 @@
 import { useState } from "react";
 import { PageShell } from "@/components/shared/PageShell";
 import { UNSAFE_DEMO_SKILL } from "@/components/skillmake/demoSkill";
-import { scanSkill } from "@/lib/api";
+import { scanSkill, scanSkillFromMarketplace } from "@/lib/api";
 import { C } from "@/lib/cockpit/derive";
 import type { SkillScan } from "@/lib/types";
 
 const MONO = "var(--font-geist-mono), 'JetBrains Mono', monospace";
+
+/** Real, validated skillmake.xyz slugs offered as one-click marketplace pulls. */
+const EXAMPLE_SLUGS = ["firecrawl-mcp", "playwright-skill"] as const;
 
 /** Cheap deterministic hash to label the textarea before a real scan runs. */
 function localHash(c: string): string {
@@ -32,14 +35,52 @@ export default function SkillMakePage() {
   const [scan, setScan] = useState<SkillScan | null>(null);
   const [isScanning, setIsScanning] = useState(false);
   const [status, setStatus] = useState("unverified");
+  // Marketplace pull state
+  const [slug, setSlug] = useState<string>(EXAMPLE_SLUGS[0]);
+  const [isPulling, setIsPulling] = useState(false);
+  const [pullNote, setPullNote] = useState<string | null>(null);
+  const [skillName, setSkillName] = useState("unsafe-demo-skill");
 
-  async function handleScan() {
+  async function handleScan(name = skillName) {
     setIsScanning(true);
-    const r = await scanSkill(content, "unsafe-demo-skill");
+    const r = await scanSkill(content, name);
     setIsScanning(false);
     if (r.ok) {
       setScan(r.data);
       setStatus(r.data.findings.length ? "flagged" : "clean");
+    }
+  }
+
+  /**
+   * Pull a real SKILL.md from skillmake.xyz by slug, drop it into the textarea,
+   * and auto-run the existing scan. Never throws (ApiResult envelope); on a hard
+   * failure we surface a small note and leave the editor as-is.
+   */
+  async function handlePull() {
+    const name = (slug || "").trim().toLowerCase();
+    if (!name) return;
+    setIsPulling(true);
+    setPullNote(null);
+    const r = await scanSkillFromMarketplace(name);
+    setIsPulling(false);
+    if (!r.ok || !r.data.fetch_ok || !r.data.content) {
+      const err = r.ok ? r.data.error : r.error;
+      setPullNote(`Could not pull "${name}" from skillmake.xyz: ${err ?? "unreachable"}`);
+      return;
+    }
+    const { content: pulled, scan: pulledScan, source } = r.data;
+    setContent(pulled);
+    setSkillName(name);
+    setPullNote(
+      source === "live"
+        ? `Pulled live from skillmake.xyz/i/${name}`
+        : `skillmake.xyz unreachable — loaded cached copy of ${name}`,
+    );
+    if (pulledScan) {
+      setScan(pulledScan);
+      setStatus(pulledScan.findings.length ? "flagged" : "clean");
+    } else {
+      void handleScan(name);
     }
   }
 
@@ -73,12 +114,124 @@ export default function SkillMakePage() {
             <span style={{ fontSize: 14, fontWeight: 600, color: C.ink }}>SKILL.md source</span>
             <span style={{ fontFamily: MONO, fontSize: 10, color: C.faint }}>{hash}</span>
           </div>
+
+          {/* Marketplace pull: fetch a real SKILL.md from skillmake.xyz by slug */}
+          <div
+            style={{
+              marginBottom: 12,
+              padding: 12,
+              border: "1px solid rgba(255,255,255,0.08)",
+              borderRadius: 12,
+              background: "rgba(255,255,255,0.014)",
+            }}
+          >
+            <div
+              style={{
+                fontFamily: MONO,
+                fontSize: 9,
+                letterSpacing: "0.14em",
+                color: C.faint,
+                marginBottom: 8,
+              }}
+            >
+              PULL FROM SKILLMAKE.XYZ
+            </div>
+            <div style={{ display: "flex", gap: 8, alignItems: "stretch" }}>
+              <span
+                aria-hidden
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  fontFamily: MONO,
+                  fontSize: 11,
+                  color: C.faint,
+                  paddingLeft: 2,
+                  whiteSpace: "nowrap",
+                }}
+              >
+                /i/
+              </span>
+              <input
+                value={slug}
+                spellCheck={false}
+                onChange={(e) => setSlug(e.target.value.replace(/[^a-z0-9-]/gi, "").toLowerCase())}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") void handlePull();
+                }}
+                placeholder="firecrawl-mcp"
+                aria-label="skillmake.xyz skill slug"
+                style={{
+                  flex: 1,
+                  minWidth: 0,
+                  background: "#020304",
+                  color: "#C9D2E0",
+                  border: "1px solid rgba(255,255,255,0.1)",
+                  borderRadius: 9,
+                  padding: "9px 11px",
+                  fontFamily: MONO,
+                  fontSize: 11.5,
+                  outline: "none",
+                }}
+              />
+              <button
+                type="button"
+                onClick={() => void handlePull()}
+                disabled={isPulling || !slug}
+                style={{
+                  cursor: isPulling || !slug ? "not-allowed" : "pointer",
+                  fontFamily: "inherit",
+                  fontSize: 12,
+                  fontWeight: 600,
+                  color: C.silver,
+                  padding: "9px 13px",
+                  border: "1px solid rgba(255,255,255,0.2)",
+                  borderRadius: 9,
+                  background: "rgba(255,255,255,0.05)",
+                  whiteSpace: "nowrap",
+                  opacity: isPulling || !slug ? 0.6 : 1,
+                  transition: "all .2s",
+                }}
+              >
+                {isPulling ? "Pulling…" : "Pull skill"}
+              </button>
+            </div>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 9, alignItems: "center" }}>
+              <span style={{ fontSize: 10.5, color: C.faint }}>Examples:</span>
+              {EXAMPLE_SLUGS.map((s) => (
+                <button
+                  key={s}
+                  type="button"
+                  onClick={() => setSlug(s)}
+                  style={{
+                    cursor: "pointer",
+                    fontFamily: MONO,
+                    fontSize: 10,
+                    color: slug === s ? "#fff" : C.muted,
+                    padding: "3px 8px",
+                    border: `1px solid ${slug === s ? "rgba(255,255,255,0.3)" : "rgba(255,255,255,0.12)"}`,
+                    borderRadius: 999,
+                    background: slug === s ? "rgba(255,255,255,0.06)" : "transparent",
+                    transition: "all .15s",
+                  }}
+                >
+                  {s}
+                </button>
+              ))}
+            </div>
+            {pullNote && (
+              <div style={{ marginTop: 9, fontFamily: MONO, fontSize: 10, color: C.muted, lineHeight: 1.5 }}>
+                {pullNote}
+              </div>
+            )}
+          </div>
+
           <textarea
             value={content}
             onChange={(e) => {
               setContent(e.target.value);
               setScan(null);
               setStatus("unverified");
+              setPullNote(null);
             }}
             spellCheck={false}
             style={{
@@ -102,6 +255,7 @@ export default function SkillMakePage() {
             disabled={isScanning}
             onMouseEnter={(e) => (e.currentTarget.style.transform = "translateY(-2px)")}
             onMouseLeave={(e) => (e.currentTarget.style.transform = "translateY(0)")}
+            data-scan-btn
             style={{
               cursor: isScanning ? "not-allowed" : "pointer",
               marginTop: 12,
@@ -120,6 +274,20 @@ export default function SkillMakePage() {
           >
             {isScanning ? "Scanning…" : "Scan skill"}
           </button>
+
+          {/* On-page attribution */}
+          <div
+            style={{
+              marginTop: 12,
+              fontSize: 10.5,
+              lineHeight: 1.55,
+              color: C.faint,
+            }}
+          >
+            Skills sourced live from skillmake.xyz; semantic search powered by
+            HydraDB. Constellan is the pre-install safety check skillmake.xyz
+            tells you to run by hand.
+          </div>
         </div>
 
         {/* Right: risk + findings */}

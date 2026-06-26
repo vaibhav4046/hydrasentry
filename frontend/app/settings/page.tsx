@@ -21,9 +21,12 @@ function str(p: ProviderStatus, key: string, fallback = "·"): string {
  * /settings/providers; Test connection hits the live /settings/providers/test.
  * Raw keys never reach the browser, only the sha256 fingerprint + length.
  */
+/** Per-provider Test connection outcome. */
+type TestState = "reachable" | "nokey" | "error";
+
 export default function SettingsPage() {
   const [providers, setProviders] = useState<ProviderStatus[]>([]);
-  const [tested, setTested] = useState<Record<string, boolean>>({});
+  const [tested, setTested] = useState<Record<string, TestState>>({});
 
   useEffect(() => {
     void getProviders().then((r) => {
@@ -31,18 +34,27 @@ export default function SettingsPage() {
     });
   }, []);
 
-  async function handleTest(name: string) {
-    const r = await testProvider(name);
+  async function handleTest(pv: ProviderStatus) {
+    // A provider with no configured key can never be reachable: surface an
+    // explicit "API key not set" state instead of silently doing nothing.
+    if (!pv.configured) {
+      setTested((prev) => ({ ...prev, [pv.name]: "nokey" }));
+      return;
+    }
+    const r = await testProvider(pv.name);
     const ok = r.ok && Boolean(r.data.ok ?? r.data.reachable);
-    setTested((prev) => ({ ...prev, [name]: ok }));
+    setTested((prev) => ({ ...prev, [pv.name]: ok ? "reachable" : "error" }));
   }
 
   return (
     <PageShell>
       <div data-page data-stagger className="cockpit-2col" style={{ display: "grid", gridTemplateColumns: "repeat(2,1fr)", gap: 14 }}>
         {providers.map((pv) => {
-          const isTested = tested[pv.name];
-          const rawStatus = isTested ? "reachable" : str(pv, "status", pv.configured ? "online" : "idle");
+          const testState = tested[pv.name];
+          const isReachable = testState === "reachable";
+          const rawStatus = isReachable
+            ? "reachable"
+            : str(pv, "status", pv.configured ? "online" : "idle");
           const status = rawStatus.toLowerCase();
           const on = status === "online" || status === "reachable";
           const statusCol = on ? C.accent : status === "offline" ? C.faint : C.muted;
@@ -99,33 +111,45 @@ export default function SettingsPage() {
                 <KV k="API KEY" v={key} vColor={keyCol} />
                 <KV k="ROLE" v={role} vColor={C.muted} />
               </div>
-              <div style={{ marginTop: 14, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
-                <button
-                  type="button"
-                  onClick={() => void handleTest(pv.name)}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.borderColor = "rgba(255,255,255,0.32)";
-                    e.currentTarget.style.background = "rgba(255,255,255,0.06)";
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.borderColor = "rgba(255,255,255,0.16)";
-                    e.currentTarget.style.background = "rgba(255,255,255,0.03)";
-                  }}
-                  style={{
-                    cursor: "pointer",
-                    fontFamily: "inherit",
-                    fontSize: 12,
-                    padding: "8px 13px",
-                    border: "1px solid rgba(255,255,255,0.16)",
-                    borderRadius: 9,
-                    background: "rgba(255,255,255,0.03)",
-                    color: C.silver,
-                    transition: "all .2s",
-                  }}
-                >
-                  {isTested ? "Reachable ✓" : "Test connection"}
-                </button>
-                <span style={{ fontSize: 11, color: C.faint }}>{getKey}</span>
+              <div style={{ marginTop: 14, display: "flex", flexDirection: "column", gap: 8 }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
+                  <button
+                    type="button"
+                    onClick={() => void handleTest(pv)}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.borderColor = "rgba(255,255,255,0.32)";
+                      e.currentTarget.style.background = "rgba(255,255,255,0.06)";
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.borderColor = "rgba(255,255,255,0.16)";
+                      e.currentTarget.style.background = "rgba(255,255,255,0.03)";
+                    }}
+                    style={{
+                      cursor: "pointer",
+                      fontFamily: "inherit",
+                      fontSize: 12,
+                      padding: "8px 13px",
+                      border: "1px solid rgba(255,255,255,0.16)",
+                      borderRadius: 9,
+                      background: "rgba(255,255,255,0.03)",
+                      color: C.silver,
+                      transition: "all .2s",
+                    }}
+                  >
+                    {isReachable ? "Reachable ✓" : "Test connection"}
+                  </button>
+                  <span style={{ fontSize: 11, color: C.faint }}>{getKey}</span>
+                </div>
+                {testState === "nokey" && (
+                  <div style={{ fontFamily: MONO, fontSize: 10.5, color: C.accent, lineHeight: 1.5 }}>
+                    API key not set. Configure {pv.name} first.
+                  </div>
+                )}
+                {testState === "error" && (
+                  <div style={{ fontFamily: MONO, fontSize: 10.5, color: C.muted, lineHeight: 1.5 }}>
+                    Not reachable. Check the key and base URL.
+                  </div>
+                )}
               </div>
             </div>
           );

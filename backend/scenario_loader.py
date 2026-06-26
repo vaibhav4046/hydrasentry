@@ -96,7 +96,13 @@ def get_scenario(scenario_id: str) -> dict[str, Any]:
 
 
 def list_scenarios() -> list[dict[str, Any]]:
-    """Return a lightweight summary of each scenario for the UI."""
+    """Return a per-scenario summary for the UI.
+
+    Includes the deterministic baseline/poisoned answers and the expected vs
+    forbidden behavior so the Replay Lab can show real, distinct content per
+    scenario tab without running each scenario. These fields are static scenario
+    data (no engine run), so the canonical demo determinism is unaffected.
+    """
     out = []
     for sc in _scenarios().values():
         out.append({
@@ -108,5 +114,9 @@ def list_scenarios() -> list[dict[str, Any]]:
             "tenant_id": sc["tenant_id"],
             "sub_tenant": sc["sub_tenant"],
             "policy_version": sc["policy"]["version"],
+            "baseline_answer": sc.get("baseline_answer", ""),
+            "poisoned_answer": sc.get("poisoned_answer", ""),
+            "expected_safe_behavior": sc.get("expected_safe_behavior", ""),
+            "forbidden_behavior": sc.get("forbidden_behavior", ""),
         })
     return out

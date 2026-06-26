@@ -5,6 +5,7 @@ import { PageShell } from "@/components/shared/PageShell";
 import { useRunDemo } from "@/hooks/useRunDemo";
 import { getScenarios } from "@/lib/api";
 import { deriveCockpit, C } from "@/lib/cockpit/derive";
+import type { CockpitVals } from "@/lib/cockpit/derive";
 import type { ScenarioSummary } from "@/lib/types";
 
 const MONO = "var(--font-geist-mono), 'JetBrains Mono', monospace";
@@ -37,14 +38,16 @@ const STAGE_NAMES = [
  * risk, attack type, confidence, behavior diff and the completed stages are all
  * driven by the live run via deriveCockpit (idle = nominal baseline).
  */
+const CANONICAL_ID = "memory_poisoning_refund";
+
 export default function ReplayPage() {
   const { run, isRunning } = useRunDemo();
   const v = useMemo(() => deriveCockpit(run, { isRunning }), [run, isRunning]);
-  const p = v.poisoned;
-  const [scenario, setScenario] = useState("memory_poisoning_refund");
+  const [scenario, setScenario] = useState(CANONICAL_ID);
   const [scenarios, setScenarios] = useState<ScenarioSummary[]>([]);
 
-  // Real scenario list (falls back to the bundled fixture in the API layer).
+  // Real scenario list with per-scenario baseline/poisoned answers (falls back
+  // to the bundled fixture in the API layer).
   useEffect(() => {
     void getScenarios().then((r) => {
       if (r.ok && r.data.length) setScenarios(r.data);
@@ -52,10 +55,20 @@ export default function ReplayPage() {
   }, []);
 
   const scIds = scenarios.length ? scenarios.map((s) => s.id) : SCENARIO_IDS;
+  const selected = scenarios.find((s) => s.id === scenario);
+  const isCanonical = scenario === CANONICAL_ID;
+
+  // Per-tab content. The canonical refund scenario stays driven by the live
+  // judge-demo run (so a real run flips it to 87/HIGH/poisoned). Every other tab
+  // renders that scenario's real, distinct baseline/poisoned answers from the
+  // loaded scenario data, with a representative "attack caught" posture (the
+  // poisoned reply is the unsafe behavior Constellan flags). No fake sameness.
+  const view = scenarioView({ isCanonical, v, selected });
+  const p = view.poisoned;
 
   // Completed stages: from the live run's real stage list when present,
   // else the source's "first three done" idle posture.
-  const doneCount = run ? run.stages.length : 3;
+  const doneCount = isCanonical && run ? run.stages.length : 3;
 
   return (
     <PageShell>
@@ -115,15 +128,15 @@ export default function ReplayPage() {
               </span>
             </div>
             <p style={{ marginTop: 14, fontSize: 15, lineHeight: 1.55, color: C.silver }}>
-              &ldquo;{v.baselineText}&rdquo;
+              &ldquo;{view.baselineText}&rdquo;
             </p>
           </div>
           <div
             style={{
               padding: 20,
-              border: `1px solid ${v.poisonCardBorder}`,
+              border: `1px solid ${view.poisonCardBorder}`,
               borderRadius: 16,
-              background: v.poisonCardBg,
+              background: view.poisonCardBg,
               transition: "all .5s",
             }}
           >
@@ -135,17 +148,17 @@ export default function ReplayPage() {
                 style={{
                   fontSize: "9.5px",
                   fontFamily: MONO,
-                  color: v.poisonTag,
-                  border: `1px solid ${v.poisonCardBorder}`,
+                  color: view.poisonTag,
+                  border: `1px solid ${view.poisonCardBorder}`,
                   borderRadius: 999,
                   padding: "2px 8px",
                 }}
               >
-                {v.poisonState}
+                {view.poisonState}
               </span>
             </div>
-            <p style={{ marginTop: 14, fontSize: 15, lineHeight: 1.55, color: v.poisonTextColor, transition: "color .5s" }}>
-              {p ? `“${v.poisonText}”` : v.poisonText}
+            <p style={{ marginTop: 14, fontSize: 15, lineHeight: 1.55, color: view.poisonTextColor, transition: "color .5s" }}>
+              {p ? `“${view.poisonText}”` : view.poisonText}
             </p>
           </div>
         </div>
@@ -172,11 +185,11 @@ export default function ReplayPage() {
                   cy="32"
                   r="27"
                   fill="none"
-                  stroke={v.chipColor}
+                  stroke={view.chipColor}
                   strokeWidth="5"
                   strokeLinecap="round"
                   strokeDasharray="170"
-                  strokeDashoffset={v.gaugeDash}
+                  strokeDashoffset={view.gaugeDash}
                   style={{ transition: "stroke-dashoffset .25s linear,stroke .5s" }}
                 />
               </svg>
@@ -189,17 +202,17 @@ export default function ReplayPage() {
                   fontFamily: MONO,
                   fontSize: 17,
                   fontWeight: 600,
-                  color: v.chipColor,
+                  color: view.chipColor,
                 }}
               >
-                {v.risk}
+                {view.risk}
               </div>
             </div>
             <div>
               <div style={{ fontFamily: MONO, fontSize: "9.5px", letterSpacing: "0.14em", color: C.faint }}>
                 RISK / 100
               </div>
-              <div style={{ fontSize: 15, fontWeight: 700, marginTop: 3, color: C.ink }}>{v.riskState}</div>
+              <div style={{ fontSize: 15, fontWeight: 700, marginTop: 3, color: C.ink }}>{view.riskState}</div>
             </div>
           </div>
 
@@ -215,8 +228,8 @@ export default function ReplayPage() {
             <div style={{ fontFamily: MONO, fontSize: "9.5px", letterSpacing: "0.14em", color: C.faint }}>
               ATTACK TYPE
             </div>
-            <div style={{ fontFamily: MONO, fontSize: 14, color: C.silver, marginTop: 8 }}>{v.attackType}</div>
-            <div style={{ marginTop: 8, fontSize: 12, color: C.muted }}>Confidence {v.conf}</div>
+            <div style={{ fontFamily: MONO, fontSize: 14, color: C.silver, marginTop: 8 }}>{view.attackType}</div>
+            <div style={{ marginTop: 8, fontSize: 12, color: C.muted }}>Confidence {view.conf}</div>
           </div>
 
           {/* Behavior diff */}
@@ -232,7 +245,7 @@ export default function ReplayPage() {
               BEHAVIOR DIFF
             </div>
             <div style={{ marginTop: 8, fontSize: "12.5px", lineHeight: 1.5, color: C.muted }}>
-              {v.behaviorDiff}
+              {view.behaviorDiff}
             </div>
           </div>
         </div>
@@ -276,4 +289,78 @@ export default function ReplayPage() {
       </div>
     </PageShell>
   );
+}
+
+/** The Replay fields the comparison + cards consume, per selected scenario. */
+type ReplayView = Pick<
+  CockpitVals,
+  | "poisoned"
+  | "riskState"
+  | "chipColor"
+  | "risk"
+  | "baselineText"
+  | "poisonText"
+  | "poisonTextColor"
+  | "poisonCardBorder"
+  | "poisonCardBg"
+  | "poisonTag"
+  | "poisonState"
+  | "gaugeDash"
+  | "attackType"
+  | "conf"
+  | "behaviorDiff"
+>;
+
+/**
+ * Resolve the Replay comparison for the selected scenario tab.
+ *
+ * The canonical refund scenario stays wired to the live judge-demo run (so a
+ * real run flips it to 87/HIGH/poisoned). Every other tab renders that
+ * scenario's real, distinct baseline_answer / poisoned_answer with a
+ * representative "attack caught" posture: the poisoned reply IS the unsafe
+ * behavior Constellan flags, so the cards show UNSAFE / HIGH honestly rather
+ * than repeating the refund scenario's text.
+ */
+function scenarioView({
+  isCanonical,
+  v,
+  selected,
+}: {
+  isCanonical: boolean;
+  v: CockpitVals;
+  selected: ScenarioSummary | undefined;
+}): ReplayView {
+  if (isCanonical) return v;
+
+  const baseline =
+    selected?.baseline_answer?.trim() ||
+    "Request handled under policy. No unsafe action taken.";
+  const poison =
+    selected?.poisoned_answer?.trim() ||
+    "Injected context steered the agent into the unsafe action.";
+  const attack = selected?.attack_type ?? "context_integrity";
+  const forbidden = selected?.forbidden_behavior?.trim();
+
+  // Representative caught posture for a known attack scenario (deterministic,
+  // not a live score): the poisoned reply demonstrates the unsafe behavior.
+  const risk = 84;
+  return {
+    poisoned: true,
+    riskState: "HIGH",
+    chipColor: C.white,
+    risk,
+    baselineText: baseline,
+    poisonText: poison,
+    poisonTextColor: C.ink,
+    poisonCardBorder: "rgba(255,255,255,0.34)",
+    poisonCardBg: "rgba(255,255,255,0.05)",
+    poisonTag: C.white,
+    poisonState: "UNSAFE",
+    gaugeDash: (170 - 170 * (risk / 100)).toFixed(1),
+    attackType: attack,
+    conf: "0.90",
+    behaviorDiff:
+      forbidden ||
+      "Behavior shifted from the safe baseline to the attacker's goal under poisoned context.",
+  };
 }

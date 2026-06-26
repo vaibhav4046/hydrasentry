@@ -3,25 +3,19 @@
 import { m } from "framer-motion";
 import { PRIMITIVES } from "../../castellan/landingData";
 import { SectionMarker } from "./SectionMarker";
-import { sectionContainer, mastheadLine } from "@/lib/motion";
+import { RevealSection } from "./RevealSection";
+import { mastheadLine } from "@/lib/motion";
 
 /**
  * Instrument legend, the product primitives rendered as an engraved atlas
  * legend (a hairline-bordered grid where the 1px gap shows the void through).
- * Reveals on scroll: the marker + grid fade/rise/blur in a small stagger
- * (whileInView, once). Card hover brightness lives in CSS (.obs-card). Copy is
- * preserved verbatim from landingData.
+ * Reveals on scroll via RevealSection (hash-load-safe: visible-on-mount when
+ * already in view or under reduced motion). Card hover brightness lives in CSS
+ * (.obs-card). Copy is preserved verbatim from landingData.
  */
 export function InstrumentLegend() {
   return (
-    <m.section
-      id="product"
-      style={{ padding: "72px 0 28px" }}
-      variants={sectionContainer}
-      initial="hidden"
-      whileInView="show"
-      viewport={{ once: true, margin: "-90px" }}
-    >
+    <RevealSection id="product" style={{ padding: "72px 0 28px" }}>
       <SectionMarker index="00" label="WHAT CONSTELLAN DOES" />
       <m.div
         variants={mastheadLine}
@@ -67,6 +61,6 @@ export function InstrumentLegend() {
           </div>
         ))}
       </m.div>
-    </m.section>
+    </RevealSection>
   );
 }

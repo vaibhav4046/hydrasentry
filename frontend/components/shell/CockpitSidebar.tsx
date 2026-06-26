@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { COCKPIT_NAV } from "./cockpitNav";
 import { CockpitIcon } from "./cockpitIcons";
+import { WorkspaceSwitcher } from "./WorkspaceSwitcher";
 import { BUILD_SHORT } from "@/lib/build";
 import { C } from "@/lib/cockpit/derive";
 
@@ -73,70 +74,8 @@ export function CockpitSidebar({ onNavigate, engaged }: CockpitSidebarProps) {
         />
       </Link>
 
-      {/* Workspace selector */}
-      <button
-        type="button"
-        style={{
-          cursor: "pointer",
-          fontFamily: "inherit",
-          display: "flex",
-          alignItems: "center",
-          gap: 10,
-          width: "100%",
-          padding: "9px 10px",
-          border: "1px solid rgba(255,255,255,0.09)",
-          borderRadius: 11,
-          background: "rgba(255,255,255,0.02)",
-          transition: "border-color .2s",
-        }}
-      >
-        <span
-          style={{
-            width: 26,
-            height: 26,
-            flex: "none",
-            borderRadius: 8,
-            background: "linear-gradient(135deg,#252b33,#0b0d11)",
-            border: "1px solid rgba(255,255,255,0.12)",
-            display: "grid",
-            placeItems: "center",
-            fontFamily: MONO,
-            fontSize: 11,
-            color: C.accent,
-          }}
-        >
-          R
-        </span>
-        <span
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            lineHeight: 1.15,
-            textAlign: "left",
-            minWidth: 0,
-          }}
-        >
-          <span style={{ fontSize: "12.5px", fontWeight: 600, color: C.ink }}>
-            Refund Agent
-          </span>
-          <span style={{ fontFamily: MONO, fontSize: 9, color: C.faint }}>
-            workspace · prod
-          </span>
-        </span>
-        <svg
-          style={{ marginLeft: "auto", flex: "none" }}
-          width="12"
-          height="12"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke={C.faint}
-          strokeWidth="2.2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        >
-          <path d="M8 10l4 4 4-4" />
-        </svg>
-      </button>
+      {/* Workspace selector (real dropdown, not a dead chevron) */}
+      <WorkspaceSwitcher />
 
       {/* Grouped nav */}
       <nav

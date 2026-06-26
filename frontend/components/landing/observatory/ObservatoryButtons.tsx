@@ -1,6 +1,6 @@
 "use client";
 
-import type { ReactNode } from "react";
+import type { MouseEvent, ReactNode } from "react";
 
 /**
  * Refined observatory CTAs, deliberately NOT rounded gradient pills. The
@@ -49,10 +49,27 @@ interface GhostProps {
   children: ReactNode;
 }
 
+/**
+ * Smooth-scroll to an on-page hash target. Mirrors the nav-link behavior but is
+ * explicit so the CTA reliably scrolls (the bare-hash anchor "changed the URL
+ * but did not scroll"). Updates the hash without a jump, then animates into view.
+ */
+function scrollToHash(e: MouseEvent<HTMLAnchorElement>, href: string) {
+  if (!href.startsWith("#")) return;
+  const id = href.slice(1);
+  const el = document.getElementById(id);
+  if (!el) return; // let the browser fall back to default hash nav
+  e.preventDefault();
+  el.scrollIntoView({ behavior: "smooth", block: "start" });
+  // Reflect the section in the URL without triggering a second jump.
+  if (history.replaceState) history.replaceState(null, "", href);
+}
+
 export function SightButton({ href, children }: GhostProps) {
   return (
     <a
       href={href}
+      onClick={(e) => scrollToHash(e, href)}
       className="obs-btn-ghost mono"
       style={{
         fontSize: "12px",

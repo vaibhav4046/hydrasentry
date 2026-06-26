@@ -3,24 +3,19 @@
 import { m } from "framer-motion";
 import { FEATURES } from "../../castellan/landingData";
 import { SectionMarker } from "./SectionMarker";
-import { sectionContainer, mastheadLine } from "@/lib/motion";
+import { RevealSection } from "./RevealSection";
+import { mastheadLine } from "@/lib/motion";
 
 /**
- * Instruments, the capabilities grid. Reveals on scroll with a small stagger;
- * each instrument cell is a hairline-bordered plate with a mono glyph badge.
- * Card hover brightness lives in CSS (.obs-card). Copy preserved from
+ * Instruments, the capabilities grid. Reveals on scroll via RevealSection
+ * (hash-load-safe: visible-on-mount when already in view or under reduced
+ * motion); each instrument cell is a hairline-bordered plate with a mono glyph
+ * badge. Card hover brightness lives in CSS (.obs-card). Copy preserved from
  * landingData.
  */
 export function InstrumentsGrid() {
   return (
-    <m.section
-      id="features"
-      style={{ padding: "48px 0" }}
-      variants={sectionContainer}
-      initial="hidden"
-      whileInView="show"
-      viewport={{ once: true, margin: "-90px" }}
-    >
+    <RevealSection id="features" style={{ padding: "48px 0" }}>
       <div
         className="obs-feat-head"
         style={{
@@ -103,6 +98,6 @@ export function InstrumentsGrid() {
           </div>
         ))}
       </m.div>
-    </m.section>
+    </RevealSection>
   );
 }

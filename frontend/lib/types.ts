@@ -146,12 +146,30 @@ export interface SkillScanFinding {
 export interface SkillScan {
   skill_hash: string;
   name: string;
+  description?: string;
   risk_score: number;
   band: RiskBand;
   findings: SkillScanFinding[];
   unsafe_instructions: string[];
   recommended_fix: string;
   status: string;
+}
+
+/**
+ * Result of pulling a SKILL.md from the skillmake.xyz marketplace by slug and
+ * scanning it server-side (POST /skillmake/scan-url). The fetch fails closed:
+ * on a hard failure `fetch_ok` is false, `scan`/`content` are null, and `error`
+ * explains why. `source` is "live" (fetched from skillmake.xyz) or "cache"
+ * (served from the shipped offline fixture when the live fetch failed).
+ */
+export interface MarketplaceSkillScan {
+  fetch_ok: boolean;
+  slug: string;
+  source: "live" | "cache" | "none";
+  url: string;
+  content: string | null;
+  scan: SkillScan | null;
+  error?: string;
 }
 
 // --- Scheduled scan / self-refinement --------------------------------------
@@ -238,6 +256,12 @@ export interface ScenarioSummary {
   title: string;
   attack_type?: string;
   mission?: Mission;
+  /** Deterministic per-scenario fields, surfaced for the Replay Lab tabs. */
+  task?: string;
+  baseline_answer?: string;
+  poisoned_answer?: string;
+  expected_safe_behavior?: string;
+  forbidden_behavior?: string;
   [key: string]: unknown;
 }
 

@@ -25,6 +25,7 @@ import ota
 import scenario_engine
 import scenario_loader
 import scheduler
+import skillmake_marketplace
 import skillmake_scanner
 import storage
 from config import key_status, settings
@@ -71,6 +72,10 @@ def err(message: str, status: int = 400, **extra: Any) -> JSONResponse:
 class SkillScanBody(BaseModel):
     content: str
     name: Optional[str] = None
+
+
+class SkillScanUrlBody(BaseModel):
+    name: str  # marketplace slug, e.g. "firecrawl-mcp"
 
 
 class ProviderTestBody(BaseModel):
@@ -229,6 +234,44 @@ async def skillmake_scan(body: SkillScanBody) -> JSONResponse:
     scan = skillmake_scanner.scan_skill(body.content, name=body.name)
     storage.save_skill_scan(scan)
     return ok(scan)
+
+
+@app.post("/skillmake/scan-url")
+async def skillmake_scan_url(body: SkillScanUrlBody) -> JSONResponse:
+    """Pull a real SKILL.md from skillmake.xyz by slug, then scan it.
+
+    OPT-IN and additive: this is never on the canonical /runs/judge-demo path.
+    The fetch fails closed (a clean JSON error, never a 500) and falls back to a
+    pre-cached real fixture so the live demo survives offline. The fetched text
+    is piped through the same deterministic scanner that powers /skillmake/scan.
+    """
+    fetched = await asyncio.to_thread(skillmake_marketplace.fetch_skill, body.name)
+    if not fetched.get("ok"):
+        return ok({
+            "fetch_ok": False,
+            "slug": fetched.get("slug"),
+            "source": fetched.get("source", "none"),
+            "url": fetched.get("url"),
+            "error": fetched.get("error", "fetch failed"),
+            "scan": None,
+        })
+    content = fetched["content"]
+    scan = skillmake_scanner.scan_skill(content, name=fetched["slug"])
+    storage.save_skill_scan(scan)
+    return ok({
+        "fetch_ok": True,
+        "slug": fetched["slug"],
+        "source": fetched["source"],  # "live" or "cache"
+        "url": fetched["url"],
+        "content": content,
+        "scan": scan,
+    })
+
+
+@app.get("/skillmake/examples")
+async def skillmake_examples() -> JSONResponse:
+    """Real, validated marketplace slugs the UI can offer as one-click pulls."""
+    return ok({"slugs": skillmake_marketplace.EXAMPLE_SLUGS})
 
 
 @app.get("/results/summary")

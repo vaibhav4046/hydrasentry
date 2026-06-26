@@ -18,6 +18,7 @@
  */
 import type {
   ConfigStatus,
+  MarketplaceSkillScan,
   McpManifest,
   McpResources,
   ProviderStatus,
@@ -27,6 +28,7 @@ import type {
   ScheduledAgent,
   SkillScan,
 } from "./types";
+import { MARKETPLACE_DEMO_SKILL } from "@/components/skillmake/demoSkill";
 import demo from "./fixtures/demo.json";
 
 interface DemoBundle {
@@ -78,4 +80,35 @@ export const demoSkillScan = (): SkillScan => clone(DEMO_SKILL_SCAN);
 /** Find a scenario fixture by id, falling back to the canonical refund run. */
 export function demoScenarioById(id: string): ScenarioSummary | undefined {
   return demoScenarios().find((s) => s.id === id);
+}
+
+/**
+ * Offline fallback for a skillmake.xyz marketplace pull. Returns the bundled
+ * real firecrawl-mcp SKILL.md with a deterministic clean (LOW) scan — matching
+ * what the live scanner produces for that benign tool skill — so the standalone
+ * demo still shows a genuine pull (source "cache") when no backend is reachable.
+ */
+export function demoMarketplaceScan(slug: string): MarketplaceSkillScan {
+  const name = slug || "firecrawl-mcp";
+  const scan: SkillScan = {
+    skill_hash: "demo-firecrawl",
+    name,
+    description:
+      "Use when an agent needs Firecrawl through MCP: scrape pages, crawl sites, map URLs, search the web, or extract structured data from public web content.",
+    risk_score: 0,
+    band: "LOW",
+    findings: [],
+    unsafe_instructions: [],
+    recommended_fix:
+      "No unsafe instructions detected. Safe to use under normal review.",
+    status: "approved",
+  };
+  return {
+    fetch_ok: true,
+    slug: name,
+    source: "cache",
+    url: `https://skillmake.xyz/i/${name}`,
+    content: MARKETPLACE_DEMO_SKILL,
+    scan,
+  };
 }

@@ -1,25 +1,30 @@
 "use client";
 
 import { m } from "framer-motion";
+import type { Variants } from "framer-motion";
 import { ARCH_STAGES } from "../../castellan/landingData";
 import { SectionMarker } from "./SectionMarker";
-import { sectionContainer, mastheadLine, EASE_OUT_EXPO } from "@/lib/motion";
+import { RevealSection } from "./RevealSection";
+import { mastheadLine, EASE_OUT_EXPO } from "@/lib/motion";
 
 /**
  * Reduction method, the architecture as a five-stage deterministic loop. As it
  * enters, the heading reveals, the top rule draws left-to-right (scaleX), and
  * the stage columns fade/rise in sequence; the final node glows (the evidence).
+ * Wrapped in RevealSection so a direct /#architecture hash-load (or reduced
+ * motion) shows it immediately instead of a blank section.
  */
+const topRule: Variants = {
+  hidden: { scaleX: 0 },
+  show: {
+    scaleX: 1,
+    transition: { duration: 0.9, ease: EASE_OUT_EXPO, delay: 0.1 },
+  },
+};
+
 export function ReductionMethod() {
   return (
-    <m.section
-      id="architecture"
-      style={{ padding: "52px 0 24px" }}
-      variants={sectionContainer}
-      initial="hidden"
-      whileInView="show"
-      viewport={{ once: true, margin: "-90px" }}
-    >
+    <RevealSection id="architecture" style={{ padding: "52px 0 24px" }}>
       <SectionMarker index="03" label="THE METHOD" />
       <m.h2
         variants={mastheadLine}
@@ -38,9 +43,11 @@ export function ReductionMethod() {
       </m.h2>
 
       <div style={{ position: "relative", marginTop: "30px" }}>
-        {/* top rule draws across as the section enters */}
+        {/* top rule draws across as the section enters (variant-driven so it
+            reveals with the section even on an already-in-view hash-load) */}
         <m.span
           aria-hidden
+          variants={topRule}
           style={{
             position: "absolute",
             top: 0,
@@ -50,10 +57,6 @@ export function ReductionMethod() {
             background: "rgba(234,240,250,0.1)",
             transformOrigin: "left center",
           }}
-          initial={{ scaleX: 0 }}
-          whileInView={{ scaleX: 1 }}
-          viewport={{ once: true, margin: "-90px" }}
-          transition={{ duration: 0.9, ease: EASE_OUT_EXPO, delay: 0.1 }}
         />
         <div
           className="obs-method"
@@ -102,6 +105,6 @@ export function ReductionMethod() {
           ))}
         </div>
       </div>
-    </m.section>
+    </RevealSection>
   );
 }

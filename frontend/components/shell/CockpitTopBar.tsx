@@ -2,6 +2,7 @@
 
 import type { ReactNode } from "react";
 import { useRunDemo } from "@/hooks/useRunDemo";
+import { CommandPalette, openPalette } from "./CommandPalette";
 import { deriveCockpit, C } from "@/lib/cockpit/derive";
 
 interface CockpitTopBarProps {
@@ -101,8 +102,12 @@ export function CockpitTopBar({ title, crumb, actions, onMenu }: CockpitTopBarPr
         </div>
       </div>
 
-      {/* Center search */}
-      <label
+      {/* Center search: opens the command palette (also Ctrl/Cmd+K) */}
+      <button
+        type="button"
+        onClick={() => openPalette()}
+        aria-label="Open command palette"
+        aria-keyshortcuts="Control+K"
         className="cockpit-search-box"
         style={{
           flex: "1 1 auto",
@@ -115,26 +120,28 @@ export function CockpitTopBar({ title, crumb, actions, onMenu }: CockpitTopBarPr
           borderRadius: 10,
           background: "rgba(255,255,255,0.02)",
           maxWidth: 340,
+          cursor: "pointer",
+          fontFamily: "inherit",
+          textAlign: "left",
         }}
       >
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={C.faint} strokeWidth="1.9" strokeLinecap="round" style={{ flex: "none" }}>
           <circle cx="11" cy="11" r="7" />
           <path d="M21 21l-4.2-4.2" />
         </svg>
-        <input
-          placeholder="Search runs, skills, memories"
-          aria-label="Search"
+        <span
           style={{
             flex: 1,
             minWidth: 0,
-            background: "transparent",
-            border: "none",
-            outline: "none",
-            color: C.silver,
-            fontFamily: "inherit",
+            color: C.faint,
             fontSize: "12.5px",
+            whiteSpace: "nowrap",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
           }}
-        />
+        >
+          Search runs, skills, pages
+        </span>
         <span
           style={{
             flex: "none",
@@ -148,7 +155,7 @@ export function CockpitTopBar({ title, crumb, actions, onMenu }: CockpitTopBarPr
         >
           ⌘K
         </span>
-      </label>
+      </button>
 
       {/* Right cluster */}
       <div style={{ flex: "none", display: "flex", alignItems: "center", gap: 10 }}>
@@ -213,6 +220,8 @@ export function CockpitTopBar({ title, crumb, actions, onMenu }: CockpitTopBarPr
           {v.demoLabel}
         </button>
       </div>
+
+      <CommandPalette />
     </header>
   );
 }

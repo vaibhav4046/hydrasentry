@@ -1,8 +1,10 @@
 "use client";
 
-import { m } from "framer-motion";
+import { useEffect, useRef, useState } from "react";
+import { m, useInView } from "framer-motion";
 import { TransitButton, SightButton } from "./ObservatoryButtons";
 import { useRunJudgeDemo } from "../castellan/useRunJudgeDemo";
+import { useReducedMotionSafe } from "@/hooks/useReducedMotionSafe";
 import { scaleIn } from "@/lib/motion";
 
 /**
@@ -10,17 +12,33 @@ import { scaleIn } from "@/lib/motion";
  * meridian arc) with a Space Grotesk masthead and the two refined CTAs. Restrained,
  * monochrome, no glowing radial blob. The plate surfaces from the dark on
  * scroll (framer-motion scaleIn, once). The primary fires the real judge demo.
+ *
+ * Reveal is hash-load/reduced-motion safe (initial={false} + an in-view-on-mount
+ * fallback) so the plate, and crucially the "Run Judge Demo" CTA inside it, is
+ * never stuck at opacity:0 when the observer does not fire.
  */
 export function ObservatoryFinalCta() {
   const { run, isRunning } = useRunJudgeDemo();
+  const ref = useRef<HTMLDivElement>(null);
+  const reduce = useReducedMotionSafe();
+  const inView = useInView(ref, { once: true, margin: "-100px" });
+  const [mountedInView, setMountedInView] = useState(false);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const r = el.getBoundingClientRect();
+    const vh = window.innerHeight || document.documentElement.clientHeight;
+    if (r.top < vh && r.bottom > 0) setMountedInView(true);
+  }, []);
+  const show = reduce || inView || mountedInView;
 
   return (
     <section style={{ padding: "56px 0 96px" }}>
       <m.div
+        ref={ref}
         variants={scaleIn}
-        initial="hidden"
-        whileInView="show"
-        viewport={{ once: true, margin: "-100px" }}
+        initial={false}
+        animate={show ? "show" : "hidden"}
         style={{
           position: "relative",
           padding: "clamp(40px,6vw,72px) clamp(28px,5vw,64px)",
