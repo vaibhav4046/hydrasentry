@@ -876,6 +876,31 @@
   }
 }
 
+/* ============================================================
+   Context Graph star-atlas plate (/graph). The DOM-rendered star labels and
+   plate chrome must stay legible as the plate scales down on small screens;
+   mirrors the homepage ChartPlate's responsive trims. Scoped to .atlas-plate so
+   nothing else is affected.
+   ============================================================ */
+@media (max-width: 760px) {
+  /* Drop the faint designation line so only catalogue names show when tight. */
+  .atlas-plate .atlas-star-des {
+    display: none;
+  }
+  .atlas-plate .atlas-plate-coords {
+    display: none !important;
+  }
+}
+@media (max-width: 480px) {
+  /* On phones the legend would crowd the figure; keep only the swatches row
+     compact and hide the coordinate column entirely. */
+  .atlas-plate .atlas-plate-legend {
+    gap: 9px !important;
+    font-size: 8px !important;
+    max-width: 96% !important;
+  }
+}
+
 /* Honor reduced-motion: kill transitions/animations and scroll smoothing. */
 @media (prefers-reduced-motion: reduce) {
   html {

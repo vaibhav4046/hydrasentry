@@ -2,41 +2,44 @@
 
 import { useMemo, useState } from "react";
 import { PageShell } from "@/components/shared/PageShell";
-import { CockpitGraphFlow } from "@/components/shell/CockpitGraphFlow";
+import { AtlasPlate } from "@/components/graph/AtlasPlate";
 import { useRunDemo } from "@/hooks/useRunDemo";
 import { C } from "@/lib/cockpit/derive";
-import { buildGraphModel, type NodeProvenance } from "@/lib/cockpit/graphModel";
+import { buildAtlasGraph } from "@/lib/cockpit/atlasGraphModel";
+import type { NodeProvenance } from "@/lib/cockpit/graphModel";
 
 const MONO = "var(--font-geist-mono), 'JetBrains Mono', monospace";
 
 /**
- * Context Graph — the evidence surface. Renders a deterministic, tiered,
- * left-to-right DIRECTED graph of the memory-poisoning attack flow (SVG, not a
- * free canvas), so the page always shows a clear logical graph on the deployed
- * standalone. When a live run is present its real graph drives the same tiered
- * layout, and the REAL/DERIVED badge is set honestly from `graph_source`. The
- * poisoned posture (which lights the tainted path) and node provenance are read
- * from the run; with no run we fall back to the canonical demo graph + posture.
+ * Memory Graph — the evidence surface, rendered as a detailed, logical
+ * constellation star-atlas (the same observatory language as the homepage
+ * star-chart, scaled up into a working observation plate). Every context entity
+ * of the memory_poisoning_refund run is a star; thin constellation lines carry
+ * the directed logical relations; the tainted path is the bright fallen
+ * constellation severed at the MCP firewall guardian star. Always renders the
+ * full demo constellation on the cold standalone; a live run's real graph is
+ * mapped into the same star layout and the REAL/DERIVED badge is set honestly
+ * from `graph_source`. Clicking a star updates the Node Inspector with that
+ * entity's full provenance.
  */
 export default function GraphPage() {
   const { run, isRunning } = useRunDemo();
 
-  // Single source of truth for nodes/edges AND inspector provenance: the same
-  // tiered model the canvas renders. Real run graph when present, else demo.
-  const model = useMemo(() => buildGraphModel(run?.graph ?? null), [run]);
+  // Single source of truth for the constellation AND inspector provenance:
+  // the real run graph when present, else the canonical demo atlas.
+  const model = useMemo(() => buildAtlasGraph(run?.graph ?? null), [run]);
 
-  // Default selection: the poisoned memory if present, else the first node.
+  // Default selection: the poisoned (extinction) memory if present, else first.
   const defaultId = useMemo(() => {
-    const poison = model.nodes.find((n) => n.role === "poisoned_memory");
-    return poison?.id ?? model.nodes[0]?.id ?? "";
+    const poison = model.stars.find((s) => s.extinct && s.tainted);
+    return poison?.id ?? model.stars[0]?.id ?? "";
   }, [model]);
-  const [inspId, setInspId] = useState<string | null>(null);
+  const [selId, setSelId] = useState<string | null>(null);
 
-  const activeId = inspId ?? defaultId;
-  const selected = model.nodes.find((n) => n.id === activeId) ?? model.nodes[0];
+  const activeId = selId ?? defaultId;
+  const selected =
+    model.stars.find((s) => s.id === activeId) ?? model.stars[0];
   const insp: NodeProvenance | undefined = selected?.insp;
-  // The canonical attack graph always shows its tainted path, so a node's
-  // inspector styling follows its own taint flag (not the live posture).
   const taintNode = Boolean(selected?.tainted);
   const inspColor = taintNode ? "#fff" : C.ink;
 
@@ -60,9 +63,14 @@ export default function GraphPage() {
       <div
         data-page
         className="cockpit-graph-grid"
-        style={{ display: "grid", gridTemplateColumns: "1fr 300px", gap: 14, alignItems: "stretch" }}
+        style={{
+          display: "grid",
+          gridTemplateColumns: "1fr 300px",
+          gap: 14,
+          alignItems: "stretch",
+        }}
       >
-        {/* Canvas panel */}
+        {/* Constellation plate panel */}
         <div
           style={{
             position: "relative",
@@ -70,72 +78,19 @@ export default function GraphPage() {
             borderRadius: 18,
             overflow: "hidden",
             background:
-              "radial-gradient(120% 100% at 50% 0%,rgba(16,20,26,0.7),rgba(2,3,4,0.97))",
+              "radial-gradient(120% 100% at 50% 0%,rgba(16,20,26,0.6),rgba(2,3,4,0.97))",
             minHeight: 560,
+            padding: 14,
+            display: "flex",
           }}
         >
-          <div style={{ position: "absolute", top: 14, left: 16, zIndex: 4, display: "flex", gap: 7 }}>
-            <span
-              style={{
-                fontFamily: MONO,
-                fontSize: "9.5px",
-                letterSpacing: "0.1em",
-                color: isReal ? C.accent : C.faint,
-                border: `1px solid ${isReal ? "rgba(234,240,250,0.3)" : "rgba(255,255,255,0.1)"}`,
-                borderRadius: 999,
-                padding: "5px 10px",
-                background: isReal ? "rgba(234,240,250,0.05)" : "transparent",
-              }}
-            >
-              REAL HYDRADB QUERY_PATHS
-            </span>
-            <span
-              style={{
-                fontFamily: MONO,
-                fontSize: "9.5px",
-                letterSpacing: "0.1em",
-                color: isReal ? C.faint : C.accent,
-                border: `1px solid ${isReal ? "rgba(255,255,255,0.1)" : "rgba(234,240,250,0.3)"}`,
-                borderRadius: 999,
-                padding: "5px 10px",
-                background: isReal ? "transparent" : "rgba(234,240,250,0.05)",
-              }}
-            >
-              DERIVED SCENARIO GRAPH
-            </span>
-          </div>
-          <div style={{ position: "absolute", inset: 0, padding: "52px 16px 16px" }}>
-            <CockpitGraphFlow
-              graph={run?.graph ?? null}
-              selectedId={activeId}
-              onInspect={setInspId}
-            />
-          </div>
-          {/* Legend: clarifies the directed flow + tainted-path highlight. */}
-          <div
-            style={{
-              position: "absolute",
-              bottom: 12,
-              left: 16,
-              zIndex: 4,
-              display: "flex",
-              gap: 14,
-              fontFamily: MONO,
-              fontSize: "9px",
-              letterSpacing: "0.08em",
-              color: C.faint,
-            }}
-          >
-            <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
-              <span style={{ width: 16, height: 2, background: "#fff", display: "inline-block" }} />
-              TAINTED PATH
-            </span>
-            <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
-              <span style={{ width: 16, height: 2, background: "rgba(200,212,230,0.22)", display: "inline-block" }} />
-              CLEAN / OTHER
-            </span>
-            <span>{isRunning ? "running…" : "left → right"}</span>
-          </div>
+          <AtlasPlate
+            model={model}
+            selectedId={activeId}
+            onSelect={setSelId}
+            isReal={isReal}
+            isRunning={isRunning}
+          />
         </div>
 
         {/* Node inspector */}
@@ -149,7 +104,14 @@ export default function GraphPage() {
             flexDirection: "column",
           }}
         >
-          <div style={{ fontFamily: MONO, fontSize: "9.5px", letterSpacing: "0.16em", color: C.faint }}>
+          <div
+            style={{
+              fontFamily: MONO,
+              fontSize: "9.5px",
+              letterSpacing: "0.16em",
+              color: C.faint,
+            }}
+          >
             NODE INSPECTOR
           </div>
           <div style={{ marginTop: 10, fontSize: 17, fontWeight: 700, color: inspColor }}>
@@ -158,7 +120,15 @@ export default function GraphPage() {
           <div style={{ fontFamily: MONO, fontSize: 11, color: C.muted, marginTop: 2 }}>
             {insp && insp.chunk !== "—" ? insp.chunk : (selected?.id ?? "")}
           </div>
-          <div style={{ marginTop: 16, display: "flex", flexDirection: "column", gap: 1, borderTop: "1px solid rgba(255,255,255,0.07)" }}>
+          <div
+            style={{
+              marginTop: 16,
+              display: "flex",
+              flexDirection: "column",
+              gap: 1,
+              borderTop: "1px solid rgba(255,255,255,0.07)",
+            }}
+          >
             {rows.map((r) => (
               <div
                 key={r.k}
@@ -170,8 +140,26 @@ export default function GraphPage() {
                   borderBottom: "1px solid rgba(255,255,255,0.05)",
                 }}
               >
-                <span style={{ fontFamily: MONO, fontSize: 10, letterSpacing: "0.08em", color: C.faint }}>{r.k}</span>
-                <span style={{ fontFamily: MONO, fontSize: 11, color: r.col ?? C.muted, textAlign: "right" }}>{r.v}</span>
+                <span
+                  style={{
+                    fontFamily: MONO,
+                    fontSize: 10,
+                    letterSpacing: "0.08em",
+                    color: C.faint,
+                  }}
+                >
+                  {r.k}
+                </span>
+                <span
+                  style={{
+                    fontFamily: MONO,
+                    fontSize: 11,
+                    color: r.col ?? C.muted,
+                    textAlign: "right",
+                  }}
+                >
+                  {r.v}
+                </span>
               </div>
             ))}
           </div>
@@ -184,11 +172,15 @@ export default function GraphPage() {
               background: taintNode ? "rgba(255,255,255,0.05)" : "rgba(255,255,255,0.012)",
             }}
           >
-            <div style={{ fontFamily: MONO, fontSize: 9, letterSpacing: "0.14em", color: C.faint }}>RISK REASON</div>
-            <div style={{ marginTop: 6, fontSize: 12, lineHeight: 1.5, color: C.silver }}>{insp?.reason ?? "—"}</div>
+            <div style={{ fontFamily: MONO, fontSize: 9, letterSpacing: "0.14em", color: C.faint }}>
+              RISK REASON
+            </div>
+            <div style={{ marginTop: 6, fontSize: 12, lineHeight: 1.5, color: C.silver }}>
+              {insp?.reason ?? "—"}
+            </div>
           </div>
           <div style={{ marginTop: "auto", paddingTop: 14, fontSize: 11, color: C.faint }}>
-            Click any node to inspect its provenance.
+            Click any star to inspect its provenance.
           </div>
         </div>
       </div>
