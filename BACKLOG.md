@@ -105,35 +105,47 @@ were fixed in this Phase 0 pass.
 | 16 | Live `POST /runs/real`: deployment can cold-start into deterministic fallback (Groq env/latency); fail-closed contract intact. | MEDIUM | Phase 0 (diagnosability) + ops | Diagnosability improved by findings 1-2. Env/latency check on deployment is ops, not a code edit. |
 | 17 | `real_run.py` `_deterministic_fallback`: `judge=None`, `computed=False` by design in fallback. | LOW | n/a | Confirmed by-design; no action. |
 | 18 | Phase 1 persistence + multi-tenant isolation (`db/` package): Postgres app store, reversible migrations, tenant-scoped repo, BOLA-denied, incidents + signed certificates persisted, audit log per action. | ROADMAP | Phase 1 | **DONE (Phase 1):** 16 new tests; BOLA proven (tenant B -> None/404, no data leak); migration up/down reversible + idempotent; seed repeatable; persistence fail-closed when DB down (surfaced, never faked). |
-| 19 | `.env` `DATABASE_URL` points at `localhost:5432` (refused); Supabase project unreachable in all pooler regions (`ENOTFOUND tenant or user not found`) + direct host does not resolve -> likely paused. | HIGH | Phase 1 -> ops | **DEFERRED to ops:** restore a real session-pooler DSN (`postgres.<ref>` user, `aws-<n>-<region>.pooler.supabase.com:5432`) and run `python -m db.migrate up`. Code is driver-agnostic and ready; live tables not yet created. |
+| 19 | `.env` `DATABASE_URL` appeared to point at `localhost:5432` (refused). ROOT CAUSE: a stray persistent shell `DATABASE_URL=localhost` shadowed `backend/.env` because `config.py` loaded dotenv with `override=False`, so the shell var won. NOT a paused project. | HIGH | Phase 1 | **RESOLVED (Phase 1):** `config.py` now loads `.env` with `override=True` and the stray var was cleared. The REAL Supabase Postgres 17.6 (session pooler, port 5432) is reachable; `python -m db.migrate up` created all 6 tables live (verified in `information_schema`). Real persistence proven end-to-end against live Supabase: an Incident + CRITICAL Certificate persisted, retrieved tenant-scoped, BOLA-denied, and confirmed via raw SQL in the `incidents` table (verification rows cleaned up). Conftest pins the suite to throwaway sqlite so CI stays offline + green despite `override=True`. |
 | 20 | Phase 1 review carries (DB): `checkfirst` migrations skip column-drift (no Alembic); single random UUIDv4 PKs fragment index at scale; `JSON` (not `JSONB`) so `fields`/`detail` not queryable inside. | LOW | Phase 2-3 | Backlog. Acceptable at current scale; revisit with Alembic + JSONB if the store grows. |
 | 21 | Phase 1 review carry: persistence auto-provisions a tenant on write via `X-Tenant-Slug` (no auth); CORS wildcard fallback unchanged. | MEDIUM | Phase 2 | Backlog (folded into Phase 2 auth + CORS allowlist). |
 
-### Phase 1 blocker status (was: the Postgres connection string)
+### Phase 1 blocker status: RESOLVED (now live on real Supabase Postgres)
 
-The Phase 1 code is **built and proven**: a `db/` package (engine + models +
-reversible migrations + tenant-scoped repo + persistence service) is wired into
-`/runs/real`, and the multi-tenant/BOLA/fail-closed contract is verified by 16
-tests against a real DB engine. The legacy `storage.py` (SQLite + `runs/*.json`)
-is intentionally left in place for run replay/report; the new Postgres store is
-the durable multi-tenant incident/certificate/audit history.
+The Phase 1 code is **built, proven, and now running on the real Supabase
+Postgres 17.6**: a `db/` package (engine + models + reversible migrations +
+tenant-scoped repo + persistence service) is wired into `/runs/real`, and the
+multi-tenant/BOLA/fail-closed contract is verified by the test suite (sqlite,
+offline) AND proven end-to-end against the live database. The legacy
+`storage.py` (SQLite + `runs/*.json`) is intentionally left in place for run
+replay/report; the new Postgres store is the durable multi-tenant
+incident/certificate/audit history.
 
-**One residual blocker, now an ops task, not a code task:** the `.env`
-`DATABASE_URL` is not a working Supabase string -- it points at `localhost:5432`
-(connection refused) and the Supabase project `gwytslpqvqfewsjcqmuj` is
-unreachable (no pooler region accepts the tenant; the direct host does not
-resolve), consistent with a paused project. The driver-agnostic code creates the
-live tables the instant a real session-pooler DSN is restored:
+**Root cause of the earlier "unreachable" finding (resolved):** it was NOT a
+paused project. A stray persistent shell `DATABASE_URL=localhost` was shadowing
+`backend/.env`, and `config.py` loaded dotenv with `override=False`, so the shell
+var won. Fixed by `load_dotenv(..., override=True)` + clearing the stray var.
+With that, the session pooler (port 5432) is reachable and `python -m db.migrate
+up` created all 6 tables live (confirmed in `information_schema`).
+
+Local end-to-end proof against live Supabase: an Incident + CRITICAL Certificate
+persisted, retrieved tenant-scoped, BOLA-denied for another tenant, and the row
+read straight back via raw SQL from the `incidents` table. Verification rows were
+deleted afterward so the real DB is left clean.
+
+**Remaining ops follow-up (NOT done in this code change, pending user
+authorization):** provisioning the production Vercel backend
+(`backend-three-puce-75`) with the real `DATABASE_URL` / Supabase keys and a
+`--prod` redeploy so the *deployed* API persists to Supabase too. That step moves
+production secrets and triggers a prod deploy, so it is left for explicit user
+sign-off rather than executed from a relayed request. The driver-agnostic code is
+ready; serverless should use the session pooler (5432) and mind the free-tier
+connection cap.
+
+Operator runbook (already executed locally; repeat on the deploy host once
+authorized):
 
 ```
-# 1. Set a real DATABASE_URL in backend/.env, e.g.:
-#    postgresql://postgres.<ref>:<password>@aws-<n>-<region>.pooler.supabase.com:5432/postgres
-# 2. Create the tables:
-python -m db.migrate up
-# 3. Seed the demo tenant:
-python -m db.migrate seed
+# .env already has the real session-pooler DATABASE_URL + Supabase keys.
+python -m db.migrate up     # create the 6 tables (idempotent)
+python -m db.migrate seed   # seed the demo tenant (idempotent)
 ```
-
-Until that DSN exists, the app boots normally (app-DB init is fail-soft) and
-persistence fails closed per request -- surfaced in the `/runs/real` response
-`persistence` block, never silently faked.
