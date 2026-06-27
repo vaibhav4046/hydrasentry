@@ -33,6 +33,7 @@ import scheduler
 import skillmake_marketplace
 import skillmake_scanner
 import storage
+from standards import asi06
 from auth import api_keys as api_key_svc
 from auth.identity import Identity, current_identity, require_user
 from config import key_status, settings
@@ -291,6 +292,18 @@ async def config_status(
         "frontend_url": settings.frontend_url,
     })
     return ok(base)
+
+
+@app.get("/standards/asi06")
+async def standards_asi06() -> JSONResponse:
+    """OWASP ASI06 (Memory Poisoning) control mapping, self-verified.
+
+    Read-only and unauthenticated: this is the public compliance artifact a
+    judge or auditor can fetch from the live product. Each control names the
+    real implementing module and symbol; ``verified_all`` is recomputed against
+    the running codebase so the served mapping is honest, never just asserted.
+    """
+    return ok(asi06.mapping(verify=True))
 
 
 @app.get("/scenarios")
