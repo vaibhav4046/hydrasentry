@@ -1,0 +1,47 @@
+1
+00:00:00,000 --> 00:00:09,000
+Agents do not fail at the prompt anymore. They fail at memory.
+
+2
+00:00:09,000 --> 00:00:18,000
+A poisoned memory quietly overrides the policy the agent was told to follow. Prompt scanners cannot see that. Watch one happen.
+
+3
+00:00:18,000 --> 00:00:30,000
+A real customer-refund agent backed by HydraDB memory. Policy: refunds over five hundred pounds need a manager. The clean agent escalates the GBP 900 refund. Correct.
+
+4
+00:00:30,000 --> 00:00:40,000
+Now inject one poisoned memory. Same task, same agent. This time it auto-approves GBP 900 with no manager sign-off.
+
+5
+00:00:40,000 --> 00:00:52,000
+A real judge scores it: eighty-seven, HIGH on the deterministic floor, around ninety and CRITICAL on the live path. Then the part no prompt tool gives you. The graph.
+
+6
+00:00:52,000 --> 00:01:02,000
+The poisoned chunk, the relation it travelled, the policy it overrode, the tool call it drove. Labelled REAL HydraDB query paths or DERIVED fallback. We never present derived data as real.
+
+7
+00:01:02,000 --> 00:01:10,000
+The MCP firewall intercepts the tainted path before the agent acts. The unsafe refund never fires. The poisoned memory is quarantined.
+
+8
+00:01:10,000 --> 00:01:22,000
+Every blocked run seals into a Memory Integrity Certificate: what changed, which node carried it, which tool would have fired, the regression rule that now prevents it. HMAC-signed and offline-verifiable.
+
+9
+00:01:22,000 --> 00:01:32,000
+And this is not a drawing. Run a live HydraDB query right now. Real triplets, real query time, straight off the owned tenant.
+
+10
+00:01:32,000 --> 00:01:48,000
+This is a real multi-tenant SaaS. My incidents, my certificates, my tenant, behind a magic-link sign-in.
+
+11
+00:01:48,000 --> 00:02:00,000
+I mint an API key, shown once, then stored only as a salted hash. I install the native MCP server, paste the key, and my agent's incidents flow into this dashboard. Ask for someone else's, you get a 404, not a leak.
+
+12
+00:02:00,000 --> 00:02:10,000
+Replay the attack. Trace the path. Block the action. Certify the fix. HydraSentry.
