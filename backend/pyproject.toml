@@ -1,0 +1,51 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "hydrasentry-mcp"
+version = "1.0.0"
+description = "HydraSentry: native stdio MCP server exposing real context-integrity tools (SKILL.md safety scan, memory poison scan, live HydraDB graph query, agent attack run, integrity certificates) to any MCP client."
+readme = "MCP_README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "vaibhav4046" }]
+keywords = ["mcp", "model-context-protocol", "agent-security", "context-integrity", "hydradb"]
+
+# Runtime deps for the MCP server and the real tools it wraps. httpx powers the
+# live skillmake.xyz fetch and the HydraDB adapter; python-dotenv loads backend
+# keys from .env. No MCP SDK dependency: the stdio JSON-RPC protocol is
+# implemented directly, so the server installs and runs offline.
+dependencies = [
+    "httpx>=0.27",
+    "python-dotenv>=1.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/vaibhav4046/hydrasentry"
+Repository = "https://github.com/vaibhav4046/hydrasentry"
+
+[project.scripts]
+hydrasentry-mcp = "hydrasentry_mcp.server:main"
+
+[tool.setuptools]
+# The MCP package plus the real engine modules it imports. py-modules keeps the
+# flat backend modules importable; packages ship the package dirs.
+packages = ["hydrasentry_mcp", "adapters"]
+py-modules = [
+    "skillmake_scanner",
+    "skillmake_marketplace",
+    "risk_engine",
+    "graph_extractor",
+    "scenario_loader",
+    "config",
+    "real_graph",
+    "real_run",
+    "real_agent",
+    "agent_runner",
+    "hydra_client",
+    "model_router",
+]
+
+[tool.setuptools.package-data]
+hydrasentry_mcp = ["MCP_README.md"]
