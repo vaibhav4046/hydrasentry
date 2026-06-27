@@ -19,6 +19,7 @@ from typing import Any
 
 import graph_extractor
 import risk_engine
+import semantic_detector
 from adapters.local_adapter import LocalGraphAdapter
 
 logger = logging.getLogger("hydrasentry.local_scan")
@@ -253,6 +254,57 @@ def _apply_content_nudge(risk: dict[str, Any], signal: dict[str, Any],
     return nudged
 
 
+# Band ordering so a combine can only ever LIFT a result, never lower it. The
+# semantic signal is additive in exactly the same spirit as the lexical nudge.
+_BAND_ORDER = {"LOW": 0, "MEDIUM": 1, "HIGH": 2, "CRITICAL": 3}
+
+
+def _all_scan_memories(scenario: dict[str, Any]) -> list[dict[str, Any]]:
+    """Every memory the scan ingested (clean + poison), for semantic scoring.
+
+    Both sides are scored: an UNLABELLED paraphrase poison arrives as
+    ``clean_context`` (the whole point), and re-scoring a labelled poison is
+    harmless because the combine only lifts the band."""
+    return list(scenario.get("clean_context", [])) + list(scenario.get("poison_context", []))
+
+
+def _apply_semantic_signal(risk: dict[str, Any],
+                           semantic: dict[str, Any]) -> dict[str, Any]:
+    """Combine the embeddings-based semantic poison signal into the risk result.
+
+    Lift-only: if the semantic detector fired with a band stronger than the
+    current band, raise to the semantic band/score; otherwise leave the result
+    untouched. This is what lets a paraphrased unlabelled poison that the lexical
+    path missed reach MEDIUM/HIGH. Returns a NEW dict (immutable update) and tags
+    the result transparently. When embeddings are UNAVAILABLE the result is left
+    as-is and tagged ``semantic_available=False`` so the caller can label the
+    scan "lexical only, semantic unavailable" -- never a silent pass."""
+    out = dict(risk)
+    out["semantic_available"] = bool(semantic.get("available"))
+    if not semantic.get("available"):
+        out["semantic_note"] = semantic.get("reason", "semantic detection unavailable")
+        return out
+    if not semantic.get("fired"):
+        out["semantic_max_similarity"] = semantic.get("max_similarity")
+        return out
+
+    sem_band = semantic.get("band", "MEDIUM")
+    sem_score = int(semantic.get("score", 55))
+    out["semantic_max_similarity"] = semantic.get("max_similarity")
+    out["semantic_model"] = semantic.get("model")
+    rules_fired = list(out.get("rules_fired", []))
+    rules_fired.append(
+        f"semantic:paraphrase_poison_detected:sim={semantic.get('max_similarity')}"
+    )
+    out["rules_fired"] = rules_fired
+    out["semantic_heuristic"] = True
+
+    if _BAND_ORDER.get(sem_band, 0) > _BAND_ORDER.get(out.get("band", "LOW"), 0):
+        out["score"] = max(int(out.get("score", 0)), sem_score)
+        out["band"] = sem_band
+    return out
+
+
 def run_local_scan(payload: dict[str, Any]) -> dict[str, Any]:
     """Run the full pipeline on local memories and return a compact result.
 
@@ -284,10 +336,24 @@ def run_local_scan(payload: dict[str, Any]) -> dict[str, Any]:
     content = _content_signal(scenario)
     risk = _apply_content_nudge(risk, content, scenario)
 
+    # The real moat: SEMANTIC paraphrase detection via embeddings. Catches a
+    # reworded policy-override poison the lexical/marker paths miss. Lift-only and
+    # fail-closed -- if embeddings are unavailable the band is unchanged and the
+    # result is tagged so the response reads "lexical only, semantic unavailable".
+    semantic = semantic_detector.detect(_all_scan_memories(scenario))
+    risk = _apply_semantic_signal(risk, semantic)
+
     firewall = _firewall_decision(risk)
     findings = _findings(scenario, graph, diff, risk)
     if content.get("fired") and risk.get("content_heuristic"):
         findings.extend(content["evidence"])
+    if semantic.get("fired") and risk.get("semantic_heuristic"):
+        findings.extend(semantic.get("evidence", []))
+    elif not semantic.get("available"):
+        findings.append(
+            "semantic detection unavailable (lexical only): "
+            + str(semantic.get("reason", "embeddings unavailable"))
+        )
 
     return {
         "ok": True,
@@ -305,6 +371,7 @@ def run_local_scan(payload: dict[str, Any]) -> dict[str, Any]:
         "poisoned": poisoned_answer,
         "behavior_diff": diff,
         "content_signal": content,
+        "semantic_signal": semantic,
     }
 
 
