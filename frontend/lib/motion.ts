@@ -154,9 +154,18 @@ export const mastheadContainer: Variants = {
   },
 };
 
-/** One masthead line/element: rise + fade + blur-clear, cinematic easing. */
+/**
+ * One masthead line/element: rise + blur-clear, cinematic easing.
+ *
+ * Bulletproof visibility: the hidden state is opacity:1 (NOT 0). The masthead
+ * text — kicker, headline, subcopy, idle metrics, CTAs — must be legible at the
+ * very first paint and can never get stuck invisible, regardless of run state,
+ * MotionConfig timing, or whether the entrance tween completes. The subtle
+ * "surfacing from the dark" entrance is carried by y + blur only (compositor
+ * friendly), so motion is preserved without ever animating opacity from 0.
+ */
 export const mastheadLine: Variants = {
-  hidden: { opacity: 0, y: 22, filter: "blur(10px)" },
+  hidden: { opacity: 1, y: 22, filter: "blur(10px)" },
   show: {
     opacity: 1,
     y: 0,
@@ -165,9 +174,12 @@ export const mastheadLine: Variants = {
   },
 };
 
-/** The italic accent, lands last, a touch slower so it reads as the punctuation. */
+/**
+ * The italic accent, lands last. Same bulletproof rule: opacity:1 at rest, the
+ * entrance reads through y + blur only so the line is never hidden.
+ */
 export const mastheadAccent: Variants = {
-  hidden: { opacity: 0, y: 14, filter: "blur(8px)" },
+  hidden: { opacity: 1, y: 14, filter: "blur(8px)" },
   show: {
     opacity: 1,
     y: 0,

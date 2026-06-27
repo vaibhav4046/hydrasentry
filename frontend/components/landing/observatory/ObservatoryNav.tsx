@@ -216,7 +216,7 @@ export function ObservatoryNav() {
               onMouseEnter={btnLift}
               onMouseLeave={btnDrop}
             >
-              {isRunning ? "Running…" : "Run Judge Demo"}
+              {isRunning ? "Running…" : "Run live attack"}
             </button>
           </div>
         </div>
