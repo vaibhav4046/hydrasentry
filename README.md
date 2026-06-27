@@ -278,6 +278,13 @@ This maps to **OWASP ASI06 (Memory Poisoning)** controls in the Agentic Security
 | **Ground-truth eval** | Baseline-vs-poisoned replay produces a computed behavior diff, not an asserted one. |
 | **Trust scoring** | Deterministic risk score (rules + Groq judge + replay) plus a semantic similarity signal. |
 
+This mapping is not just prose. It is a **self-verifying artifact**: the canonical control list lives in `backend/standards/asi06.py`, where every control names the real implementing module and a real symbol inside it. `backend/tests/test_standards_asi06.py` asserts that each cited file exists and each cited symbol is still present, so the mapping cannot silently rot into a false claim. The same mapping is served read-only from the live API, with verification recomputed against the running codebase:
+
+```bash
+curl https://backend-three-puce-75.vercel.app/standards/asi06
+# -> { ok, data: { risk_id: "ASI06", verified_all: true, controls: [ { id, evidence_file, evidence_symbol, verified }, ... ] } }
+```
+
 ---
 
 ## The Memory Integrity Certificate (MIC)
