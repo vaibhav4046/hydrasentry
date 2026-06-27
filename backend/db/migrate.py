@@ -28,7 +28,7 @@ import json
 import sys
 from typing import Any
 
-from sqlalchemy import inspect
+from sqlalchemy import inspect, text
 
 from db.engine import get_engine
 from db.models import ALL_TABLES, SQLModel
@@ -36,7 +36,13 @@ from db.repo import TenantRepo
 
 # The migration version. Bump and add a branch here when the schema changes; the
 # downgrade must stay the exact inverse so up/down round-trips cleanly.
-MIGRATION_VERSION = "0001_initial"
+#
+# 0002_api_keys_and_user_sub adds the per-user API key table and the
+# ``users.supabase_sub`` column (Phase 2 auth). ``create_all`` creates the new
+# ``api_keys`` table on both fresh and existing databases, but it never ALTERs an
+# existing table -- so the new column on the already-live ``users`` table is
+# added explicitly and reversibly below.
+MIGRATION_VERSION = "0002_api_keys_and_user_sub"
 
 DEFAULT_TENANT_SLUG = "demo"
 DEFAULT_TENANT_NAME = "Demo Tenant"
@@ -45,22 +51,80 @@ DEFAULT_TENANT_NAME = "Demo Tenant"
 _TABLE_NAMES = [t.__tablename__ for t in ALL_TABLES]
 
 
+def _users_columns() -> set[str]:
+    insp = inspect(get_engine())
+    if "users" not in set(insp.get_table_names()):
+        return set()
+    return {c["name"] for c in insp.get_columns("users")}
+
+
+def _add_user_sub_column() -> bool:
+    """Add ``users.supabase_sub`` (nullable, unique) to an existing users table.
+
+    Returns True if the column was added, False if it was already present. Safe
+    to re-run (checks the live schema first). On a fresh DB the column is created
+    by ``create_all`` and this is a no-op.
+    """
+    if "supabase_sub" in _users_columns():
+        return False
+    engine = get_engine()
+    with engine.begin() as conn:
+        conn.execute(text("ALTER TABLE users ADD COLUMN supabase_sub VARCHAR"))
+        # A partial-safe unique index (NULLs are allowed to repeat on both
+        # Postgres and sqlite). Named so the downgrade can drop it precisely.
+        conn.execute(
+            text(
+                "CREATE UNIQUE INDEX IF NOT EXISTS ix_users_supabase_sub "
+                "ON users (supabase_sub)"
+            )
+        )
+    return True
+
+
+def _drop_user_sub_column() -> bool:
+    """Reverse of :func:`_add_user_sub_column`. Drops the index then the column.
+
+    Postgres supports ``DROP COLUMN``; older sqlite may not, but the test
+    round-trip uses ``drop_all`` (whole-table) so this is exercised on Postgres.
+    """
+    cols = _users_columns()
+    if "supabase_sub" not in cols:
+        return False
+    engine = get_engine()
+    with engine.begin() as conn:
+        conn.execute(text("DROP INDEX IF EXISTS ix_users_supabase_sub"))
+        try:
+            conn.execute(text("ALTER TABLE users DROP COLUMN supabase_sub"))
+        except Exception:  # noqa: BLE001 -- sqlite < 3.35 cannot drop columns
+            return False
+    return True
+
+
 def _existing_tables() -> set[str]:
     insp = inspect(get_engine())
     return set(insp.get_table_names())
 
 
 def upgrade() -> dict[str, Any]:
-    """Create all tables. Idempotent (``checkfirst`` skips existing)."""
+    """Create all tables + apply additive column migrations. Idempotent.
+
+    ``create_all(checkfirst=True)`` creates any missing table (incl. the new
+    ``api_keys`` table) but never ALTERs an existing one, so the new
+    ``users.supabase_sub`` column on the already-live ``users`` table is added
+    explicitly and reversibly. Both steps re-check the live schema first, so the
+    whole thing is safe to re-run on a fresh or already-migrated DB.
+    """
     engine = get_engine()
     before = _existing_tables()
     SQLModel.metadata.create_all(engine, checkfirst=True)
+    sub_added = _add_user_sub_column()
     after = _existing_tables()
     created = sorted((after - before) & set(_TABLE_NAMES))
     return {
         "action": "up",
         "version": MIGRATION_VERSION,
         "created": created,
+        "user_sub_column_added": sub_added,
         "tables_present": sorted(after & set(_TABLE_NAMES)),
         "ok": set(_TABLE_NAMES).issubset(after),
     }
@@ -70,6 +134,10 @@ def downgrade() -> dict[str, Any]:
     """Drop all tables in reverse FK order. Idempotent (``checkfirst``)."""
     engine = get_engine()
     before = _existing_tables()
+    # Drop the added column first (it lives on a table about to be dropped, but
+    # dropping it explicitly keeps the migration a clean inverse if a future
+    # downgrade is column-only rather than whole-table).
+    _drop_user_sub_column()
     # Drop children before parents. SQLModel.metadata.drop_all already sorts in
     # reverse dependency order, but pass checkfirst so a partial state is fine.
     SQLModel.metadata.drop_all(engine, checkfirst=True)

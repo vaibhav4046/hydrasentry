@@ -81,27 +81,49 @@ def test_bola_tenant_b_cannot_read_tenant_a_incident(clean_app_db):
 
 
 def test_bola_via_http_returns_404_not_data(clean_app_db):
+    """BOLA over HTTP under REAL auth (Phase 2): two API-key-authenticated users;
+    user B asking for user A's incident id gets 404, never the data. The old
+    unauthenticated X-Tenant-Slug header path is gone -- isolation is now bound to
+    a verified credential, which is the stronger property."""
     from fastapi.testclient import TestClient
 
+    import auth.api_keys as api_keys_mod
     import main
+    from db.repo import ApiKeyRepo, IncidentRepo, UserRepo
 
     client = TestClient(main.app)
 
-    # Tenant A creates an incident through the persistence service.
-    out = persist_run(_real_run_result(), tenant_slug="http-tenant-a")
-    assert out["persisted"] is True
-    incident_id = out["incident_id"]
+    # User A + key, and an incident owned by A's tenant.
+    user_a, tenant_a = UserRepo.get_or_create_with_tenant("http-A", "httpa@x.com")
+    key_a = api_keys_mod.new_key()
+    ApiKeyRepo.create(
+        user_id=user_a.id, tenant_id=tenant_a.id, name="a",
+        key_hash=key_a.key_hash, prefix=key_a.prefix,
+    )
+    incident = IncidentRepo.create(
+        tenant_a.id, scenario="secret-refund", risk_score=87, band="HIGH",
+        baseline_answer="denied", poisoned_answer="approved",
+    )
+    incident_id = incident.id
 
-    # Tenant A can read it.
+    # User B + key (different tenant).
+    user_b, tenant_b = UserRepo.get_or_create_with_tenant("http-B", "httpb@x.com")
+    key_b = api_keys_mod.new_key()
+    ApiKeyRepo.create(
+        user_id=user_b.id, tenant_id=tenant_b.id, name="b",
+        key_hash=key_b.key_hash, prefix=key_b.prefix,
+    )
+
+    # User A can read its own incident.
     own = client.get(
-        f"/incidents/{incident_id}", headers={"X-Tenant-Slug": "http-tenant-a"}
+        f"/incidents/{incident_id}", headers={"X-API-Key": key_a.raw}
     )
     assert own.status_code == 200
     assert own.json()["data"]["id"] == incident_id
 
-    # Tenant B asking for A's id gets 404 with NO incident data in the body.
+    # User B asking for A's id gets 404 with NO incident data in the body.
     cross = client.get(
-        f"/incidents/{incident_id}", headers={"X-Tenant-Slug": "http-tenant-b"}
+        f"/incidents/{incident_id}", headers={"X-API-Key": key_b.raw}
     )
     assert cross.status_code == 404
     body = cross.json()

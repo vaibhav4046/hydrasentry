@@ -101,76 +101,110 @@ def _build_certificate(incident_fields: dict[str, Any]) -> dict[str, Any]:
     return generate_certificate(scan_shape)
 
 
+def _persist_core(
+    tenant_id: str,
+    tenant_slug: str,
+    result: dict[str, Any],
+    actor: str,
+) -> dict[str, Any]:
+    """Shared persistence body for an already-resolved tenant. Tenant-scoped
+    through the BOLA-safe repo. Raises on DB error (caller fails closed)."""
+    fields = _incident_fields(result)
+    incident = IncidentRepo.create(tenant_id, **fields)
+
+    cert_id: Optional[str] = None
+    if _should_certify(fields["decision"], fields["band"]):
+        cert = _build_certificate(fields)
+        payload = cert.get("payload", {})
+        mic_id = cert.get("digest", "")
+        certificate = CertificateRepo.create(
+            tenant_id,
+            incident_id=incident.id,
+            mic_id=mic_id,
+            hmac_sig=cert.get("signature"),
+            risk_score=fields["risk_score"],
+            decision=fields["decision"],
+            fields={
+                "version": cert.get("version"),
+                "issuer": cert.get("issuer"),
+                "signed": cert.get("signed"),
+                "algorithm": cert.get("algorithm"),
+                "payload": payload,
+            },
+        )
+        cert_id = certificate.id
+
+    AuditLogRepo.create(
+        tenant_id,
+        actor=actor,
+        action="persist_run",
+        detail={
+            "incident_id": incident.id,
+            "certificate_id": cert_id,
+            "mode": fields["mode"],
+            "band": fields["band"],
+            "decision": fields["decision"],
+            "real": bool(result.get("real")),
+        },
+    )
+
+    return {
+        "persisted": True,
+        "tenant_id": tenant_id,
+        "tenant_slug": tenant_slug,
+        "incident_id": incident.id,
+        "certificate_id": cert_id,
+    }
+
+
+def _fail_closed(exc: Exception, label: str) -> dict[str, Any]:
+    from db.engine import safe_error_detail
+
+    logger.warning("persist_run failed (%s): %s", label, type(exc).__name__)
+    return {
+        "persisted": False,
+        "error": "persistence unavailable",
+        "kind": type(exc).__name__,
+        # Credentials in the DSN are redacted before surfacing the detail.
+        "detail": safe_error_detail(exc),
+    }
+
+
 def persist_run(
     result: dict[str, Any],
     tenant_slug: str = DEFAULT_TENANT_SLUG,
     actor: str = "system",
 ) -> dict[str, Any]:
-    """Persist a run result as an Incident (+ Certificate when blocked) and an
-    AuditLog row, all under ``tenant_slug``.
+    """Persist a run under ``tenant_slug`` (get-or-create the tenant by slug).
 
-    Returns ``{persisted: bool, incident_id?, certificate_id?, tenant_id?,
-    error?, kind?}``. On any DB error it returns ``persisted: false`` with the
-    error surfaced -- never raises into the request path, never fabricates.
+    Used by the unauthenticated demo path and the existing tests. Returns
+    ``{persisted: bool, incident_id?, certificate_id?, tenant_id?, error?,
+    kind?}``. On any DB error it fails closed -- never raises, never fabricates.
     """
     try:
         tenant = TenantRepo.ensure(tenant_slug, f"{tenant_slug} tenant")
-        fields = _incident_fields(result)
-        incident = IncidentRepo.create(tenant.id, **fields)
-
-        cert_id: Optional[str] = None
-        if _should_certify(fields["decision"], fields["band"]):
-            cert = _build_certificate(fields)
-            payload = cert.get("payload", {})
-            mic_id = cert.get("digest", "")
-            certificate = CertificateRepo.create(
-                tenant.id,
-                incident_id=incident.id,
-                mic_id=mic_id,
-                hmac_sig=cert.get("signature"),
-                risk_score=fields["risk_score"],
-                decision=fields["decision"],
-                fields={
-                    "version": cert.get("version"),
-                    "issuer": cert.get("issuer"),
-                    "signed": cert.get("signed"),
-                    "algorithm": cert.get("algorithm"),
-                    "payload": payload,
-                },
-            )
-            cert_id = certificate.id
-
-        AuditLogRepo.create(
-            tenant.id,
-            actor=actor,
-            action="persist_run",
-            detail={
-                "incident_id": incident.id,
-                "certificate_id": cert_id,
-                "mode": fields["mode"],
-                "band": fields["band"],
-                "decision": fields["decision"],
-                "real": bool(result.get("real")),
-            },
-        )
-
-        return {
-            "persisted": True,
-            "tenant_id": tenant.id,
-            "tenant_slug": tenant.slug,
-            "incident_id": incident.id,
-            "certificate_id": cert_id,
-        }
+        return _persist_core(tenant.id, tenant.slug, result, actor)
     except Exception as exc:  # noqa: BLE001 -- fail closed + surface, never fake
-        from db.engine import safe_error_detail
+        return _fail_closed(exc, f"tenant={tenant_slug}")
 
-        logger.warning(
-            "persist_run failed (tenant=%s): %s", tenant_slug, type(exc).__name__
-        )
-        return {
-            "persisted": False,
-            "error": "persistence unavailable",
-            "kind": type(exc).__name__,
-            # Credentials in the DSN are redacted before surfacing the detail.
-            "detail": safe_error_detail(exc),
-        }
+
+def persist_run_for_tenant(
+    result: dict[str, Any],
+    tenant_id: str,
+    tenant_slug: Optional[str] = None,
+    actor: str = "system",
+) -> dict[str, Any]:
+    """Persist a run under an ALREADY-RESOLVED tenant id (Phase 2 auth path).
+
+    The tenant was created at sign-in / key-creation, so this does NOT
+    auto-provision by slug -- it writes straight to the authenticated user's
+    tenant. Same fail-closed contract as :func:`persist_run`.
+    """
+    if not tenant_id or not tenant_id.strip():
+        # A blank tenant_id is a programming error at the call site, not a DB
+        # outage. Surface it distinctly rather than as "persistence unavailable".
+        raise ValueError("persist_run_for_tenant requires a non-empty tenant_id")
+    try:
+        return _persist_core(tenant_id, tenant_slug or tenant_id, result, actor)
+    except Exception as exc:  # noqa: BLE001 -- fail closed + surface, never fake
+        return _fail_closed(exc, f"tenant_id={tenant_id}")

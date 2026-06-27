@@ -8,5 +8,9 @@ sse-starlette==2.2.1
 sqlmodel==0.0.39
 SQLAlchemy==2.0.51
 psycopg2-binary==2.9.12
+# Phase 2: Supabase-JWT verification (JWKS / ES256 + legacy HS256 fallback).
+# cryptography is required for the ES256 (EC) public-key path.
+PyJWT==2.12.1
+cryptography==46.0.5
 pytest==8.3.4
 pytest-asyncio==0.25.2

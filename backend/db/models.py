@@ -23,6 +23,7 @@ __all__ = [
     "SQLModel",
     "Tenant",
     "User",
+    "ApiKey",
     "Incident",
     "Certificate",
     "RegressionRule",
@@ -50,6 +51,11 @@ def _ts_column(*, index: bool = False) -> Column:
     return Column(TIMESTAMP(timezone=True), index=index, nullable=False)
 
 
+def _ts_column_nullable(*, index: bool = False) -> Column:
+    """A nullable timezone-aware timestamp (e.g. last_used_at / revoked_at)."""
+    return Column(TIMESTAMP(timezone=True), index=index, nullable=True)
+
+
 def _json_column() -> Column:
     """A JSON column with an empty-dict server-side default, cross-dialect."""
     return Column(JSON, nullable=False, default=dict)
@@ -67,8 +73,10 @@ class Tenant(SQLModel, table=True):
 
 
 class User(SQLModel, table=True):
-    """An identity. Populated for real in Phase 2 (auth); the table exists now
-    so the tenant/user model is in place and migrations are stable."""
+    """An identity, linked to its personal Tenant. Populated for real in Phase 2
+    (Supabase auth): ``supabase_sub`` is the verified JWT ``sub`` claim and is the
+    stable primary key for get-or-create on sign-in (email can change; sub does
+    not). ``email`` is kept for display but is no longer the unique anchor."""
 
     __tablename__ = "users"
 
@@ -76,8 +84,45 @@ class User(SQLModel, table=True):
     tenant_id: Optional[str] = Field(
         default=None, foreign_key="tenants.id", index=True
     )
-    email: str = Field(index=True, unique=True)
+    # The verified Supabase JWT subject. Unique + indexed so get-or-create on
+    # sign-in is a single keyed lookup that cannot collide across users.
+    supabase_sub: Optional[str] = Field(
+        default=None, index=True, unique=True
+    )
+    email: str = Field(index=True)
     created_at: datetime = Field(default_factory=_now, sa_column=_ts_column())
+
+
+class ApiKey(SQLModel, table=True):
+    """A per-user API key for agents / the MCP server.
+
+    The RAW key is shown exactly once at creation and is NEVER stored: only a
+    salted SHA-256 ``key_hash`` and the first-8-char ``prefix`` (for display) are
+    persisted. Verification hashes the presented key and constant-time compares.
+    A key is valid only while ``revoked_at`` is NULL. ``tenant_id`` is the owning
+    user's personal tenant -- an authenticated agent's writes land there.
+    """
+
+    __tablename__ = "api_keys"
+    __table_args__ = (
+        Index("ix_api_keys_user_created", "user_id", "created_at"),
+    )
+
+    id: str = Field(default_factory=_uuid, primary_key=True)
+    user_id: str = Field(foreign_key="users.id", index=True)
+    tenant_id: str = Field(foreign_key="tenants.id", index=True)
+    name: str = Field(default="")
+    # Salted SHA-256 hex digest of the raw key. The raw key is never stored.
+    key_hash: str = Field(index=True, unique=True)
+    # First 8 chars of the raw key, safe to show in a list (not a secret alone).
+    prefix: str = Field(default="", index=True)
+    created_at: datetime = Field(default_factory=_now, sa_column=_ts_column())
+    last_used_at: Optional[datetime] = Field(
+        default=None, sa_column=_ts_column_nullable()
+    )
+    revoked_at: Optional[datetime] = Field(
+        default=None, sa_column=_ts_column_nullable()
+    )
 
 
 class Incident(SQLModel, table=True):
@@ -160,6 +205,7 @@ class AuditLog(SQLModel, table=True):
 ALL_TABLES = [
     Tenant,
     User,
+    ApiKey,
     Incident,
     Certificate,
     RegressionRule,

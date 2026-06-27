@@ -13,6 +13,7 @@ batching multiple writes in one transaction.
 from __future__ import annotations
 
 from contextlib import contextmanager
+from datetime import datetime, timezone
 from typing import Any, Iterator, Optional
 
 from sqlalchemy.exc import IntegrityError
@@ -20,6 +21,7 @@ from sqlmodel import Session, select
 
 from db.engine import get_session
 from db.models import (
+    ApiKey,
     AuditLog,
     Certificate,
     Incident,
@@ -27,6 +29,10 @@ from db.models import (
     Tenant,
     User,
 )
+
+
+def _now() -> datetime:
+    return datetime.now(timezone.utc)
 
 
 class TenantScopingError(ValueError):
@@ -181,17 +187,19 @@ class AuditLogRepo(_ScopedRepo):
 
 
 class UserRepo:
-    """Users carry an optional tenant_id (Phase 2 wires real auth)."""
+    """Users are linked to a personal Tenant. ``supabase_sub`` (the verified JWT
+    subject) is the stable anchor for get-or-create on sign-in."""
 
     @staticmethod
     def create(
         email: str,
         tenant_id: Optional[str] = None,
+        supabase_sub: Optional[str] = None,
         *,
         session: Optional[Session] = None,
     ) -> User:
         with _session(session) as s:
-            user = User(email=email, tenant_id=tenant_id)
+            user = User(email=email, tenant_id=tenant_id, supabase_sub=supabase_sub)
             s.add(user)
             s.flush()
             s.refresh(user)
@@ -201,3 +209,164 @@ class UserRepo:
     def get_by_email(email: str, *, session: Optional[Session] = None) -> Optional[User]:
         with _session(session) as s:
             return s.exec(select(User).where(User.email == email)).first()
+
+    @staticmethod
+    def get_by_sub(sub: str, *, session: Optional[Session] = None) -> Optional[User]:
+        with _session(session) as s:
+            return s.exec(select(User).where(User.supabase_sub == sub)).first()
+
+    @staticmethod
+    def get_or_create_with_tenant(
+        sub: str,
+        email: str,
+        *,
+        session: Optional[Session] = None,
+    ) -> tuple[User, Tenant]:
+        """Idempotently resolve a verified Supabase identity to (user, tenant).
+
+        One personal Tenant per user, keyed by a deterministic ``user-<sub>``
+        slug so a re-sign-in never spawns a second tenant. Concurrency-safe: a
+        racing insert on the unique ``supabase_sub`` constraint is caught and the
+        committed row re-read, so neither caller 500s. Only ever called AFTER the
+        JWT is cryptographically verified -- ``sub``/``email`` are trusted here.
+        """
+        slug = f"user-{sub}"
+        # The personal tenant is created in its OWN committed transaction first
+        # (TenantRepo.ensure manages its own session/savepoint), so a unique-slug
+        # race inside ensure can never roll back the user transaction below. The
+        # user row is then created/looked-up in the caller's session.
+        tenant = TenantRepo.ensure(slug, email or slug, session=session)
+        with _session(session) as s:
+            existing = s.exec(
+                select(User).where(User.supabase_sub == sub)
+            ).first()
+            if existing is not None:
+                if not existing.tenant_id:
+                    existing.tenant_id = tenant.id
+                    s.add(existing)
+                    s.flush()
+                # Keep the display email fresh if it changed upstream.
+                if email and existing.email != email:
+                    existing.email = email
+                    s.add(existing)
+                    s.flush()
+                # Resolve the tenant the user is actually linked to (may predate
+                # this call); fall back to the ensured personal tenant.
+                linked = s.get(Tenant, existing.tenant_id) or tenant
+                return existing, linked
+
+            user = User(email=email or slug, tenant_id=tenant.id, supabase_sub=sub)
+            s.add(user)
+            try:
+                s.flush()
+                s.refresh(user)
+                return user, tenant
+            except IntegrityError:
+                # A concurrent sign-in created the user first. Roll back THIS
+                # session's failed insert and re-read the committed winner.
+                s.rollback()
+                won = s.exec(
+                    select(User).where(User.supabase_sub == sub)
+                ).first()
+                if won is None:
+                    raise
+                won_tenant = s.get(Tenant, won.tenant_id) or tenant
+                return won, won_tenant
+
+
+class ApiKeyRepo:
+    """Per-user API keys. Only a salted hash + display prefix are stored; the
+    raw key is never persisted. Verification is a keyed hash lookup that excludes
+    revoked keys, then a constant-time compare in the service layer."""
+
+    @staticmethod
+    def create(
+        *,
+        user_id: str,
+        tenant_id: str,
+        name: str,
+        key_hash: str,
+        prefix: str,
+        session: Optional[Session] = None,
+    ) -> ApiKey:
+        with _session(session) as s:
+            row = ApiKey(
+                user_id=user_id,
+                tenant_id=tenant_id,
+                name=name,
+                key_hash=key_hash,
+                prefix=prefix,
+            )
+            s.add(row)
+            s.flush()
+            s.refresh(row)
+            return row
+
+    @staticmethod
+    def get_active_by_hash(
+        key_hash: str, *, session: Optional[Session] = None
+    ) -> Optional[ApiKey]:
+        """Look up a NON-revoked key by its salted hash. Revoked keys are
+        invisible here (default-deny: a revoked key authenticates nothing)."""
+        with _session(session) as s:
+            return s.exec(
+                select(ApiKey).where(
+                    ApiKey.key_hash == key_hash,
+                    ApiKey.revoked_at.is_(None),  # type: ignore[union-attr]
+                )
+            ).first()
+
+    @staticmethod
+    def list_for_user(
+        user_id: str, *, session: Optional[Session] = None
+    ) -> list[ApiKey]:
+        """All of a user's keys (active + revoked), newest first."""
+        with _session(session) as s:
+            stmt = (
+                select(ApiKey)
+                .where(ApiKey.user_id == user_id)
+                .order_by(ApiKey.created_at.desc())
+            )
+            return list(s.exec(stmt).all())
+
+    @staticmethod
+    def get_for_user(
+        user_id: str, key_id: str, *, session: Optional[Session] = None
+    ) -> Optional[ApiKey]:
+        """A single key only if it belongs to ``user_id`` (BOLA gate for keys)."""
+        with _session(session) as s:
+            return s.exec(
+                select(ApiKey).where(
+                    ApiKey.id == key_id, ApiKey.user_id == user_id
+                )
+            ).first()
+
+    @staticmethod
+    def touch_last_used(key_id: str, *, session: Optional[Session] = None) -> None:
+        with _session(session) as s:
+            row = s.get(ApiKey, key_id)
+            if row is not None and row.revoked_at is None:
+                row.last_used_at = _now()
+                s.add(row)
+                s.flush()
+
+    @staticmethod
+    def revoke(
+        user_id: str, key_id: str, *, session: Optional[Session] = None
+    ) -> Optional[ApiKey]:
+        """Revoke a key the caller owns. Returns the revoked row, or None if the
+        key does not exist or belongs to another user (no cross-user revoke)."""
+        with _session(session) as s:
+            row = s.exec(
+                select(ApiKey).where(
+                    ApiKey.id == key_id, ApiKey.user_id == user_id
+                )
+            ).first()
+            if row is None:
+                return None
+            if row.revoked_at is None:
+                row.revoked_at = _now()
+                s.add(row)
+                s.flush()
+                s.refresh(row)
+            return row

@@ -12,20 +12,26 @@ roadmap is real about what is not built yet.
 
 ## Part 1: 8-axis self-scores
 
-Phase 1 deltas are noted inline. Phase 1 shipped real Postgres persistence with
+Phase deltas are noted inline. Phase 1 shipped real Postgres persistence with
 enforced multi-tenant isolation (tenant-scoped repo, reversible migrations,
 BOLA-denied across tenants, incidents + signed certificates persisted, audit
-log per action), proven against a real DB engine with 16 new tests.
+log per action). Phase 2 (backend) added real authentication on that store:
+Supabase user-JWT verified via the project JWKS (ES256, issuer+aud+exp pinned)
+plus per-user API keys (salted-hash, constant-time, raw shown once), per-user
+tenants, and connect-your-agent persistence (an API-key agent's run lands in its
+own tenant, not demo) -- with the public unauthenticated showcase preserved and
+fail-closed default-deny on user-data endpoints. 147 green tests (20 new in
+Phase 2), migration 0002 applied to the live Supabase Postgres.
 
 | Axis | Score | One-line basis |
 |------|-------|----------------|
 | Realness | 8 | Real Groq attack + real HydraDB graph + real judge + real MCP server; fail-closed when degraded. Gap: real path is the unreliable branch under quota. |
 | Technical depth | 8 | Replay harness, graph taint tracing, deterministic+LLM risk fusion, native stdio MCP, MIC signing. Gap: detection is lexical, not semantic. |
-| Production hardening | 7 | **Phase 1 (+1):** durable Postgres app store via SQLModel, reversible/idempotent migrations, tenant-scoped repo, persistence wired into /runs/real, fail-closed when DB down (surfaced, never faked). Fail-closed everywhere, wall-clock caps, 143 green tests. Gap: no auth, no rate limiting (Phase 2). |
+| Production hardening | 8 | **Phase 2-BE (+1):** real auth on the app store (Supabase user-JWT via JWKS/ES256 + per-user API keys), per-user tenants, connect-your-agent persistence; auth runs off the event loop (to_thread), fail-closed (invalid credential 401, never demo). **Phase 1:** durable Postgres app store via SQLModel, reversible/idempotent migrations (now 0002: api_keys + users.supabase_sub, applied to live Postgres), tenant-scoped repo, persistence wired into /runs/real, fail-closed when DB down. 147 green tests. Gap: no rate limiting on real-cost/write endpoints (Phase 3); CORS wildcard fallback + MCP fail-open still open (Phase 2-3). |
 | Standards / OWASP ASI06 | 7 | Directly targets agent memory poisoning (ASI06) with replay + provenance + firewall. Gap: no formal control mapping doc, no semantic coverage claim. |
 | Usability | 8 | One-click judge demo, honest REAL-vs-DERIVED labels, console, native MCP install, **Phase 1:** GET /incidents + /incidents/{id} history endpoints. Gap: GET on a POST-only route 404s confusingly (Phase 1 quick, still open). |
 | Polish | 9 | ESLint clean, TS clean, build green, masthead-paint fixes, honest-state on dead controls. |
-| Security-of-itself | 7 | **Phase 1 (+1):** enforced tenant scoping (BOLA-denied: tenant B cannot read tenant A's incident, 404 leaks nothing), default-deny repo (no query without tenant_id), search_path-injection guard, DSN-credential redaction in error bodies. Secrets masked + never printed, fail-closed firewall. Gap: every HTTP surface still unauthenticated; CORS wildcard fallback (Phase 2). |
+| Security-of-itself | 8 | **Phase 2-BE (+1):** real authn/authz on the app store. JWT verified against the project JWKS (ES256) with issuer+audience+exp pinned (alg=none / wrong-key / wrong-project all 401); API keys stored as salted SHA-256 only (raw shown once, never persisted/returned again), constant-time compare; default-deny on user-data endpoints (Depends(require_user) runs before the body); BOLA now holds under real credentials (user A cannot read or revoke user B's incidents/keys). Self-red-teamed (security-reviewer + fastapi-reviewer), findings triaged + fixed. **Phase 1:** enforced tenant scoping, default-deny repo, search_path-injection guard, DSN-credential redaction. Gap: CORS wildcard fallback + MCP gateway fail-open + non-constant-time MCP secret compare still open (Phase 2-3). |
 | Narrative | 9 | Clear thesis (graph-memory agents inherit a blind spot prompt-testing misses), replay -> trace -> block -> certify arc, honest provenance. |
 
 ### Gaps under each axis below 9
@@ -37,9 +43,16 @@ log per action), proven against a real DB engine with 16 new tests.
 **Technical depth (8)**
 - HIGH: Detection is lexical (cue-list substring + regex), so paraphrased unlabelled poison can evade it. Needs an embedding/contradiction classifier -> **Phase 3 (semantic detector)**.
 
-**Production hardening (7)**
-- MEDIUM: No authentication on any HTTP surface -> **Phase 2**.
-- MEDIUM: No rate limiting on real-cost / write endpoints -> **Phase 2**.
+**Production hardening (8)**
+- DONE (Phase 2-BE): Auth on the app store. Supabase user-JWT (JWKS/ES256,
+  issuer+aud+exp enforced) + per-user API keys (salted-hash, constant-time,
+  raw-once); per-user tenants; an API-key agent's /runs/real lands in its user's
+  tenant (connect-your-agent), proven on live Postgres. Public unauthenticated
+  showcase preserved (demo tenant). Migration 0002 applied to live Postgres.
+- MEDIUM: No rate limiting on real-cost / write endpoints -> **Phase 3**.
+- MEDIUM: CORS `['*']` + credentials fallback when CORS_ORIGINS empty; MCP
+  gateway fail-open + non-constant-time secret compare (pre-existing, surfaced by
+  the Phase 2 self-red-team) -> **Phase 2-3**.
 - DONE (Phase 1): Durable Postgres app store (SQLModel + psycopg2), reversible
   idempotent migrations (`python -m db.migrate up|down|reset|seed`), tenant-scoped
   repo, persistence wired into /runs/real. **The legacy SQLite + `runs/*.json`
@@ -94,7 +107,7 @@ were fixed in this Phase 0 pass.
 | 5 | Fail-closed contract (positive finding): every failure is HTTP 200, labelled, never masquerades as real. | LOW | n/a | Confirmed correct; no action. |
 | 6 | Semantic detection (`adapters/local_scan.py`): paraphrased unlabelled poison evades the lexical cue list. | HIGH | Phase 3 | Backlog (semantic detector). Limitation documented in README; document in demo too. |
 | 7 | SkillMake static scanner (`skillmake_scanner.py`): regex-only under-scores reworded exfil. | HIGH | Phase 3 | Backlog. Tighten regexes near-term; semantic detection later. Document regex coverage limit. |
-| 8 | Auth on all HTTP surfaces (`main.py`): every non-MCP-write endpoint unauthenticated, incl. real-cost paths. | MEDIUM | Phase 2 | Backlog (auth). |
+| 8 | Auth on the app-store HTTP surfaces (`main.py` + `auth/`): incidents + key management + real-run persistence were unauthenticated. | MEDIUM | Phase 2 | **DONE (Phase 2-BE):** additive/optional auth -- Supabase user-JWT (JWKS/ES256, issuer+aud+exp pinned; alg=none/wrong-key/wrong-project -> 401) + per-user API keys (salted-hash, constant-time, raw-once). `/auth/sync`, `/api-keys` GET/POST/DELETE are default-deny (`Depends(require_user)`); `/incidents`, `/incidents/{id}`, `/runs/real` resolve the caller's own tenant (JWT or API key) or the demo tenant when unauthenticated. BOLA holds under real credentials. Migration 0002 (api_keys + users.supabase_sub) applied to live Postgres. Public showcase preserved. Self-red-teamed; 20 new tests. Remaining HTTP surfaces (run-replay, MCP) -> Phase 2-3. |
 | 9 | Tenant isolation on real quarantine (`mcp_gateway.py` -> `quarantine_memory`): caller-supplied tenant ids, no allowlist (gated by `X-MCP-Secret`). | MEDIUM | Phase 2-3 | Backlog (owned-tenant allowlist). |
 | 10 | MCP gateway fail-open branch (`mcp_gateway.py` `_secret_guard`): writes allowed with warning if secret unset (set in deploy). | MEDIUM | Phase 2 | Backlog (fail closed when secret unset). |
 | 11 | CORS config (`main.py` / `config.py` `_cors_list`): `['*']` + credentials fallback when `CORS_ORIGINS` empty (real allowlist in deploy). | LOW | Phase 2 | Backlog (drop wildcard fallback or disable credentials when wildcarding). |

@@ -13,7 +13,7 @@ import logging
 from contextlib import asynccontextmanager
 from typing import Any, Optional
 
-from fastapi import FastAPI, Header, Request, Response
+from fastapi import Depends, FastAPI, Header, Request, Response
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, PlainTextResponse
@@ -32,6 +32,8 @@ import scheduler
 import skillmake_marketplace
 import skillmake_scanner
 import storage
+from auth import api_keys as api_key_svc
+from auth.identity import Identity, current_identity, require_user
 from config import key_status, settings
 from db import persistence
 
@@ -143,6 +145,10 @@ class ProviderTestBody(BaseModel):
     provider: str
 
 
+class ApiKeyCreateBody(BaseModel):
+    name: Optional[str] = None
+
+
 class McpScenarioBody(BaseModel):
     scenario_id: str
 
@@ -223,7 +229,7 @@ async def judge_demo() -> JSONResponse:
 
 @app.post("/runs/real")
 async def runs_real(
-    x_tenant_slug: Optional[str] = Header(default=None),
+    identity: Identity = Depends(current_identity),
 ) -> JSONResponse:
     """Genuinely-real run: live HydraDB context (clean + poisoned sub-tenants) +
     real Groq agent answers + a computed risk score (rules + real Groq judge).
@@ -235,11 +241,13 @@ async def runs_real(
     returns the deterministic result labelled ``mode:"deterministic_fallback"``
     as HTTP 200 — never a 500, never a hang.
 
-    The result is persisted as a tenant-scoped Incident (+ Certificate when the
-    run is blocked/high-risk) under the tenant resolved from ``X-Tenant-Slug``
-    (default ``demo`` until Phase 2 auth). Persistence is fail-closed: if the app
-    DB is down the run still returns, with a ``persistence`` block surfacing the
-    error -- it is never silently faked.
+    Auth is additive (Phase 2): the run persists to the AUTHENTICATED caller's
+    own tenant (Supabase JWT or API key), or to the shared ``demo`` tenant when
+    unauthenticated -- so the public showcase still works and an API-key agent's
+    run lands in its user's tenant (connect-your-agent). A present-but-invalid
+    credential is already a 401 from the dependency (fail-closed). Persistence is
+    fail-closed: if the app DB is down the run still returns with a
+    ``persistence`` block surfacing the error -- never silently faked.
     """
     try:
         result = await asyncio.to_thread(real_run.run_real)
@@ -251,11 +259,20 @@ async def runs_real(
             status_code=200,
         )
 
-    tenant_slug = persistence.resolve_tenant_slug(x_tenant_slug)
-    persist = await asyncio.to_thread(
-        persistence.persist_run, result, tenant_slug, "runs_real"
-    )
+    if identity.tenant_id:
+        persist = await asyncio.to_thread(
+            persistence.persist_run_for_tenant,
+            result, identity.tenant_id, identity.tenant_slug, "runs_real",
+        )
+    else:
+        # Demo fallback with no resolved tenant id (app DB blip): provision the
+        # demo tenant by slug so the public showcase still persists.
+        persist = await asyncio.to_thread(
+            persistence.persist_run, result,
+            identity.tenant_slug or persistence.DEFAULT_TENANT_SLUG, "runs_real",
+        )
     result["persistence"] = persist
+    result["auth_method"] = identity.auth_method
     return JSONResponse(result, status_code=200)
 
 
@@ -405,9 +422,11 @@ async def results_summary() -> JSONResponse:
 
 
 # --- Tenant-scoped incidents (Postgres app store) ---------------------------
-# Every read here goes through the BOLA-safe tenant-scoped repo: the tenant is
-# resolved from X-Tenant-Slug (default 'demo' until Phase 2 auth). A row owned by
-# another tenant is invisible -- GET /incidents/{id} returns 404, never the data.
+# Every read here goes through the BOLA-safe tenant-scoped repo. The tenant comes
+# from current_identity: the authenticated user's own tenant (JWT or API key), or
+# the shared 'demo' tenant when unauthenticated. A row owned by another tenant is
+# invisible -- GET /incidents/{id} returns 404, never the data -- so tenant
+# isolation now holds under real auth, not just an unauthenticated header.
 
 def _incident_dto(inc: Any) -> dict[str, Any]:
     return {
@@ -428,28 +447,22 @@ def _incident_dto(inc: Any) -> dict[str, Any]:
     }
 
 
-def _resolve_tenant_or_none(x_tenant_slug: Optional[str]):
-    from db.repo import TenantRepo
-
-    slug = persistence.resolve_tenant_slug(x_tenant_slug)
-    return TenantRepo.get_by_slug(slug)
-
-
 @app.get("/incidents")
 async def list_incidents(
-    x_tenant_slug: Optional[str] = Header(default=None),
+    identity: Identity = Depends(current_identity),
 ) -> JSONResponse:
-    """Tenant-scoped incident list, newest first. Fail-closed if DB is down."""
+    """Tenant-scoped incident list, newest first. The tenant is the caller's own
+    (JWT / API key) or the demo tenant when unauthenticated. Fail-closed if the
+    DB is down. A present-but-invalid credential 401s in the dependency."""
     try:
         from db.repo import AuditLogRepo, IncidentRepo
 
-        tenant = await asyncio.to_thread(_resolve_tenant_or_none, x_tenant_slug)
-        if tenant is None:
+        if not identity.tenant_id:
             return ok([])
-        rows = await asyncio.to_thread(IncidentRepo.list, tenant.id)
+        rows = await asyncio.to_thread(IncidentRepo.list, identity.tenant_id)
         await asyncio.to_thread(
-            AuditLogRepo.create, tenant.id,
-            action="list_incidents", actor="api",
+            AuditLogRepo.create, identity.tenant_id,
+            action="list_incidents", actor=identity.auth_method,
             detail={"count": len(rows)},
         )
         return ok([_incident_dto(r) for r in rows])
@@ -462,34 +475,138 @@ async def list_incidents(
 @app.get("/incidents/{incident_id}")
 async def get_incident(
     incident_id: str,
-    x_tenant_slug: Optional[str] = Header(default=None),
+    identity: Identity = Depends(current_identity),
 ) -> JSONResponse:
     """Tenant-scoped single incident. 404 if not in this tenant (BOLA gate)."""
     try:
         from db.repo import AuditLogRepo, IncidentRepo
 
-        tenant = await asyncio.to_thread(_resolve_tenant_or_none, x_tenant_slug)
-        if tenant is None:
+        if not identity.tenant_id:
             return err(f"incident '{incident_id}' not found", status=404)
-        inc = await asyncio.to_thread(IncidentRepo.get, tenant.id, incident_id)
+        inc = await asyncio.to_thread(
+            IncidentRepo.get, identity.tenant_id, incident_id
+        )
         if inc is None:
             # Either the id does not exist or it belongs to a different tenant.
             # Both collapse to 404 so cross-tenant probing leaks nothing.
             await asyncio.to_thread(
-                AuditLogRepo.create, tenant.id,
-                action="get_incident_denied", actor="api",
+                AuditLogRepo.create, identity.tenant_id,
+                action="get_incident_denied", actor=identity.auth_method,
                 detail={"incident_id": incident_id},
             )
             return err(f"incident '{incident_id}' not found", status=404)
         await asyncio.to_thread(
-            AuditLogRepo.create, tenant.id,
-            action="get_incident", actor="api",
+            AuditLogRepo.create, identity.tenant_id,
+            action="get_incident", actor=identity.auth_method,
             detail={"incident_id": incident_id},
         )
         return ok(_incident_dto(inc))
     except Exception as exc:  # noqa: BLE001 -- fail closed, surface honestly
         logger.warning("get_incident failed: %s", type(exc).__name__)
         return err("incident store unavailable", status=503,
+                   kind=type(exc).__name__)
+
+
+# --- Auth: user sync + per-user API keys (JWT required) ---------------------
+# These are the USER-DATA management endpoints: default-deny. They depend on
+# ``require_user`` (Depends), which runs BEFORE the handler body and 401s anyone
+# who is not a verified Supabase user -- a forged/expired token, the demo
+# fallback, or an API-key agent (an agent must not mint/list keys for the user).
+
+def _api_key_dto(row: Any) -> dict[str, Any]:
+    """A safe, RAW-key-free view of an API key for listing."""
+    return {
+        "id": row.id,
+        "name": row.name,
+        "prefix": row.prefix,
+        "created_at": row.created_at.isoformat() if row.created_at else None,
+        "last_used_at": row.last_used_at.isoformat() if row.last_used_at else None,
+        "revoked_at": row.revoked_at.isoformat() if row.revoked_at else None,
+        "revoked": row.revoked_at is not None,
+    }
+
+
+@app.post("/auth/sync")
+async def auth_sync(
+    identity: Identity = Depends(require_user),
+) -> JSONResponse:
+    """Idempotent sign-in sync. Verifies the JWT (in ``require_user``), gets-or-
+    creates the user + personal tenant, and returns the tenant. Safe to call on
+    every web sign-in. 401 (from the dependency) if the token is
+    missing/forged/expired or the caller is not a real user."""
+    return ok({
+        "user_id": identity.user_id,
+        "email": identity.email,
+        "tenant_id": identity.tenant_id,
+        "tenant_slug": identity.tenant_slug,
+        "auth_method": identity.auth_method,
+    })
+
+
+@app.get("/api-keys")
+async def list_api_keys(
+    identity: Identity = Depends(require_user),
+) -> JSONResponse:
+    """List the caller's API keys (no raw secrets). JWT required."""
+    try:
+        from db.repo import ApiKeyRepo
+
+        rows = await asyncio.to_thread(ApiKeyRepo.list_for_user, identity.user_id)
+        return ok([_api_key_dto(r) for r in rows])
+    except Exception as exc:  # noqa: BLE001 -- fail closed, surface honestly
+        logger.warning("list_api_keys failed: %s", type(exc).__name__)
+        return err("api key store unavailable", status=503,
+                   kind=type(exc).__name__)
+
+
+@app.post("/api-keys")
+async def create_api_key(
+    body: ApiKeyCreateBody,
+    identity: Identity = Depends(require_user),
+) -> JSONResponse:
+    """Create an API key for the caller. The RAW key is returned exactly ONCE
+    here and is never stored or shown again. JWT required."""
+    try:
+        from db.repo import ApiKeyRepo
+
+        generated = api_key_svc.new_key()
+        row = await asyncio.to_thread(
+            ApiKeyRepo.create,
+            user_id=identity.user_id,
+            tenant_id=identity.tenant_id,
+            name=(body.name or "").strip()[:120],
+            key_hash=generated.key_hash,
+            prefix=generated.prefix,
+        )
+        payload = _api_key_dto(row)
+        # The ONLY time the raw key is ever returned.
+        payload["raw_key"] = generated.raw
+        return ok(payload)
+    except Exception as exc:  # noqa: BLE001 -- fail closed, surface honestly
+        logger.warning("create_api_key failed: %s", type(exc).__name__)
+        return err("api key store unavailable", status=503,
+                   kind=type(exc).__name__)
+
+
+@app.delete("/api-keys/{key_id}")
+async def revoke_api_key(
+    key_id: str,
+    identity: Identity = Depends(require_user),
+) -> JSONResponse:
+    """Revoke one of the caller's API keys. 404 if it is not the caller's key
+    (no cross-user revoke). JWT required."""
+    try:
+        from db.repo import ApiKeyRepo
+
+        row = await asyncio.to_thread(
+            ApiKeyRepo.revoke, identity.user_id, key_id
+        )
+        if row is None:
+            return err(f"api key '{key_id}' not found", status=404)
+        return ok(_api_key_dto(row))
+    except Exception as exc:  # noqa: BLE001 -- fail closed, surface honestly
+        logger.warning("revoke_api_key failed: %s", type(exc).__name__)
+        return err("api key store unavailable", status=503,
                    kind=type(exc).__name__)
 
 
