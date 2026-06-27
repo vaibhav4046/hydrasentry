@@ -5,4 +5,4 @@
  * hydration mismatch.
  */
 export const BUILD_SHORT: string =
-  process.env.NEXT_PUBLIC_BUILD_SHORT?.slice(0, 7) || "demo";
+  process.env.NEXT_PUBLIC_BUILD_SHORT?.slice(0, 7) || "local";

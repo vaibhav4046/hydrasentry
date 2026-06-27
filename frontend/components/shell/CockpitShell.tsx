@@ -13,7 +13,7 @@ import { useDemoStore } from "@/store/useDemoStore";
 interface CockpitShellProps {
   /** Override the resolved page title (defaults from the route). */
   title?: string;
-  /** Optional extra top-bar actions, rendered left of the DEMO pill. */
+  /** Optional extra top-bar actions, rendered left of the posture pill. */
   actions?: ReactNode;
   children: ReactNode;
 }

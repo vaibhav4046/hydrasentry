@@ -55,7 +55,7 @@ export function CommandPalette() {
     return [
       {
         id: "run-demo",
-        label: "Run judge demo",
+        label: "Run live attack",
         hint: "ACTION · memory_poisoning_refund → 87 / HIGH",
         run: () => {
           void trigger();
@@ -167,7 +167,7 @@ export function CommandPalette() {
             setQuery(e.target.value);
             setCursor(0);
           }}
-          placeholder="Jump to a page or run the demo…"
+          placeholder="Jump to a page or run a live attack…"
           aria-label="Command palette search"
           style={{
             width: "100%",

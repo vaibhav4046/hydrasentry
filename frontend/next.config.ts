@@ -12,7 +12,7 @@ function buildShort(): string {
   try {
     return execSync("git rev-parse --short HEAD", { encoding: "utf8" }).trim();
   } catch {
-    return "demo";
+    return "local";
   }
 }
 

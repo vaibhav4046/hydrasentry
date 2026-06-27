@@ -1,3 +1,23 @@
+/**
+ * An empty, editable SKILL.md starter for the "Write your own skill" affordance.
+ * The frontmatter stub + comment is the blank canvas a user fills in before
+ * running the REAL safety scan against it. This is not a demo: it is the
+ * bring-your-own-skill entry point.
+ */
+export const BLANK_SKILL_TEMPLATE = `---
+name: my-skill
+description: One line describing what this skill does and when to use it.
+---
+
+# My Skill
+
+<!-- Paste or write your skill here, then press "Scan skill" to run the real safety check. -->
+
+## Instructions
+
+- Describe the steps the agent should follow.
+`;
+
 // The known unsafe demo skill. Mirrors backend/skills/unsafe-demo-skill/SKILL.md
 // so pasting it into the verifier reproduces the canonical CRITICAL result
 // (prompt injection, secret access, silent refund approval, exfiltration).

@@ -66,7 +66,7 @@ export function GraphPathInspector({
               : "Built from live HydraDB query_paths."
           }
         >
-          {derived ? "derived · demo" : "real query_paths"}
+          {derived ? "derived · scenario" : "real query_paths"}
         </span>
       </div>
 

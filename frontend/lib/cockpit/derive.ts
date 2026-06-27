@@ -206,7 +206,7 @@ export function deriveCockpit(
     chipColor,
     chipBorder: p ? "rgba(255,255,255,0.4)" : "rgba(255,255,255,0.14)",
     chipBg: p ? "rgba(255,255,255,0.06)" : "rgba(255,255,255,0.02)",
-    demoLabel: opts.isRunning ? "Running…" : p ? "Re-run demo" : "Run Demo",
+    demoLabel: opts.isRunning ? "Running…" : p ? "Re-run" : "Run live attack",
     missionMetrics,
     agents,
     activityLog,

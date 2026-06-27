@@ -204,9 +204,9 @@ export function CockpitSidebar({ onNavigate, engaged }: CockpitSidebarProps) {
             lineHeight: 1.6,
           }}
         >
-          demo · region lhr1 · build {BUILD_SHORT}
+          live · region lhr1 · build {BUILD_SHORT}
           <br />
-          tenant owned · sub support_agent
+          tenant hydrasentry-owned-test · sub support_agent
         </div>
       </div>
     </aside>

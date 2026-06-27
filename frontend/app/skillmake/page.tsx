@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { PageShell } from "@/components/shared/PageShell";
-import { UNSAFE_DEMO_SKILL } from "@/components/skillmake/demoSkill";
+import { UNSAFE_DEMO_SKILL, BLANK_SKILL_TEMPLATE } from "@/components/skillmake/demoSkill";
 import { scanSkill, scanSkillFromMarketplace } from "@/lib/api";
 import { C } from "@/lib/cockpit/derive";
 import type { SkillScan } from "@/lib/types";
@@ -44,6 +44,7 @@ export default function SkillMakePage() {
   const [isPulling, setIsPulling] = useState(false);
   const [pullNote, setPullNote] = useState<string | null>(null);
   const [skillName, setSkillName] = useState("unsafe-demo-skill");
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   async function handleScan(name = skillName, scanContent = content) {
     setIsScanning(true);
@@ -74,6 +75,28 @@ export default function SkillMakePage() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  /**
+   * Bring-your-own-skill: clear the editor to an empty, editable SKILL.md
+   * template and focus it so the user can paste or write their own skill, then
+   * run the REAL scan against it. Resets any prior scan/disposition so the
+   * result panel reads "unscanned" until they press Scan skill.
+   */
+  function handleWriteOwn() {
+    setContent(BLANK_SKILL_TEMPLATE);
+    setSkillName("my-skill");
+    setSlug("my-skill");
+    setScan(null);
+    setStatus("unverified");
+    setPullNote(null);
+    queueMicrotask(() => {
+      const el = textareaRef.current;
+      if (!el) return;
+      el.focus();
+      // Put the caret on the comment line so typing replaces the placeholder.
+      el.setSelectionRange(el.value.length, el.value.length);
+    });
+  }
 
   /** Reset the editor to the bundled unsafe-demo-skill and scan it (the CRITICAL
    * catch), e.g. after a clean marketplace pull, so the dangerous case is always
@@ -146,10 +169,43 @@ export default function SkillMakePage() {
             padding: 18,
           }}
         >
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, marginBottom: 6 }}>
             <span style={{ fontSize: 14, fontWeight: 600, color: C.ink }}>SKILL.md source</span>
             <span style={{ fontFamily: MONO, fontSize: 10, color: C.faint }}>{hash}</span>
           </div>
+          <div style={{ fontSize: 11, color: C.muted, lineHeight: 1.5, marginBottom: 12 }}>
+            Bring or write your own SKILL.md and get a real safety scan before you
+            install it.
+          </div>
+
+          {/* Primary affordance: clear the editor to a blank SKILL.md template so
+              the user can write their own skill, then run the real scan on it. */}
+          <button
+            type="button"
+            onClick={handleWriteOwn}
+            title="Clear the editor to an empty SKILL.md template, then write or paste your own skill and scan it."
+            style={{
+              cursor: "pointer",
+              width: "100%",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 8,
+              marginBottom: 12,
+              fontFamily: "inherit",
+              fontSize: 12.5,
+              fontWeight: 600,
+              color: C.ink,
+              padding: "10px 13px",
+              border: "1px solid rgba(255,255,255,0.22)",
+              borderRadius: 11,
+              background: "rgba(255,255,255,0.04)",
+              transition: "all .2s",
+            }}
+          >
+            <span aria-hidden style={{ fontFamily: MONO, fontSize: 14, lineHeight: 1 }}>+</span>
+            Write your own skill
+          </button>
 
           {/* Marketplace pull: fetch a real SKILL.md from skillmake.xyz by slug */}
           <div
@@ -285,6 +341,7 @@ export default function SkillMakePage() {
           </div>
 
           <textarea
+            ref={textareaRef}
             value={content}
             onChange={(e) => {
               setContent(e.target.value);

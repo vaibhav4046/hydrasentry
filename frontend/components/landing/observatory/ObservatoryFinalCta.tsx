@@ -141,7 +141,7 @@ export function ObservatoryFinalCta() {
             }}
           >
             <TransitButton onClick={run} disabled={isRunning}>
-              {isRunning ? "Routing…" : "Run Judge Demo"} →
+              {isRunning ? "Routing…" : "Run live attack"} →
             </TransitButton>
             <SightButton href="#architecture">See how it works</SightButton>
           </div>
