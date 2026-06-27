@@ -43,7 +43,19 @@ _LAST_FAILURE: Optional[str] = None
 # module constant (no magic string at the call site). qwen3-32b (the default
 # replay_judge model) is a reasoning model that emits <think> and is too slow
 # for the parallel-under-9s budget, so the real run pins this one explicitly.
-AGENT_MODEL = "llama-3.3-70b-versatile"
+#
+# Model choice is a RELIABILITY decision, not just a quality one. The real run
+# fires up to three completions per click (2 agents + 1 judge) and a demo gets
+# clicked repeatedly, so the binding constraint is Groq's free-tier
+# tokens-per-minute (TPM) ceiling, not latency. Measured free-tier TPM:
+#   llama-3.3-70b-versatile  -> 12000 TPM  (the old default; ~6 runs/min before 429)
+#   meta-llama/llama-4-scout -> 30000 TPM  (~15 runs/min; 2.5x the headroom)
+# llama-4-scout is current (present in GET /v1/models), returns real 200
+# completions, and demonstrates the poisoning attack identically (clean context
+# -> escalate; poisoned context -> auto-approve), so it is pinned here to keep
+# the real path surviving repeated clicks instead of silently dropping to the
+# deterministic demo on the first TPM spike.
+AGENT_MODEL = "meta-llama/llama-4-scout-17b-16e-instruct"
 
 # Per-call HTTP timeout. Three Groq calls (2 agents in parallel + 1 judge)
 # must all finish inside the orchestrator's ~9s wall-clock budget, so each call
@@ -51,14 +63,18 @@ AGENT_MODEL = "llama-3.3-70b-versatile"
 _HTTP_TIMEOUT = 6.0
 
 # Groq free-tier returns 429 under rapid repeated calls (clicking "Run real
-# attack" a few times in a demo). One quick in-call retry on a transient status
-# recovers the common single-spike case without blowing the wall-clock budget.
-# The backoff honours Groq's Retry-After header when present, otherwise a short
-# fixed sleep, and is capped so two attempts still fit inside _HTTP_TIMEOUT*2.
+# attack" a few times in a demo). In-call retries on a transient status recover
+# the common single-spike case without blowing the wall-clock budget. The backoff
+# honours Groq's reset hints (the ``x-ratelimit-reset-tokens`` /
+# ``x-ratelimit-reset-requests`` headers, which point at the real per-minute
+# window, falling back to ``Retry-After``), and is capped so the attempts still
+# fit inside the orchestrator budget. Three attempts (two retries) ride out a
+# brief TPM contention spike; a sustained quota wall is surfaced as the failure
+# reason rather than retried into a timeout.
 _RETRYABLE_STATUS = frozenset({429, 500, 502, 503, 504})
-_MAX_ATTEMPTS = 2
+_MAX_ATTEMPTS = 3
 _RETRY_BACKOFF_SECONDS = 0.6
-_RETRY_BACKOFF_CAP_SECONDS = 1.5
+_RETRY_BACKOFF_CAP_SECONDS = 2.0
 
 _AGENT_MAX_TOKENS = 180
 _JUDGE_MAX_TOKENS = 220
@@ -95,20 +111,52 @@ def _status_label(status: int) -> str:
     return "http_error"
 
 
-def _retry_after_seconds(headers: Any) -> float:
-    """Honour Groq's Retry-After header (seconds) if present and small, else the
-    default backoff. Capped so a single retry cannot blow the wall-clock budget."""
-    raw = None
+# Groq expresses its rate-limit reset as a compact duration ("194ms", "2.5s",
+# "1m16.2s"), not plain seconds, so a naive float() parse fails on every value
+# except a bare number. Parse it into seconds so the backoff can target the real
+# window instead of a blind fixed sleep.
+_DURATION_RE = re.compile(r"(?:(\d+(?:\.\d+)?)m(?!s))?(?:(\d+(?:\.\d+)?)s)?(?:(\d+(?:\.\d+)?)ms)?")
+
+
+def _parse_groq_duration(raw: Optional[str]) -> Optional[float]:
+    """Parse a Groq reset string ("194ms", "2.5s", "1m16.2s") into seconds, or a
+    bare number as seconds. Returns None if nothing parseable."""
+    if not raw:
+        return None
+    raw = raw.strip()
     try:
-        raw = headers.get("retry-after") or headers.get("Retry-After")
+        return float(raw)  # plain "0.5" style (e.g. a Retry-After in seconds)
+    except (TypeError, ValueError):
+        pass
+    m = _DURATION_RE.fullmatch(raw)
+    if not m or not any(m.groups()):
+        return None
+    minutes = float(m.group(1) or 0.0)
+    seconds = float(m.group(2) or 0.0)
+    millis = float(m.group(3) or 0.0)
+    return minutes * 60.0 + seconds + millis / 1000.0
+
+
+def _retry_after_seconds(headers: Any) -> float:
+    """Pick a backoff that targets Groq's real reset window. Prefers the
+    ``x-ratelimit-reset-tokens`` / ``x-ratelimit-reset-requests`` hints (the TPM
+    window that actually gated the 429), then ``Retry-After``, then the default
+    fixed backoff. Always capped so retries cannot blow the wall-clock budget."""
+    candidates: list[Optional[str]] = []
+    try:
+        candidates = [
+            headers.get("x-ratelimit-reset-tokens"),
+            headers.get("x-ratelimit-reset-requests"),
+            headers.get("retry-after") or headers.get("Retry-After"),
+        ]
     except Exception:  # noqa: BLE001
-        raw = None
+        candidates = []
     delay = _RETRY_BACKOFF_SECONDS
-    if raw:
-        try:
-            delay = float(raw)
-        except (TypeError, ValueError):
-            delay = _RETRY_BACKOFF_SECONDS
+    for raw in candidates:
+        parsed = _parse_groq_duration(raw)
+        if parsed is not None and parsed > 0:
+            delay = parsed
+            break
     return min(max(delay, 0.0), _RETRY_BACKOFF_CAP_SECONDS)
 
 

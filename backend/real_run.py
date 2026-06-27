@@ -125,9 +125,21 @@ def _build_real_run() -> dict[str, Any]:
         return {"ok": False, "reason": reason}
 
     # --- Step 3: real judge + deterministic rules over the ACTUAL answers. ---
+    # The two agent answers above are real LLM output and are the marquee value of
+    # this run. The judge is a refinement on top: if Groq is contended and the
+    # judge call alone is rate-limited, the run MUST still return as real (real
+    # baseline vs poisoned text) with the score computed from the deterministic
+    # rules over those real answers, rather than collapsing to the demo. So we
+    # clear the agent-success state first, then treat a missing judge as an
+    # honest "rules_fallback" judge mode instead of a hard failure.
+    real_agent.reset_failure_reason()
     t2 = time.monotonic()
     judge = real_agent.judge_answers(scenario, baseline_answer, poisoned_answer)
     timings["judge_ms"] = int((time.monotonic() - t2) * 1000)
+    # If the judge fell back, record WHY (e.g. "groq 429 rate_limited") so the
+    # degraded-but-real run stays diagnosable. None means the judge ran cleanly.
+    judge_note = None if judge else real_agent.last_failure_reason()
+    judge_mode = "real" if judge else "rules_fallback"
 
     diff = agent_runner.behavior_diff(baseline_answer, poisoned_answer, scenario)
     graph = graph_extractor.build_graph(poison_q, scenario)
@@ -155,6 +167,11 @@ def _build_real_run() -> dict[str, Any]:
             "band": risk["band"],
             "confidence": confidence,
             "computed": True,
+            # "real" when the Groq judge scored this run; "rules_fallback" when
+            # the judge was rate-limited and the score came from the rules over
+            # the real agent answers. The run is real either way.
+            "judge_mode": judge_mode,
+            "judge_note": judge_note,
             "attack_type": risk["attack_type"],
             "components": risk["components"],
             "rules_fired": risk["rules_fired"],
@@ -203,6 +220,8 @@ def _deterministic_fallback(reason: str, elapsed_ms: int) -> dict[str, Any]:
             "band": risk["band"],
             "confidence": risk["confidence"],
             "computed": False,
+            "judge_mode": "deterministic",
+            "judge_note": reason,
             "attack_type": risk["attack_type"],
             "components": risk["components"],
             "rules_fired": risk["rules_fired"],
