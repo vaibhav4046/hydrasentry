@@ -16,7 +16,8 @@ export type CockpitIconKey =
   | "settings"
   | "console"
   | "keys"
-  | "rules";
+  | "rules"
+  | "standards";
 
 const ICON_D: Record<CockpitIconKey, string> = {
   mission:
@@ -36,6 +37,9 @@ const ICON_D: Record<CockpitIconKey, string> = {
   // Shield + signature lines: a tenant rule is a stored attack signature.
   rules:
     "M12 2.5l8 3v6c0 5-3.4 8.5-8 9.9-4.6-1.4-8-4.9-8-9.9v-6zM8.5 10.5h7M8.5 13.5h5",
+  // Shield + check: the verified OWASP ASI06 compliance mapping.
+  standards:
+    "M12 2.5l8 3v6c0 5-3.4 8.5-8 9.9-4.6-1.4-8-4.9-8-9.9v-6zM8.6 11.8l2.3 2.3L15.6 9",
 };
 
 interface CockpitIconProps {

@@ -82,3 +82,31 @@ def test_endpoint_is_public_no_auth_required():
     raw = resp.text.lower()
     for leaked in ("hs_live_", "secret", "database_url", "api_key", "password"):
         assert leaked not in raw
+
+
+def test_endpoint_matches_frontend_page_contract():
+    # The in-app /standards page (frontend/app/standards/page.tsx) reads an exact
+    # set of fields off this response. Pin them here so a backend rename can never
+    # silently blank the live compliance surface a judge looks at.
+    resp = client.get("/standards/asi06")
+    assert resp.status_code == 200
+    data = resp.json()["data"]
+    # Mapping-level fields the page header renders.
+    for field in ("taxonomy", "risk_id", "risk_name", "reference",
+                  "control_count", "verified_all", "controls"):
+        assert field in data, f"frontend page reads '{field}' from the mapping"
+    assert isinstance(data["controls"], list) and data["controls"]
+    # Per-control fields each card renders.
+    for control in data["controls"]:
+        for field in ("id", "title", "summary", "evidence_file",
+                      "evidence_symbol", "file_exists", "symbol_present",
+                      "verified"):
+            assert field in control, (
+                f"frontend control card reads '{field}'"
+            )
+        # The card links each control to a backend-relative implementing file.
+        assert control["evidence_file"].startswith("backend/")
+        # verified is the boolean AND of the two checks the page badge depends on.
+        assert control["verified"] == (
+            control["file_exists"] and control["symbol_present"]
+        )
