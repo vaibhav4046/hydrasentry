@@ -297,7 +297,7 @@ The router maps roles to providers and picks the first configured one; with no k
 
 ---
 
-## MCP gateway and Claude Code connection
+## MCP gateway and client connection
 
 HydraSentry exposes an MCP-inspired HTTP gateway. Discover it at `GET /mcp/manifest` and `GET /mcp/resources`.
 
@@ -313,7 +313,7 @@ HydraSentry exposes an MCP-inspired HTTP gateway. Discover it at `GET /mcp/manif
 
 **Resources:** `hydrasentry://project/current`, `hydrasentry://findings/latest`, `hydrasentry://reports/latest`, `hydrasentry://memory/risky`, `hydrasentry://policies/current`.
 
-The current gateway speaks **HTTP** (MCP-inspired), not native MCP stdio. To drive it from Claude Code today, call the HTTP endpoints directly (for example via a thin wrapper or `curl`), passing `X-MCP-Secret` for write tools. A native stdio MCP server is on the roadmap.
+The current gateway speaks **HTTP** (MCP-inspired), not native MCP stdio. To drive it from an MCP client today, call the HTTP endpoints directly (for example via a thin wrapper or `curl`), passing `X-MCP-Secret` for write tools. A native stdio MCP server is on the roadmap.
 
 ## SkillMake scanner
 
@@ -355,7 +355,7 @@ Bug-bounty mode is **disabled by default**. Before running anything against a sy
 ## Roadmap
 
 - **Semantic content classifier for unlabelled poison.** An embedding/contradiction classifier so an unlabelled paraphrase that overrides policy *without* the lexical cues the current thin content signal recognises still scores at least MEDIUM, complementing the shipped graph-taint + marker + lexical-content path (see Limitations).
-- Native MCP stdio server with a documented Claude Code connection
+- Native MCP stdio server with a documented client connection
 - Real scheduled execution (replace the simulated scheduler with a real runner)
 - Optional local risk-classifier fine-tuning behind the existing router seam
 - Durable storage for the hosted backend (replace ephemeral SQLite / `runs/*.json`)

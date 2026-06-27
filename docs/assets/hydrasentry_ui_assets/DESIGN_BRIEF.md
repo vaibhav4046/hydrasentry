@@ -1,4 +1,4 @@
-# HydraSentry UI Asset Brief for Claude Code
+# HydraSentry UI Asset Brief
 
 Use this folder as the complete UI asset pack.
 

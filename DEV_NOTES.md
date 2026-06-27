@@ -1,6 +1,6 @@
-# CLAUDE.md — Constellan
+# Developer Notes — Constellan
 
-Guide for future Claude Code sessions on this repo. The product is **Constellan**, a context-integrity harness for AI agents on HydraDB (HydraDB Build Blitz hackathon). The repo/directory is `hydrasentry` and some internal ids (tenant ids, the report header, a few code strings) keep that original name on purpose, so technical ids stay stable. Read `README.md` for the product pitch and `docs/ARCHITECTURE.md` for the engine.
+Working notes for this repo. The product is **Constellan**, a context-integrity harness for AI agents on HydraDB (HydraDB Build Blitz hackathon). The repo/directory is `hydrasentry` and some internal ids (tenant ids, the report header, a few code strings) keep that original name on purpose, so technical ids stay stable. Read `README.md` for the product pitch and `docs/ARCHITECTURE.md` for the engine.
 
 **Live:** frontend (public) https://frontend-nu-ochre-z41mw3z0l5.vercel.app, backend https://backend-three-puce-75.vercel.app (runs `APP_MODE=demo`). One-click: `POST https://backend-three-puce-75.vercel.app/runs/judge-demo`. Do not present the vanity `constellan.vercel.app` host as live; it is SSO-gated and stale. Use the `frontend-nu-ochre` URL.
 
@@ -77,9 +77,9 @@ pytest             # 44 tests, ~85% coverage
 
 The product is **Constellan**; the repo, directory, tenant ids (`hydrasentry-owned-test`), the finding-report header, and a few code strings keep the original `hydrasentry` name on purpose. Present Constellan as the product and note "repo: hydrasentry" once. The frontend and backend are both deployed (URLs at the top of this file); do not reintroduce any "not deployed / no live URLs" claim. The hosted backend runs in demo mode, so its graph is honestly labelled DERIVED SCENARIO GRAPH FALLBACK. Frontend type system: Space Grotesk (display), Inter (body), JetBrains Mono (code/data).
 
-## GateGuard note (Windows file writes)
+## Editing notes (Windows)
 
-This environment runs the ECC harness with GateGuard. The `Write` tool works cleanly here for `.md` files. If a file write is ever blocked, either set `$env:ECC_GATEGUARD="off"` for the session, or fall back to a shell write: `[IO.File]::WriteAllText(path, content, (New-Object System.Text.UTF8Encoding $false))` (PowerShell) — use UTF-8 (no BOM) so the BOM-tolerant loaders (`utf-8-sig` in `config.py`, `scenario_loader.py`, `ota.py`) stay happy.
+The config and scenario loaders use BOM-tolerant decoding (`utf-8-sig` in `config.py`, `scenario_loader.py`, `ota.py`), but prefer writing edited files as UTF-8 without a BOM to keep diffs clean.
 
 ## Guardrails (do not break these)
 

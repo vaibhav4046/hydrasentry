@@ -1,6 +1,6 @@
 # HydraSentry Design System
 
-A monochrome noir system. The product should read like a **classified graph security terminal**, not a generic SaaS dashboard. The source brief is `docs/assets/hydrasentry_ui_assets/DESIGN_BRIEF_FOR_CLAUDE.md`; tokens live in `frontend/app/globals.css` and the asset-pack `tokens/tokens.css`; motion in `frontend/lib/motion.ts`.
+A monochrome noir system. The product should read like a **classified graph security terminal**, not a generic SaaS dashboard. The source brief is `docs/assets/hydrasentry_ui_assets/DESIGN_BRIEF.md`; tokens live in `frontend/app/globals.css` and the asset-pack `tokens/tokens.css`; motion in `frontend/lib/motion.ts`.
 
 ## The black-and-white law
 

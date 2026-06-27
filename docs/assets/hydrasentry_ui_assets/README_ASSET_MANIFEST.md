@@ -8,7 +8,7 @@ This pack includes brand assets, black and white backgrounds, icons, CSS tokens,
 - `patterns/`: noise texture
 - `icons/`: monochrome line icons
 - `tokens/`: CSS variables and motion variants
-- `components/`: React snippets for Claude Code
+- `components/`: React snippets for the frontend
 - `copy/`: UI text and metrics
 - `remotion/`: demo video storyboard
 - `references/`: generated visual reference boards
@@ -17,4 +17,4 @@ This pack includes brand assets, black and white backgrounds, icons, CSS tokens,
 Black and white only. No orange. Use grayscale, opacity, glass, glow, and motion.
 
 ## Usage
-Paste `DESIGN_BRIEF_FOR_CLAUDE.md` into Claude Code and tell it to copy assets from this folder into the frontend project.
+Follow `DESIGN_BRIEF.md` and copy the assets from this folder into the frontend project.

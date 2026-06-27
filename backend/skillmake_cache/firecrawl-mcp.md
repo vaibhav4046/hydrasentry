@@ -9,7 +9,7 @@ audience: ai
 
 ## When to use
 
-- Adding Firecrawl as an MCP server so Claude or another MCP client can call scraping and crawling tools directly
+- Adding Firecrawl as an MCP server so an MCP client can call scraping and crawling tools directly
 - Scraping one page into Markdown or structured content before summarizing, extracting, or transforming it
 - Crawling a site or mapping URLs before building a research brief, migration plan, or documentation index
 - Using Firecrawl's extraction flow when the user needs schema-shaped data rather than raw page text
@@ -38,7 +38,7 @@ Extraction should be used when downstream work needs typed fields. Define the ta
 claude mcp add firecrawl -e FIRECRAWL_API_KEY=fc_xxx -- npx -y firecrawl-mcp
 ```
 
-Register Firecrawl as an MCP server with Claude Code using an environment-provided API key.
+Register Firecrawl as an MCP server with your MCP client using an environment-provided API key.
 
 ```
 claude mcp add firecrawl \

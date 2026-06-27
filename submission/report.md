@@ -29,7 +29,7 @@ Both tiers are deployed on Vercel and were exercised live for this report.
 | Backend (FastAPI engine) | https://backend-three-puce-75.vercel.app | Live, `APP_MODE=demo` |
 | Source | https://github.com/vaibhav4046/hydrasentry | Public |
 
-**Naming.** The product is **Constellan**. The repository, directory, tenant ids (`hydrasentry-owned-test`), the finding-report header, and a handful of code strings keep the original `hydrasentry` name on purpose, so internal identifiers stay stable across the rebrand. This is consistent across README, DEMO, SUBMISSION, and CLAUDE.
+**Naming.** The product is **Constellan**. The repository, directory, tenant ids (`hydrasentry-owned-test`), the finding-report header, and a handful of code strings keep the original `hydrasentry` name on purpose, so internal identifiers stay stable across the rebrand. This is consistent across README, DEMO, SUBMISSION, and DEV_NOTES.
 
 The hosted backend runs in demo mode. Its graph is therefore honestly labelled DERIVED SCENARIO GRAPH FALLBACK; the REAL HYDRADB QUERY_PATHS label appears only when a real HydraDB key drives a live query. The vanity host `constellan.vercel.app` is SSO-gated and stale and is never presented as live; the canonical public link is the `frontend-nu-ochre` URL.
 
@@ -154,7 +154,7 @@ These were checked and confirmed correct, and are recorded so they are not re-ra
 
 ## 6. Fixes applied in this engagement
 
-1. **Documentation de-staling (earlier in this session).** Removed the stale "no live deployment" claims; added the live frontend and backend URLs near the top of README, DEMO, SUBMISSION, and CLAUDE; reconciled the Constellan product name against the hydrasentry repo name; and neutralised the SSO-gated vanity host.
+1. **Documentation de-staling (earlier in this session).** Removed the stale "no live deployment" claims; added the live frontend and backend URLs near the top of README, DEMO, SUBMISSION, and DEV_NOTES; reconciled the Constellan product name against the hydrasentry repo name; and neutralised the SSO-gated vanity host.
 2. **Bounty video curl (HIGH).** Corrected the on-camera command to `{"name": "firecrawl-mcp"}` and documented the field and the live response shape.
 3. **Video truthfulness (MEDIUM).** Removed the false semantic-mismatch claim; the script now lists only the categories that actually fire.
 4. **Category count (LOW).** README and DEMO now say ten categories and name silent refund and user deception.
