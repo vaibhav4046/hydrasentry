@@ -63,6 +63,31 @@ export interface Graph {
 
 export type GraphSource = "real_query_paths" | "derived_scenario_graph";
 
+/**
+ * Response of `POST /graph/real-query`: a genuine, just-now HydraDB
+ * `query_paths` traversal against the pre-warmed owned tenant.
+ *
+ * Success carries `real:true` + `graph_source:"real_query_paths"` and the live
+ * proof (query_ms, triplet_count) alongside the standard `graph` block the UI
+ * already renders. On any backend failure it fails closed with `ok:false` and
+ * `fallback:"captured"`, instructing the UI to fall back to the captured proof
+ * sample. The UI must only show the LIVE label when `ok && real` AND
+ * `graph_source === "real_query_paths"`.
+ */
+export interface LiveGraphQuery {
+  ok: boolean;
+  real: boolean;
+  graph_source: GraphSource;
+  graph_basis?: string;
+  tenant_id?: string;
+  sub_tenant_id?: string;
+  scenario_id?: string;
+  query_ms?: number;
+  elapsed_ms?: number;
+  triplet_count?: number;
+  graph: Graph;
+}
+
 // --- Risk -------------------------------------------------------------------
 
 export type RiskBand = "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";

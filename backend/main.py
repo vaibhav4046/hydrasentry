@@ -24,6 +24,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 import mcp_gateway
 import model_router
 import ota
+import real_graph
 import scenario_engine
 import scenario_loader
 import scheduler
@@ -375,6 +376,49 @@ async def scan_local(body: LocalScanBody) -> JSONResponse:
         logger.exception("local scan failed: %s", exc)
         return err("local scan failed", status=400, kind=type(exc).__name__)
     return ok(result)
+
+
+# --- Real HydraDB live graph (fast query-only path) -------------------------
+
+async def _real_query_graph_response() -> JSONResponse:
+    """Shared handler for the live real HydraDB query endpoint.
+
+    Queries the PRE-WARMED stable owned tenant
+    (``hydrasentry-owned-test:live_demo_support_agent``) and returns a GENUINE
+    HydraDB ``query_paths`` graph in ~2-3s. The slow provision/ingest is done out
+    of band, so this only issues the fast /query.
+
+    Honest + additive + fail-closed:
+    * Uses the real HydraDB key from env directly; it does NOT flip APP_MODE, so
+      the canonical deterministic judge-demo (87 / HIGH / demo) stays untouched.
+    * Labels ``real:true`` / ``graph_source:"real_query_paths"`` ONLY when real
+      triplets actually parse (the same honesty gate as the rest of the engine).
+    * Hard ~8s timeout. On any timeout/error/empty graph it returns a clean
+      ``{ok:false, error, fallback:"captured"}`` envelope as HTTP 200 -- never a
+      500, never a hang. The frontend can then fall back to the captured sample.
+    """
+    try:
+        result = await asyncio.to_thread(real_graph.real_query_graph)
+    except Exception as exc:  # noqa: BLE001 -- belt-and-braces, never-500 contract
+        logger.warning("real-query endpoint error: %s", type(exc).__name__)
+        return JSONResponse(
+            {"ok": False, "error": "real query error",
+             "fallback": "captured", "kind": type(exc).__name__},
+            status_code=200,
+        )
+    # Always HTTP 200: success and the fail-closed fallback both return 200 so
+    # the caller never has to handle a 4xx/5xx for the expected offline path.
+    return JSONResponse(result, status_code=200)
+
+
+@app.post("/graph/real-query")
+async def graph_real_query_post() -> JSONResponse:
+    return await _real_query_graph_response()
+
+
+@app.get("/graph/real-query")
+async def graph_real_query_get() -> JSONResponse:
+    return await _real_query_graph_response()
 
 
 @app.get("/settings/providers")

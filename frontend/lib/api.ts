@@ -21,6 +21,7 @@ import type {
   ConfigStatus,
   Firewall,
   HealthStatus,
+  LiveGraphQuery,
   McpManifest,
   McpResources,
   MarketplaceSkillScan,
@@ -628,6 +629,93 @@ export async function mcpScheduleScan(
 
 export function runStreamUrl(idOrScenario: string): string {
   return `${BACKEND_URL}/runs/${encodeURIComponent(idOrScenario)}/stream`;
+}
+
+// --- Live HydraDB query_paths (genuine on-demand traversal) ------------------
+
+/** Client budget for the live HydraDB query. The real traversal lands in ~3s;
+ * this leaves slack for cold starts without freezing the UI indefinitely. */
+const LIVE_QUERY_TIMEOUT_MS = 9000;
+
+/**
+ * Dedicated target for the live HydraDB query.
+ *
+ * The public site deliberately ships with NEXT_PUBLIC_BACKEND_URL unset so the
+ * standalone demo serves bundled fixtures with zero failed requests. The live
+ * query is the one explicit, user-initiated call that genuinely wants the real
+ * backend, so it targets the deployed backend directly (CORS-allowlisted for
+ * the public origin) and never participates in the demo-fallback latch. An
+ * explicit NEXT_PUBLIC_BACKEND_URL, when present (local dev), still wins.
+ */
+const LIVE_QUERY_BACKEND_URL =
+  CONFIGURED_BACKEND_URL?.trim() || "https://backend-three-puce-75.vercel.app";
+
+/**
+ * Run a GENUINE, just-now HydraDB `query_paths` traversal via
+ * `POST /graph/real-query` against the pre-warmed owned tenant, and return the
+ * parsed envelope. This is the one path that produces a LIVE (not captured, not
+ * derived) real graph for the public /graph page.
+ *
+ * Unlike `request()`, this:
+ *  - uses a longer timeout (the real graph traversal takes ~3s, well past the
+ *    3.5s default), and
+ *  - returns the WHOLE top-level body as data (the endpoint replies with
+ *    { ok, real, graph_source, query_ms, triplet_count, graph, ... }, not the
+ *    { ok, data } envelope), and
+ *  - bypasses the session "backend unreachable" latch, because it is an
+ *    explicit user action that should always be allowed to try the real call.
+ *
+ * Honors the no-throw ApiResult contract: any transport/parse failure, or the
+ * backend's own fail-closed { ok:false, fallback:"captured" } body, surfaces as
+ * a normalized result the caller branches on. The caller decides what to render;
+ * this function never fabricates a real:true result. When no real backend is
+ * configured (standalone demo) it returns ok:false so the caller shows the
+ * captured sample.
+ */
+export async function queryRealGraph(): Promise<ApiResult<LiveGraphQuery>> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), LIVE_QUERY_TIMEOUT_MS);
+  try {
+    const res = await fetch(`${LIVE_QUERY_BACKEND_URL}/graph/real-query`, {
+      method: "POST",
+      headers: { Accept: "application/json" },
+      cache: "no-store",
+      signal: controller.signal,
+    });
+
+    let payload: LiveGraphQuery | null = null;
+    try {
+      payload = (await res.json()) as LiveGraphQuery;
+    } catch {
+      payload = null;
+    }
+
+    // Fail-closed body: backend returns { ok:false, fallback:"captured" } on
+    // timeout/error/no-key. Surface it as a normalized failure so the caller
+    // renders the captured sample honestly.
+    if (payload && payload.ok === false) {
+      return { ok: false, error: "live query unavailable" };
+    }
+    // Genuine success: must carry real:true + real_query_paths + a graph.
+    if (
+      payload &&
+      payload.ok === true &&
+      payload.real === true &&
+      payload.graph_source === "real_query_paths" &&
+      payload.graph &&
+      Array.isArray(payload.graph.nodes)
+    ) {
+      return { ok: true, data: payload };
+    }
+    if (!res.ok) {
+      return { ok: false, error: `Request failed (${res.status})` };
+    }
+    return { ok: false, error: "Malformed response from backend" };
+  } catch (error: unknown) {
+    return { ok: false, error: errorMessage(error) };
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 export type { Firewall };

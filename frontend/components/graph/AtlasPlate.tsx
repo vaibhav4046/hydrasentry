@@ -44,6 +44,8 @@ interface AtlasPlateProps {
   coordTicks?: readonly string[];
   /** When true, the REAL source is a captured offline sample, not a live call. */
   captured?: boolean;
+  /** When true, the REAL source is a genuine just-now live HydraDB query. */
+  live?: boolean;
 }
 
 export function AtlasPlate({
@@ -54,6 +56,7 @@ export function AtlasPlate({
   isRunning,
   coordTicks = ATLAS_COORD_TICKS,
   captured = false,
+  live = false,
 }: AtlasPlateProps) {
   const [hoverId, setHoverId] = useState<string | null>(null);
   const onHover = useCallback((id: string | null) => setHoverId(id), []);
@@ -118,8 +121,8 @@ export function AtlasPlate({
         </span>
       </div>
 
-      {/* source badge, honest real vs derived */}
-      <SourceBadge isReal={isReal} captured={captured} />
+      {/* source badge, honest real (live / captured) vs derived */}
+      <SourceBadge isReal={isReal} captured={captured} live={live} />
 
       {/* coordinate readouts */}
       <div
@@ -201,17 +204,32 @@ function CornerMarks() {
 }
 
 /**
- * Honest, NON-INTERACTIVE graph-source label. Previously this rendered two
- * pills (REAL / DERIVED) which read as a dead segmented toggle. It is a status
- * indicator, not a control, so it now shows a SINGLE badge reflecting the actual
- * source: "REAL HYDRADB QUERY_PATHS" only when the backend parsed real HydraDB
- * query_paths, otherwise "DERIVED SCENARIO GRAPH FALLBACK". A leading dot +
- * "SOURCE" label make it unmistakably a readout. (pointerEvents:none.)
+ * Honest, NON-INTERACTIVE graph-source label. It is a status indicator, not a
+ * control, so it shows a SINGLE badge reflecting the actual source. Three
+ * real-ish states are distinguished truthfully:
+ *   - LIVE      "REAL HYDRADB QUERY_PATHS · LIVE"      genuine just-now query
+ *   - CAPTURED  "REAL HYDRADB QUERY_PATHS · CAPTURED"  real proof artifact
+ *   - DERIVED   "DERIVED SCENARIO GRAPH FALLBACK"      demo fallback
+ * LIVE only ever shows for a real, just-now traversal; never for captured or
+ * derived. The LIVE state reads brightest (solid dot, white text). A leading
+ * dot + "SOURCE" label make it unmistakably a readout. (pointerEvents:none.)
  */
-function SourceBadge({ isReal, captured = false }: { isReal: boolean; captured?: boolean }) {
-  const realLabel = captured
-    ? "REAL HYDRADB QUERY_PATHS · CAPTURED"
-    : "REAL HYDRADB QUERY_PATHS";
+function SourceBadge({
+  isReal,
+  captured = false,
+  live = false,
+}: {
+  isReal: boolean;
+  captured?: boolean;
+  live?: boolean;
+}) {
+  const isLive = isReal && live;
+  const realLabel = isLive
+    ? "REAL HYDRADB QUERY_PATHS · LIVE"
+    : captured
+      ? "REAL HYDRADB QUERY_PATHS · CAPTURED"
+      : "REAL HYDRADB QUERY_PATHS";
+  const dotColor = isLive ? "#FFFFFF" : isReal ? "#EAF0FA" : "#5F6875";
   return (
     <div
       style={{
@@ -224,8 +242,18 @@ function SourceBadge({ isReal, captured = false }: { isReal: boolean; captured?:
         pointerEvents: "none",
         padding: "4px 10px",
         borderRadius: 999,
-        border: `1px solid ${isReal ? "rgba(234,240,250,0.3)" : "rgba(255,255,255,0.12)"}`,
-        background: isReal ? "rgba(234,240,250,0.05)" : "rgba(255,255,255,0.02)",
+        border: `1px solid ${
+          isLive
+            ? "rgba(255,255,255,0.55)"
+            : isReal
+              ? "rgba(234,240,250,0.3)"
+              : "rgba(255,255,255,0.12)"
+        }`,
+        background: isLive
+          ? "rgba(255,255,255,0.08)"
+          : isReal
+            ? "rgba(234,240,250,0.05)"
+            : "rgba(255,255,255,0.02)",
       }}
     >
       <span
@@ -234,8 +262,8 @@ function SourceBadge({ isReal, captured = false }: { isReal: boolean; captured?:
           width: 6,
           height: 6,
           borderRadius: "50%",
-          background: isReal ? "#EAF0FA" : "#5F6875",
-          boxShadow: isReal ? "0 0 7px #EAF0FA" : "none",
+          background: dotColor,
+          boxShadow: isReal ? `0 0 ${isLive ? 9 : 7}px ${dotColor}` : "none",
         }}
       />
       <span className="mono" style={{ fontSize: "8.5px", letterSpacing: "0.16em", color: "#5F6875" }}>
@@ -246,7 +274,7 @@ function SourceBadge({ isReal, captured = false }: { isReal: boolean; captured?:
         style={{
           fontSize: "9px",
           letterSpacing: "0.1em",
-          color: isReal ? "#EAF0FA" : "#9BA3AF",
+          color: isLive ? "#FFFFFF" : isReal ? "#EAF0FA" : "#9BA3AF",
         }}
       >
         {isReal ? realLabel : "DERIVED SCENARIO GRAPH FALLBACK"}
