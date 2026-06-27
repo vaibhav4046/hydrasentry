@@ -25,6 +25,7 @@ import mcp_gateway
 import model_router
 import ota
 import real_graph
+import real_run
 import scenario_engine
 import scenario_loader
 import scheduler
@@ -195,6 +196,30 @@ async def judge_demo() -> JSONResponse:
         logger.exception("judge-demo run failed: %s", exc)
         return err("judge-demo run failed", status=400, kind=type(exc).__name__)
     return ok(artifact)
+
+
+@app.post("/runs/real")
+async def runs_real() -> JSONResponse:
+    """Genuinely-real run: live HydraDB context (clean + poisoned sub-tenants) +
+    real Groq agent answers + a computed risk score (rules + real Groq judge).
+
+    Defined before the parametrised ``/runs/{scenario_id}`` so the literal wins.
+    Forces the real path itself (does NOT flip APP_MODE), so the canonical
+    deterministic ``/runs/judge-demo`` (87 / HIGH) and ``/graph/real-query`` stay
+    untouched. Hard ~9s wall-clock cap: on any HydraDB/Groq failure or overrun it
+    returns the deterministic result labelled ``mode:"deterministic_fallback"``
+    as HTTP 200 — never a 500, never a hang.
+    """
+    try:
+        result = await asyncio.to_thread(real_run.run_real)
+    except Exception as exc:  # noqa: BLE001 -- belt-and-braces, never-500 contract
+        logger.warning("runs/real endpoint error: %s", type(exc).__name__)
+        return JSONResponse(
+            {"ok": True, "real": False, "mode": "deterministic_fallback",
+             "fallback_reason": f"endpoint error: {type(exc).__name__}"},
+            status_code=200,
+        )
+    return JSONResponse(result, status_code=200)
 
 
 @app.post("/runs/{scenario_id}")

@@ -169,3 +169,66 @@ def test_real_query_module_fails_closed_without_key(monkeypatch):
     assert result["ok"] is False
     assert result["fallback"] == "captured"
     assert result.get("real") is not True
+
+
+def test_runs_real_endpoint_never_500():
+    """POST /runs/real must always return HTTP 200 with a valid envelope, never
+    a 500 or a hang.
+
+    In CI there is no real HydraDB key, so this exercises the fail-closed path:
+    the deterministic result labelled ``mode:"deterministic_fallback"`` (the
+    canonical 87 / HIGH). When a real key IS configured and the stable tenants
+    are pre-warmed, the same endpoint returns ``mode:"real"`` with LLM-generated
+    answers and a computed score; that live behavior is verified out of band.
+    """
+    resp = client.post("/runs/real")
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["ok"] is True
+    assert body["mode"] in ("real", "deterministic_fallback")
+    assert "score" in body["risk"] and "band" in body["risk"]
+    if body["mode"] == "real":
+        # Real path: honest provenance + computed score + LLM answers present.
+        assert body["real"] is True
+        assert body["risk"]["computed"] is True
+        assert body["baseline_answer"] and body["poisoned_answer"]
+        assert body["llm_provider"] == "groq"
+    else:
+        # Fail-closed: deterministic canonical result, never claims real.
+        assert body["real"] is False
+        assert body["risk"]["computed"] is False
+        assert body["risk"]["score"] == 87
+        assert body["risk"]["band"] == "HIGH"
+
+
+def test_run_real_module_fails_closed_without_key(monkeypatch):
+    """real_run.run_real returns the deterministic_fallback (never raises, never
+    claims real) when the HydraDB key is absent. The canonical 87/HIGH stands in
+    for the real run so the contract holds offline."""
+    import dataclasses
+
+    import real_run
+    from config import settings
+
+    keyless_hydra = dataclasses.replace(settings.hydra, api_key="")
+    keyless_settings = dataclasses.replace(settings, hydra=keyless_hydra)
+    monkeypatch.setattr(real_run, "settings", keyless_settings, raising=True)
+    result = real_run.run_real()
+    assert result["ok"] is True
+    assert result["mode"] == "deterministic_fallback"
+    assert result["real"] is False
+    assert result["risk"]["computed"] is False
+    assert result["risk"]["score"] == 87
+    assert result["risk"]["band"] == "HIGH"
+    assert result["graph"]["source"] == "derived_scenario_graph"
+
+
+def test_runs_real_registered_before_parametrised():
+    """The literal /runs/real must not be swallowed by /runs/{scenario_id}: a
+    POST returns the run envelope, never a 404 'unknown scenario real'."""
+    resp = client.post("/runs/real")
+    assert resp.status_code == 200
+    body = resp.json()
+    # If the parametrised route had won, this would be a 404 unknown-scenario.
+    assert "unknown scenario" not in str(body.get("error", "")).lower()
+    assert body.get("ok") is True
