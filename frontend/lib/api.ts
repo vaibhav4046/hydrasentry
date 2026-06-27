@@ -18,6 +18,7 @@
 import type {
   ApiEnvelope,
   ApiResult,
+  Asi06Mapping,
   ConfigStatus,
   Firewall,
   HealthStatus,
@@ -37,6 +38,7 @@ import type {
   SkillScan,
 } from "./types";
 import {
+  demoAsi06Mapping,
   demoConfigStatus,
   demoFindings,
   demoMarketplaceScan,
@@ -348,6 +350,20 @@ export async function getProviders(): Promise<ApiResult<ProviderStatus[]>> {
   return withFallback(
     await request<ProviderStatus[]>("/settings/providers"),
     demoProviders,
+  );
+}
+
+/**
+ * Self-verified OWASP ASI06 (Memory Poisoning) control mapping. A reachable
+ * backend returns the truly verified artifact (verified_all recomputed against
+ * the running codebase). Offline, the fallback returns the same control claims
+ * with verified_all = null so the page is honest that it could not prove the
+ * mapping without the live backend.
+ */
+export async function getStandardsAsi06(): Promise<ApiResult<Asi06Mapping>> {
+  return withFallback(
+    await request<Asi06Mapping>("/standards/asi06"),
+    demoAsi06Mapping,
   );
 }
 

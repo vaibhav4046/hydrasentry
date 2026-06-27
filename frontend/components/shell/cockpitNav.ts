@@ -54,6 +54,7 @@ export const COCKPIT_NAV: CockpitNavGroup[] = [
         badgeWhenEngaged: true,
       },
       { label: "MCP Gateway", href: "/mcp", icon: "mcp", badge: "7" },
+      { label: "OWASP ASI06", href: "/standards", icon: "standards" },
     ],
   },
   {
@@ -127,6 +128,11 @@ export const ROUTE_META: Record<
     title: "MCP Gateway",
     section: "Security",
     crumb: "HYDRASENTRY / GATEWAY",
+  },
+  "/standards": {
+    title: "OWASP ASI06 Mapping",
+    section: "Security",
+    crumb: "HYDRASENTRY / STANDARDS",
   },
   "/scheduled": {
     title: "Scheduled Agents",

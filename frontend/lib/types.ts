@@ -378,6 +378,38 @@ export interface McpToolResult {
   [key: string]: unknown;
 }
 
+// --- OWASP ASI06 standards mapping ------------------------------------------
+
+/**
+ * One control row from the self-verified OWASP ASI06 (Memory Poisoning) mapping
+ * served at GET /standards/asi06. Mirrors backend/standards/asi06.py: each row
+ * names the REAL implementing module and symbol, and the backend recomputes
+ * `verified` against the running codebase, so a control is only shown as
+ * verified when its cited code actually exists.
+ */
+export interface Asi06Control {
+  id: string;
+  title: string;
+  summary: string;
+  evidence_file: string;
+  evidence_symbol: string;
+  file_exists: boolean;
+  symbol_present: boolean;
+  verified: boolean;
+}
+
+/** Full ASI06 mapping artifact returned by GET /standards/asi06. */
+export interface Asi06Mapping {
+  taxonomy: string;
+  risk_id: string;
+  risk_name: string;
+  reference: string;
+  control_count: number;
+  /** True only when every control's cited evidence was found in the codebase. */
+  verified_all: boolean | null;
+  controls: Asi06Control[];
+}
+
 // --- API envelope -----------------------------------------------------------
 
 /** Every JSON endpoint wraps payloads as { ok, data } | { ok:false, error }. */

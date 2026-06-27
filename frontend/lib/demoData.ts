@@ -17,6 +17,7 @@
  * contract changes.
  */
 import type {
+  Asi06Mapping,
   ConfigStatus,
   MarketplaceSkillScan,
   McpManifest,
@@ -76,6 +77,97 @@ export const demoConfigStatus = (): ConfigStatus => clone(DEMO_CONFIG_STATUS);
 export const demoMcpManifest = (): McpManifest => clone(DEMO_MCP_MANIFEST);
 export const demoMcpResources = (): McpResources => clone(DEMO_MCP_RESOURCES);
 export const demoSkillScan = (): SkillScan => clone(DEMO_SKILL_SCAN);
+
+/**
+ * Offline ASI06 mapping. The control CLAIMS (titles, summaries, evidence
+ * anchors) are documentation mirrored from backend/standards/asi06.py, the
+ * single source of truth. CRITICAL HONESTY: verification can only be recomputed
+ * against the RUNNING codebase, so offline every control reports
+ * file_exists/symbol_present/verified = false and verified_all = null. The page
+ * renders that as "verification requires the live backend" instead of claiming a
+ * green checkmark the browser cannot prove. A reachable backend always wins and
+ * returns the truly self-verified mapping.
+ */
+const DEMO_ASI06_CLAIMS: ReadonlyArray<{
+  id: string;
+  title: string;
+  summary: string;
+  evidence_file: string;
+  evidence_symbol: string;
+}> = [
+  {
+    id: "ASI06.provenance",
+    title: "Provenance labelling of retrieved memory",
+    summary:
+      "Every graph the engine reasons over is labelled REAL HydraDB query_paths vs a DERIVED scenario fallback vs a LOCAL heuristic graph, so a derived/demo result can never be passed off as a real HydraDB retrieval.",
+    evidence_file: "backend/report.py",
+    evidence_symbol: "_graph_label",
+  },
+  {
+    id: "ASI06.tenancy",
+    title: "Per-tenant isolation of stored memory (BOLA defense)",
+    summary:
+      "Poisoned-memory incidents and certificates are stored per tenant. Every repository read/write requires a tenant_id and filters by it; a cross-tenant lookup returns nothing, and a missing scope raises rather than returning a full table.",
+    evidence_file: "backend/db/repo.py",
+    evidence_symbol: "TenantScopingError",
+  },
+  {
+    id: "ASI06.quarantine",
+    title: "Forgetting / quarantine of poisoned memory",
+    summary:
+      "When the firewall severs a poisoned action, the offending memory is quarantined so it cannot reach the agent again, and the finding is converted into a persisted regression rule.",
+    evidence_file: "backend/rules_store.py",
+    evidence_symbol: "create_rule",
+  },
+  {
+    id: "ASI06.ground_truth_eval",
+    title: "Ground-truth behavior diff (not an asserted one)",
+    summary:
+      "Risk is computed by replaying the agent on a clean baseline vs the poisoned memory and diffing the resulting behaviour, producing a deterministic score and band rather than a hand-written verdict.",
+    evidence_file: "backend/risk_engine.py",
+    evidence_symbol: "score_scenario",
+  },
+  {
+    id: "ASI06.taint_tracking",
+    title: "Graph taint tracking from the poisoned source",
+    summary:
+      "The poisoned source chunk is taint-tracked through the graph so the certificate can record exactly which node carried the attack and which query_paths triplets it travelled.",
+    evidence_file: "backend/risk_engine.py",
+    evidence_symbol: "_graph_is_tainted",
+  },
+  {
+    id: "ASI06.trust_scoring",
+    title: "Trust scoring incl. semantic paraphrase detection",
+    summary:
+      "Beyond exact forbidden-marker matching, a semantic similarity signal flags reworded poison that paraphrases a policy override, so an attacker cannot evade detection by simple rewording.",
+    evidence_file: "backend/semantic_detector.py",
+    evidence_symbol: "def detect",
+  },
+  {
+    id: "ASI06.certificate",
+    title: "Portable Memory Integrity Certificate (MIC)",
+    summary:
+      "Each severed run is sealed into a portable certificate recording the behaviour diff, the tainted source chunk, the tool that would have fired, and the regression rule that now prevents it.",
+    evidence_file: "backend/report.py",
+    evidence_symbol: "generate_report",
+  },
+];
+
+export const demoAsi06Mapping = (): Asi06Mapping => ({
+  taxonomy: "OWASP Agentic Security Initiative (ASI)",
+  risk_id: "ASI06",
+  risk_name: "Memory Poisoning",
+  reference: "https://genai.owasp.org/initiatives/#agenticsecurity",
+  control_count: DEMO_ASI06_CLAIMS.length,
+  // Offline: cannot recompute against the codebase, so do NOT assert verified.
+  verified_all: null,
+  controls: DEMO_ASI06_CLAIMS.map((c) => ({
+    ...c,
+    file_exists: false,
+    symbol_present: false,
+    verified: false,
+  })),
+});
 
 /** Find a scenario fixture by id, falling back to the canonical refund run. */
 export function demoScenarioById(id: string): ScenarioSummary | undefined {
