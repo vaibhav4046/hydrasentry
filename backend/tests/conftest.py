@@ -17,21 +17,30 @@ BACKEND_DIR = Path(__file__).resolve().parent.parent
 if str(BACKEND_DIR) not in sys.path:
     sys.path.insert(0, str(BACKEND_DIR))
 
-# Point the app DB at a throwaway sqlite file for the test session. Set this
-# before importing config so settings.database_url picks it up. The legacy
+# Point the app DB at a throwaway sqlite file for the test session so the suite
+# stays offline + green and NEVER touches the real Supabase Postgres. The legacy
 # storage.py keeps its own sqlite path (DATABASE_URL only drives the app DB
 # engine in db.engine, which reads it fresh on first use).
 _APP_DB_FILE = Path(tempfile.gettempdir()) / "hydrasentry_app_test.db"
 if _APP_DB_FILE.exists():
     _APP_DB_FILE.unlink()
-os.environ["DATABASE_URL"] = f"sqlite:///{_APP_DB_FILE.as_posix()}"
+_TEST_DB_URL = f"sqlite:///{_APP_DB_FILE.as_posix()}"
+os.environ["DATABASE_URL"] = _TEST_DB_URL
 # A signing secret so issued certificates in tests are signed (real HMAC).
 os.environ.setdefault("HYDRASENTRY_CERT_SECRET", "hydrasentry-test-cert-secret")
 
 import config  # noqa: E402
 
-# Rebuild settings from the patched environment so db.engine uses the sqlite URL.
+# config's module-level load_dotenv(override=True) repopulates os.environ from
+# backend/.env on import -- which would put the REAL Postgres DATABASE_URL back
+# and make the suite run against live Supabase. Re-assert the sqlite test URL
+# AFTER that import so the test DB is authoritative regardless of .env, then
+# rebuild settings from the patched environment.
+os.environ["DATABASE_URL"] = _TEST_DB_URL
 config.settings = config.load_settings()
+assert config.settings.database_url == _TEST_DB_URL, (
+    "test suite must use the throwaway sqlite app DB, not the real Postgres"
+)
 
 import storage  # noqa: E402
 

@@ -1,4 +1,4 @@
-﻿"""Configuration and secret-masking for HydraSentry.
+"""Configuration and secret-masking for HydraSentry.
 
 Secrets are NEVER hardcoded and NEVER printed. Any key is exposed to the
 frontend only through ``key_status`` which returns a masked fingerprint
@@ -30,7 +30,11 @@ IS_SERVERLESS = bool(os.getenv("VERCEL"))
 RUNS_DIR = Path("/tmp/runs") if IS_SERVERLESS else REPO_ROOT / "runs"
 
 # Load backend/.env if present. Never fails if absent (e.g. CI).
-load_dotenv(dotenv_path=ENV_PATH, override=False)
+# override=True so a stray persistent shell var (e.g. a leftover
+# DATABASE_URL=localhost) cannot shadow the real value in backend/.env. On
+# Vercel there is no .env in the bundle, so this is a harmless no-op there and
+# the platform-injected env vars are used as-is.
+load_dotenv(dotenv_path=ENV_PATH, override=True)
 
 DEFAULT_TENANT = "hydrasentry-owned-test"
 
