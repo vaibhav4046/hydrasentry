@@ -3,7 +3,7 @@ import { interpolate, useCurrentFrame } from "remotion";
 import { COLORS, FONTS } from "./lib/theme";
 
 /**
- * Remotion-native monochrome "artifact tree" — the same visual language as the
+ * Remotion-native monochrome "artifact tree" - the same visual language as the
  * frontend ArtifactTreeGraph, rebuilt with raw SVG + interpolate (no framer, no
  * Next imports). Deterministic geometry on a 1920x1080 stage: a luminous white
  * trunk rises into a canopy of thin branch strokes scattered with glowing

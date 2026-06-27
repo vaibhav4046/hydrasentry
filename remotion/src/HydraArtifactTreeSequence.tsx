@@ -15,21 +15,21 @@ import { COLORS, FONTS } from "./lib/theme";
 import { ArtifactTree, TREE_W, TREE_H } from "./ArtifactTree";
 
 /**
- * HydraArtifactTreeSequence — the monochrome "artifact tree" launch film. A
+ * HydraArtifactTreeSequence - the monochrome "artifact tree" launch film. A
  * Remotion-native rebuild of the frontend hero's visual identity (white tree on
  * noir, white-hot tainted path), in 8 scenes:
- *   1 Tree seed        — trunk/branches draw in
- *   2 Memory nodes     — context badges appear
- *   3 Query path       — the clean retrieval path glows
- *   4 Poisoned memory  — the tainted memory surfaces
- *   5 Conflict detected — tainted path goes white-hot + traveling dash
+ *   1 Tree seed        - trunk/branches draw in
+ *   2 Memory nodes     - context badges appear
+ *   3 Query path       - the clean retrieval path glows
+ *   4 Poisoned memory  - the tainted memory surfaces
+ *   5 Conflict detected - tainted path goes white-hot + traveling dash
  *   6 Risk counts to 87
  *   7 MCP firewall blocks
  *   8 Report generated
  *
  * Each scene owns its fades; the ArtifactTree is a pure function of
  * (progress, taint, block, frame) so scenes simply map their local frame range
- * onto those drivers. Strict monochrome — danger is white intensity, never hue.
+ * onto those drivers. Strict monochrome - danger is white intensity, never hue.
  */
 
 // Scene boundaries in frames @ 30fps (≈70s total = 2100 frames).
@@ -217,7 +217,7 @@ function SceneSeed() {
       </div>
       <TitleCard
         kicker="HydraDB native"
-        title="Every agent memory is a node on the context tree."
+        title="Agents do not fail at the prompt. They fail at memory."
         appear={useAppear(60, 96)}
         align="center"
       />
@@ -237,8 +237,8 @@ function SceneMemory() {
     <AbsoluteFill style={{ opacity: fade }}>
       <TreeStage progress={progress} />
       <TitleCard
-        kicker="Context retrieval"
-        title="Memories, policies and documents surface as labelled nodes."
+        kicker="baseline · safe"
+        title="A real refund agent on HydraDB. Refunds over GBP 500 need a manager."
         appear={useAppear(20, 56)}
       />
     </AbsoluteFill>
@@ -257,8 +257,8 @@ function SceneQueryPath() {
     <AbsoluteFill style={{ opacity: fade }}>
       <TreeStage progress={progress} />
       <TitleCard
-        kicker="query_paths"
-        title="A clean retrieval path glows through the trusted branches."
+        kicker="clean context"
+        title="On clean memory the agent escalates the GBP 900 refund. Correct."
         appear={useAppear(20, 56)}
       />
     </AbsoluteFill>
@@ -283,7 +283,7 @@ function ScenePoison() {
       <TreeStage progress={progress} taint={taint} spotX={0.32} />
       <TitleCard
         kicker="memory poisoning"
-        title="A tampered memory claims VIP customers always get instant refunds."
+        title="One poisoned memory: auto-approve refunds under GBP 2000. No prompt scanner sees it."
         appear={useAppear(24, 60)}
       />
     </AbsoluteFill>
@@ -307,8 +307,8 @@ function SceneConflict() {
     <AbsoluteFill style={{ opacity: fade }}>
       <TreeStage progress={progress} taint={taint} spotX={0.6} />
       <TitleCard
-        kicker="conflict detected"
-        title="The poisoned memory overrides the refund policy — the path goes hot."
+        kicker="attacked"
+        title="Same agent auto-approves GBP 900 with no manager sign-off. The path goes hot."
         appear={useAppear(20, 56)}
       />
     </AbsoluteFill>
@@ -321,9 +321,11 @@ function SceneRisk() {
   const taint = 1;
   const fade = useFade(SCENE_FRAMES[6] - SCENE_FRAMES[5]);
   const panel = useAppear(8, 36);
+  const chain = useAppear(120, 156);
   return (
     <AbsoluteFill style={{ opacity: fade }}>
       <TreeStage progress={progress} taint={taint} spotX={0.34} opacity={0.62} />
+      <TaintChain appear={chain} />
       <div
         style={{
           position: "absolute",
@@ -342,13 +344,13 @@ function SceneRisk() {
         <RiskCounter from={12} to={87} startFrame={36} durationFrames={70} label="RISK SCORE" size={220} />
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           <span style={{ fontFamily: FONTS.mono, fontSize: 16, letterSpacing: "4px", color: COLORS.textMuted }}>
-            MEMORY POISONING · HIGH
+            MEMORY_POISONING · HIGH · CONFIDENCE 0.92
           </span>
           <span style={{ fontFamily: FONTS.sans, fontSize: 30, fontWeight: 700, color: COLORS.textPrimary }}>
-            Rules + replay + judge agree
+            A real judge scores it
           </span>
           <span style={{ fontFamily: FONTS.sans, fontSize: 20, color: COLORS.textSecondary, maxWidth: 600 }}>
-            The deterministic engine scores the tainted path 87 / 100.
+            87 / HIGH on the deterministic floor, about 90 and CRITICAL on the live Groq path.
           </span>
         </div>
       </div>
@@ -407,13 +409,13 @@ function SceneFirewall() {
             <line x1={19} y1={5} x2={5} y2={19} stroke={COLORS.white} strokeWidth={2.6} />
           </svg>
           <span style={{ fontFamily: FONTS.mono, fontSize: 18, letterSpacing: "4px", color: COLORS.textPrimary }}>
-            CONTEXT FIREWALL · BLOCK
+            MCP FIREWALL · approve_refund() BLOCKED
           </span>
         </div>
       </div>
       <TitleCard
-        kicker="mcp gateway"
-        title="The firewall blocks the unsafe memory before the agent can act."
+        kicker="mcp firewall"
+        title="The firewall blocks the tainted path. The unsafe refund never fires. Memory quarantined."
         appear={useAppear(30, 66)}
       />
     </AbsoluteFill>
@@ -456,21 +458,24 @@ function SceneReport() {
             }}
           >
             <span style={{ fontFamily: FONTS.mono, fontSize: 15, letterSpacing: "3px", color: COLORS.textSecondary }}>
-              EVIDENCE REPORT · hydrasentry-run.md
+              MEMORY INTEGRITY CERTIFICATE · MIC-2026-REFUND-001
             </span>
             <span style={{ fontFamily: FONTS.mono, fontSize: 13, letterSpacing: "2px", color: COLORS.textMuted }}>
-              generated
+              signed
             </span>
           </div>
           <div style={{ padding: "28px", display: "flex", flexDirection: "column", gap: 12, fontFamily: FONTS.mono, fontSize: 18, color: COLORS.textSecondary }}>
             <ReportRow k="risk_score" v="87 / 100 · HIGH" />
             <ReportRow k="attack_type" v="memory_poisoning" />
             <ReportRow k="firewall.decision" v="block" />
-            <ReportRow k="quarantine" v="mem_poison_047" />
-            <ReportRow k="graph_source" v="REAL HYDRADB QUERY_PATHS" />
+            <ReportRow k="tainted_node" v="mem_poison_047" />
+            <ReportRow k="blocked_action" v="approve_refund()" />
+            <ReportRow k="signature" v="HMAC · offline-verifiable" />
           </div>
         </div>
       </AbsoluteFill>
+      {/* moat + connect-your-agent strip */}
+      <MoatStrip appear={useAppear(70, 104)} />
       <div
         style={{
           position: "absolute",
@@ -482,11 +487,120 @@ function SceneReport() {
           opacity: wm,
         }}
       >
-        <Wordmark scale={0.6} tagline="SECURE THE MEMORY LAYER" markDraw={wm} markGlow={0.5} />
+        <Wordmark scale={0.6} tagline="REPLAY · TRACE · BLOCK · CERTIFY" markDraw={wm} markGlow={0.5} />
       </div>
     </AbsoluteFill>
   );
 }
+
+// ---- query_paths taint chain (the graph beat) -------------------------------
+const CHAIN_NODES = ["mem_poison_047", "policy_refund_v2", "instant_refund_action", "manager_approval"];
+
+const TaintChain: React.FC<{ appear: number }> = ({ appear }) => {
+  const y = interpolate(appear, [0, 1], [24, 0]);
+  return (
+    <div
+      style={{
+        position: "absolute",
+        left: 120,
+        bottom: 110,
+        display: "flex",
+        flexDirection: "column",
+        gap: 16,
+        opacity: appear,
+        transform: `translateY(${y}px)`,
+        maxWidth: 760,
+      }}
+    >
+      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+        <span
+          style={{
+            fontFamily: FONTS.mono,
+            fontSize: 13,
+            letterSpacing: "3px",
+            color: COLORS.textPrimary,
+            padding: "5px 12px",
+            border: "1px solid rgba(255,255,255,0.55)",
+            borderRadius: 999,
+            background: "rgba(255,255,255,0.07)",
+          }}
+        >
+          REAL HYDRADB QUERY_PATHS
+        </span>
+        <span style={{ fontFamily: FONTS.mono, fontSize: 13, letterSpacing: "2px", color: COLORS.textMuted }}>
+          the part no prompt tool gives you
+        </span>
+      </div>
+      <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: 10 }}>
+        {CHAIN_NODES.map((n, i) => (
+          <React.Fragment key={n}>
+            <span
+              style={{
+                fontFamily: FONTS.mono,
+                fontSize: 17,
+                color: i === 0 ? COLORS.white : COLORS.textSecondary,
+                fontWeight: i === 0 ? 700 : 400,
+                textShadow: i === 0 ? "0 0 18px rgba(255,255,255,0.45)" : "none",
+              }}
+            >
+              {n}
+            </span>
+            {i < CHAIN_NODES.length - 1 && (
+              <span style={{ fontFamily: FONTS.mono, fontSize: 17, color: COLORS.textMuted }}>{"->"}</span>
+            )}
+          </React.Fragment>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+// ---- moat + connect-your-agent strip (closing) ------------------------------
+const MOAT_PILLARS: { k: string; v: string }[] = [
+  { k: "CONNECT YOUR AGENT", v: "hs_live_ key + native MCP server" },
+  { k: "SEMANTIC PARAPHRASE", v: "embeddings catch reworded poison" },
+  { k: "MULTI-TENANT", v: "isolated tenant · offline cert verify" },
+];
+
+const MoatStrip: React.FC<{ appear: number }> = ({ appear }) => {
+  const y = interpolate(appear, [0, 1], [20, 0]);
+  return (
+    <div
+      style={{
+        position: "absolute",
+        top: 96,
+        left: 0,
+        right: 0,
+        display: "flex",
+        justifyContent: "center",
+        gap: 18,
+        opacity: appear,
+        transform: `translateY(${y}px)`,
+      }}
+    >
+      {MOAT_PILLARS.map((p) => (
+        <div
+          key={p.k}
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            gap: 6,
+            padding: "12px 20px",
+            borderRadius: 12,
+            border: `1px solid ${COLORS.border}`,
+            background: "rgba(255,255,255,0.045)",
+            minWidth: 260,
+          }}
+        >
+          <span style={{ fontFamily: FONTS.mono, fontSize: 13, letterSpacing: "3px", color: COLORS.textPrimary }}>
+            {p.k}
+          </span>
+          <span style={{ fontFamily: FONTS.mono, fontSize: 14, color: COLORS.textMuted }}>{p.v}</span>
+        </div>
+      ))}
+    </div>
+  );
+};
 
 const ReportRow: React.FC<{ k: string; v: string }> = ({ k, v }) => (
   <div
