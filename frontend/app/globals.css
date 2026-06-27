@@ -160,6 +160,7 @@
   @media (max-width: 760px) {
     .console-analytics-grid,
     .console-keys-grid,
+    .console-rules-grid,
     .console-replay-grid {
       grid-template-columns: 1fr !important;
     }

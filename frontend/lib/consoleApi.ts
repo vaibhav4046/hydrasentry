@@ -22,7 +22,10 @@ import type {
   ApiKey,
   AuthSyncResult,
   CreatedApiKey,
+  DetectionRule,
   Incident,
+  NewRule,
+  RuleImportResult,
 } from "./consoleTypes";
 
 /**
@@ -48,7 +51,7 @@ function errorMessage(error: unknown): string {
 }
 
 interface ConsoleRequestOptions {
-  method?: "GET" | "POST" | "DELETE";
+  method?: "GET" | "POST" | "PATCH" | "DELETE";
   body?: unknown;
   /** Supabase access token; omitted for the unauthenticated demo-tenant reads. */
   token?: string;
@@ -149,4 +152,99 @@ export function revokeApiKey(
     method: "DELETE",
     token,
   });
+}
+
+// --- Detection rules (JWT required, tenant-scoped) ---------------------------
+
+/** List the tenant's detection rules, newest first. */
+export function listRules(token: string): Promise<ApiResult<DetectionRule[]>> {
+  return consoleRequest<DetectionRule[]>("/rules", { token });
+}
+
+/** Create a rule from an example of poisoned text (signature_text). */
+export function createRule(
+  rule: NewRule,
+  token: string,
+): Promise<ApiResult<DetectionRule>> {
+  return consoleRequest<DetectionRule>("/rules", {
+    method: "POST",
+    body: rule,
+    token,
+  });
+}
+
+/** Patch a rule (e.g. toggle `enabled`, rename). Returns the updated row. */
+export function updateRule(
+  id: string,
+  patch: Partial<NewRule>,
+  token: string,
+): Promise<ApiResult<DetectionRule>> {
+  return consoleRequest<DetectionRule>(`/rules/${encodeURIComponent(id)}`, {
+    method: "PATCH",
+    body: patch,
+    token,
+  });
+}
+
+/** Delete a rule. */
+export function deleteRule(
+  id: string,
+  token: string,
+): Promise<ApiResult<{ id: string }>> {
+  return consoleRequest<{ id: string }>(`/rules/${encodeURIComponent(id)}`, {
+    method: "DELETE",
+    token,
+  });
+}
+
+/** Import a JSON ruleset (the export shape). Returns counts. */
+export function importRules(
+  ruleset: unknown,
+  token: string,
+): Promise<ApiResult<RuleImportResult>> {
+  return consoleRequest<RuleImportResult>("/rules/import", {
+    method: "POST",
+    body: ruleset,
+    token,
+  });
+}
+
+/**
+ * Fetch the tenant's ruleset as raw JSON for download. This bypasses the
+ * { ok, data } envelope unwrap because /rules/export returns the ruleset file
+ * directly. Returns the parsed JSON (unknown shape) or an honest error.
+ */
+export async function exportRules(
+  token: string,
+): Promise<ApiResult<unknown>> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+  try {
+    const res = await fetch(`${CONSOLE_BACKEND_URL}/rules/export`, {
+      method: "GET",
+      headers: { Accept: "application/json", Authorization: `Bearer ${token}` },
+      cache: "no-store",
+      signal: controller.signal,
+    });
+    if (!res.ok) return { ok: false, error: `Export failed (${res.status})` };
+    const data = (await res.json()) as unknown;
+    // The backend may still wrap a data export in the standard envelope; unwrap
+    // it if so, otherwise treat the body as the ruleset itself.
+    if (
+      data &&
+      typeof data === "object" &&
+      "ok" in data &&
+      typeof (data as { ok: unknown }).ok === "boolean"
+    ) {
+      const env = data as ApiEnvelope<unknown>;
+      return env.ok
+        ? { ok: true, data: env.data }
+        : { ok: false, error: env.error || "Export failed" };
+    }
+    return { ok: true, data };
+  } catch (error: unknown) {
+    return { ok: false, error: errorMessage(error) };
+  } finally {
+    clearTimeout(timer);
+  }
 }

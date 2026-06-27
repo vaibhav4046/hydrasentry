@@ -47,3 +47,36 @@ export interface AuthSyncResult {
   tenant_slug: string;
   auth_method: string;
 }
+
+/**
+ * One tenant detection rule. A rule is an EXAMPLE of poisoned text: the detector
+ * embeds `signature_text` so paraphrases of the same attack get caught for this
+ * tenant. Mirrors the backend _rule_dto (GET /rules row shape).
+ */
+export interface DetectionRule {
+  id: string;
+  name: string;
+  signature_text: string;
+  attack_type: string;
+  severity: RuleSeverity | (string & {});
+  enabled: boolean;
+  created_at: string | null;
+}
+
+/** Severity ladder for a rule, mirrors the backend's accepted values. */
+export type RuleSeverity = "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
+
+/** Body for POST /rules. The backend returns the created DetectionRule. */
+export interface NewRule {
+  name: string;
+  signature_text: string;
+  attack_type: string;
+  severity: RuleSeverity;
+  enabled: boolean;
+}
+
+/** Result of POST /rules/import: how many rows landed vs were skipped. */
+export interface RuleImportResult {
+  imported: number;
+  skipped: number;
+}

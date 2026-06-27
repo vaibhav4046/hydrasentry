@@ -15,7 +15,8 @@ export type CockpitIconKey =
   | "results"
   | "settings"
   | "console"
-  | "keys";
+  | "keys"
+  | "rules";
 
 const ICON_D: Record<CockpitIconKey, string> = {
   mission:
@@ -32,6 +33,9 @@ const ICON_D: Record<CockpitIconKey, string> = {
     "M3.5 5.5h17v13h-17zM6.5 9l3 2.5-3 2.5M11.5 14.5h4",
   keys:
     "M15.5 8.5a3.5 3.5 0 11-3.5 3.5h-9M5 12v3M8 12v2",
+  // Shield + signature lines: a tenant rule is a stored attack signature.
+  rules:
+    "M12 2.5l8 3v6c0 5-3.4 8.5-8 9.9-4.6-1.4-8-4.9-8-9.9v-6zM8.5 10.5h7M8.5 13.5h5",
 };
 
 interface CockpitIconProps {
