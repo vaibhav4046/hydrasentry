@@ -46,6 +46,16 @@ interface AtlasStarChartProps {
   hoverId: string | null;
   onHover: (id: string | null) => void;
   onSelect: (id: string) => void;
+  /**
+   * Cinematic build progress [0..1]. 1 = fully materialized (the normal, frozen
+   * behaviour and the default). While a live HydraDB query is in flight the page
+   * ramps this 0 → 1 so the constellation draws itself in: stars fade/scale in
+   * in catalogue order, their incident lines draw after them, and a bright
+   * scanning bar sweeps the plate. Purely a loading affordance over the existing
+   * deterministic layout — no new data, no LIVE claim. Under reduced motion the
+   * page holds this at 1 so the final state shows instantly (never blank).
+   */
+  reveal?: number;
 }
 
 const FIELD = buildAtlasField(130);
@@ -56,12 +66,15 @@ export function AtlasStarChart({
   hoverId,
   onHover,
   onSelect,
+  reveal = 1,
 }: AtlasStarChartProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   // Keep the latest interaction state in a ref so the rAF closure reads fresh
   // values without re-subscribing the whole effect every render. Synced in an
-  // effect (never during render) per the rules of refs.
-  const stateRef = useRef({ model, selectedId, hoverId });
+  // effect (never during render) per the rules of refs. `reveal` lives here too
+  // so the rAF/paused redraw reads the freshest build progress every frame
+  // without re-running the heavy setup effect.
+  const stateRef = useRef({ model, selectedId, hoverId, reveal });
   // Screen-space star hitboxes, recomputed each frame for pointer mapping.
   const hitsRef = useRef<Array<{ id: string; x: number; y: number; r: number }>>([]);
   // When paused (reduced motion / off-screen), a ref-bumped redraw is requested
@@ -70,9 +83,9 @@ export function AtlasStarChart({
 
   // Sync the live state into the ref and nudge a redraw if the loop is paused.
   useEffect(() => {
-    stateRef.current = { model, selectedId, hoverId };
+    stateRef.current = { model, selectedId, hoverId, reveal };
     redrawRef.current?.();
-  }, [model, selectedId, hoverId]);
+  }, [model, selectedId, hoverId, reveal]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -104,10 +117,26 @@ export function AtlasStarChart({
 
     function draw(now: number) {
       const t = (now - startT) / 1000;
-      const { model, selectedId, hoverId } = stateRef.current;
+      const { model, selectedId, hoverId, reveal } = stateRef.current;
       const p = computePlot(w, h);
       const px = (nx: number) => p.ox + nx * p.size;
       const py = (ny: number) => p.oy + ny * p.size;
+
+      // Cinematic build: stars materialize in catalogue order across the first
+      // ~75% of the reveal, each with a short local fade/scale; their lines draw
+      // once both endpoints are present. reveal===1 short-circuits to the normal
+      // fully-composed picture (the frozen default, and the reduced-motion path).
+      const building = reveal < 1;
+      const starCount = Math.max(1, model.stars.length);
+      // Local materialization progress for a star at catalogue index i.
+      const starReveal = (i: number): number => {
+        if (!building) return 1;
+        const start = (i / starCount) * 0.72; // last star starts at ~0.72
+        const span = 0.28; // each star fades in over ~0.28 of the timeline
+        return clamp01((reveal - start) / span);
+      };
+      const starRevealById = new Map<string, number>();
+      model.stars.forEach((s, i) => starRevealById.set(s.id, starReveal(i)));
 
       ctx!.clearRect(0, 0, w, h);
       drawFrame(ctx!, p);
@@ -141,12 +170,22 @@ export function AtlasStarChart({
         const a = starById.get(e.from);
         const b = starById.get(e.to);
         if (!a || !b) continue;
+        // During the build, a line only draws once BOTH endpoint stars have
+        // materialized; it then draws on progressively. Outside the build this
+        // is always 1 (no behaviour change).
+        const lineReveal = building
+          ? Math.min(
+              starRevealById.get(e.from) ?? 1,
+              starRevealById.get(e.to) ?? 1,
+            )
+          : 1;
+        if (lineReveal <= 0.02) continue;
         const x1 = px(a.x);
         const y1 = py(a.y);
         const x2 = px(b.x);
         const y2 = py(b.y);
         const incident = activeId === e.from || activeId === e.to;
-        drawLine(ctx!, x1, y1, x2, y2, e, p, t, reduce, incident);
+        drawLine(ctx!, x1, y1, x2, y2, e, p, t, reduce, incident, lineReveal);
       }
 
       // ---- stars -------------------------------------------------------
@@ -157,11 +196,22 @@ export function AtlasStarChart({
         const r = radiusFor(s.mag, p.scale);
         const active = activeId === s.id;
         const selected = selectedId === s.id;
-        drawStar(ctx!, s, x, y, r, p, t, reduce, active, selected);
-        // Hitbox: a generous disc around the glyph for easy clicking.
-        hits.push({ id: s.id, x, y, r: Math.max(r * 3.2, 12 * p.scale + 8) });
+        const sr = starRevealById.get(s.id) ?? 1;
+        if (sr <= 0.001) continue;
+        drawStar(ctx!, s, x, y, r, p, t, reduce, active, selected, sr);
+        // Hitbox: a generous disc around the glyph for easy clicking. Only once
+        // the star is substantially materialized so the build can't be clicked
+        // through to a half-drawn node.
+        if (sr > 0.6) {
+          hits.push({ id: s.id, x, y, r: Math.max(r * 3.2, 12 * p.scale + 8) });
+        }
       }
       hitsRef.current = hits;
+
+      // Scanning shimmer: a bright vertical bar sweeping the plate left→right
+      // tracks the build front, reading as a live traversal materializing the
+      // graph. Only during the build, and never under reduced motion.
+      if (building && !reduce) drawScanBar(ctx!, p, reveal);
 
       if (!reduce) drawSweep(ctx!, p, t);
 
@@ -282,6 +332,7 @@ function drawLine(
   t: number,
   reduce: boolean,
   incident: boolean,
+  reveal = 1,
 ): void {
   const ang = Math.atan2(y2 - y1, x2 - x1);
   const len = Math.hypot(x2 - x1, y2 - y1);
@@ -293,6 +344,10 @@ function drawLine(
   const ey = y2 - Math.sin(ang) * inset;
 
   ctx.save();
+  // Cinematic build: a freshly-connected line fades in. reveal===1 is the
+  // normal, fully-opaque path (globalAlpha stays 1) so nothing changes once the
+  // build settles. The save above guarantees this is restored on every path.
+  if (reveal < 1) ctx.globalAlpha = easeOutCubic(clamp01(reveal));
 
   if (e.severed) {
     // The severed limb: a dashed dark line that visibly STOPS short of the
@@ -385,7 +440,28 @@ function drawStar(
   reduce: boolean,
   active: boolean,
   selected: boolean,
+  reveal = 1,
 ): void {
+  // Cinematic build: a materializing star scales up from a point and fades in.
+  // reveal===1 is the normal path (no transform), so the frozen picture is
+  // byte-identical once the build completes. The body has several early returns,
+  // so wrap the whole paint in one save/restore that always balances.
+  const building = reveal < 1;
+  if (building) {
+    ctx.save();
+    const e = easeOutCubic(reveal);
+    ctx.globalAlpha = e;
+    ctx.translate(x, y);
+    ctx.scale(0.55 + 0.45 * e, 0.55 + 0.45 * e);
+    ctx.translate(-x, -y);
+  }
+  try {
+    paintStar();
+  } finally {
+    if (building) ctx.restore();
+  }
+
+  function paintStar(): void {
   // Selection / hover reticle around any focused star.
   if (active || selected) {
     ctx.strokeStyle = active
@@ -502,4 +578,49 @@ function drawStar(
     r,
     stale ? 0.35 : active ? 0.9 : s.tainted ? 0.75 : 0.6,
   );
+  }
+}
+
+/** Smooth ease for the materialize-in scale/fade. */
+function easeOutCubic(x: number): number {
+  return 1 - Math.pow(1 - x, 3);
+}
+
+function clamp01(x: number): number {
+  return x < 0 ? 0 : x > 1 ? 1 : x;
+}
+
+/**
+ * The scanning shimmer bar that tracks the cinematic build front: a bright,
+ * soft-edged vertical band sweeping left→right across the plot as the graph
+ * materializes, with a thin leading edge. Compositor-cheap (one gradient fill).
+ * Drawn only during the build; reveal in [0..1] places the bar.
+ */
+function drawScanBar(ctx: CanvasRenderingContext2D, p: Plot, reveal: number): void {
+  const e = clamp01(reveal);
+  // Lead the build front slightly so the bar sits just ahead of the newest star.
+  const cx = p.ox + (0.04 + e * 0.96) * p.size;
+  const bandW = Math.max(26, p.size * 0.13);
+  const x0 = cx - bandW;
+  ctx.save();
+  // Clip to the plot square so the bar never bleeds over the frame chrome.
+  ctx.beginPath();
+  ctx.rect(p.ox, p.oy, p.size, p.size);
+  ctx.clip();
+  const grad = ctx.createLinearGradient(x0, 0, cx, 0);
+  grad.addColorStop(0, "rgba(234,240,250,0)");
+  grad.addColorStop(0.7, "rgba(234,240,250,0.05)");
+  grad.addColorStop(1, "rgba(234,240,250,0.14)");
+  ctx.fillStyle = grad;
+  ctx.fillRect(x0, p.oy, bandW, p.size);
+  // Thin bright leading edge, fades out as the build completes.
+  ctx.strokeStyle = `rgba(255,255,255,${0.5 * (1 - e * 0.5)})`;
+  ctx.lineWidth = 1.2;
+  ctx.shadowColor = "rgba(255,255,255,0.5)";
+  ctx.shadowBlur = 7;
+  ctx.beginPath();
+  ctx.moveTo(cx, p.oy);
+  ctx.lineTo(cx, p.oy + p.size);
+  ctx.stroke();
+  ctx.restore();
 }

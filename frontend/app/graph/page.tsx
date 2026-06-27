@@ -1,9 +1,10 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { PageShell } from "@/components/shared/PageShell";
 import { AtlasPlate } from "@/components/graph/AtlasPlate";
 import { useRunDemo } from "@/hooks/useRunDemo";
+import { useReducedMotionSafe } from "@/hooks/useReducedMotionSafe";
 import { queryRealGraph } from "@/lib/api";
 import { C } from "@/lib/cockpit/derive";
 import {
@@ -44,8 +45,33 @@ type LiveState =
  * from `graph_source`. Clicking a star updates the Node Inspector with that
  * entity's full provenance.
  */
+/** SSR-safe "is this client component hydrated and interactive yet" signal.
+ * Server + first paint snapshot is false; the client snapshot is true. Used to
+ * gate the live-query control so a fast judge clicking on a cold, not-yet-
+ * hydrated page sees an honest "loading" affordance instead of a silent no-op.
+ * Mirrors the useSyncExternalStore convention in hooks/useDemoMode.ts and avoids
+ * the set-state-in-effect lint of a mount flag. */
+const noopSubscribe = () => () => {};
+function useHydrated(): boolean {
+  return useSyncExternalStore(
+    noopSubscribe,
+    () => true,
+    () => false,
+  );
+}
+
+/** Loading-affordance build duration before the real response lands (ms). The
+ * real query returns in ~2.4-3.2s; we pace the visible build to ~2.6s and hold
+ * near-complete until the genuine response settles it, so the reveal always
+ * tracks a real call and never out-runs it into a fake "done". */
+const BUILD_MS = 2600;
+/** The build ramps to this ceiling while in flight; the real response (or the
+ * honest fallback) completes the final stretch to 1.0. */
+const BUILD_CEILING = 0.9;
+
 export default function GraphPage() {
   const { run, isRunning } = useRunDemo();
+  const reducedMotion = useReducedMotionSafe();
 
   // Optional view of the CAPTURED real HydraDB sample (a toggle, off by default).
   // When on, it overrides the live posture so a judge on the live URL can see a
@@ -61,6 +87,27 @@ export default function GraphPage() {
   // or a graceful fallback to the captured sample (status:fallback).
   const [liveState, setLiveState] = useState<LiveState>({ status: "idle" });
   const isLiveLoading = liveState.status === "loading";
+
+  // Cinematic build progress [0..1] for the constellation. 1 = fully
+  // materialized (the normal frozen plate, and the reduced-motion value). While
+  // a live query is in flight we ramp this 0 → BUILD_CEILING so the graph draws
+  // itself in over the captured layout; the real response settles it to 1.
+  const [reveal, setReveal] = useState(1);
+  const rafRef = useRef<number | null>(null);
+  const buildStartRef = useRef(0);
+
+  // Interactivity readiness for the live-query control. False during SSR and the
+  // first (pre-hydration) client paint, true once React has hydrated and the
+  // onClick handler will actually fire. A fast judge clicking on a cold page
+  // sees an honest "loading…" state instead of a silent no-op.
+  const ready = useHydrated();
+
+  // Stop any in-flight reveal ramp on unmount.
+  useEffect(() => {
+    return () => {
+      if (rafRef.current != null) cancelAnimationFrame(rafRef.current);
+    };
+  }, []);
   const liveGraph =
     liveState.status === "live" ? (liveState.data.graph as unknown as Graph) : null;
   // A live success outranks the captured toggle; while loading we keep the
@@ -71,18 +118,54 @@ export default function GraphPage() {
     liveState.status === "loading" ||
     liveState.status === "fallback";
 
+  /** Settle the cinematic build to the final state (reveal = 1) and stop the
+   * ramp. Used both on a genuine real:true response and on the honest fallback. */
+  function settleReveal() {
+    if (rafRef.current != null) {
+      cancelAnimationFrame(rafRef.current);
+      rafRef.current = null;
+    }
+    setReveal(1);
+  }
+
   async function runLiveQuery() {
+    // Guard: ignore clicks before the component is interactive (cold-load race)
+    // or while a query is already running.
+    if (!ready || isLiveLoading) return;
     setLiveState({ status: "loading" });
     setSelId(null);
+
+    // Reduced motion: skip the build animation entirely. The captured layout is
+    // shown immediately (reveal stays 1, never blank) while the real call runs,
+    // then we snap to the live or fallback final state.
+    if (!reducedMotion) {
+      if (rafRef.current != null) cancelAnimationFrame(rafRef.current);
+      setReveal(0);
+      buildStartRef.current = performance.now();
+      const tick = (now: number) => {
+        const elapsed = now - buildStartRef.current;
+        const next = Math.min(BUILD_CEILING, (elapsed / BUILD_MS) * BUILD_CEILING);
+        setReveal(next);
+        if (next < BUILD_CEILING) {
+          rafRef.current = requestAnimationFrame(tick);
+        } else {
+          rafRef.current = null;
+        }
+      };
+      rafRef.current = requestAnimationFrame(tick);
+    }
+
     const result = await queryRealGraph();
     if (result.ok) {
       setLiveState({ status: "live", data: result.data });
+      settleReveal();
       return;
     }
     setLiveState({
       status: "fallback",
       note: "Live query unavailable, showing captured run.",
     });
+    settleReveal();
   }
 
   // Single source of truth for the constellation AND inspector provenance:
@@ -195,19 +278,27 @@ export default function GraphPage() {
             <button
               type="button"
               onClick={runLiveQuery}
-              disabled={isLiveLoading}
-              aria-busy={isLiveLoading}
-              title="Run a genuine, just-now HydraDB query_paths traversal against the owned tenant and render the real graph."
+              disabled={isLiveLoading || !ready}
+              aria-busy={isLiveLoading || !ready}
+              title={
+                ready
+                  ? "Run a genuine, just-now HydraDB query_paths traversal against the owned tenant and render the real graph."
+                  : "Warming up the live query control…"
+              }
               style={{
-                cursor: isLiveLoading ? "progress" : "pointer",
+                cursor: isLiveLoading
+                  ? "progress"
+                  : ready
+                    ? "pointer"
+                    : "wait",
                 fontFamily: MONO,
                 fontSize: "9.5px",
                 letterSpacing: "0.12em",
                 textTransform: "uppercase",
-                color: isLive ? "#0A0A0A" : "#EAF0FA",
+                color: isLive ? "#0A0A0A" : ready ? "#EAF0FA" : "#9BA3AF",
                 padding: "7px 12px",
                 borderRadius: 999,
-                border: `1px solid ${isLive ? "rgba(255,255,255,0.95)" : "rgba(234,240,250,0.55)"}`,
+                border: `1px solid ${isLive ? "rgba(255,255,255,0.95)" : ready ? "rgba(234,240,250,0.55)" : "rgba(234,240,250,0.22)"}`,
                 background: isLive
                   ? "linear-gradient(180deg,#FFFFFF,#D7DCE4)"
                   : "rgba(8,10,13,0.72)",
@@ -225,18 +316,21 @@ export default function GraphPage() {
                   width: 6,
                   height: 6,
                   borderRadius: "50%",
-                  background: isLive ? "#0A0A0A" : "#EAF0FA",
-                  boxShadow: isLive ? "none" : "0 0 7px #EAF0FA",
-                  animation: isLiveLoading
-                    ? "hsPulseDot 1.1s ease-in-out infinite"
-                    : "none",
+                  background: isLive ? "#0A0A0A" : ready ? "#EAF0FA" : "#9BA3AF",
+                  boxShadow: isLive || !ready ? "none" : "0 0 7px #EAF0FA",
+                  animation:
+                    isLiveLoading || !ready
+                      ? "hsPulseDot 1.1s ease-in-out infinite"
+                      : "none",
                 }}
               />
-              {isLiveLoading
-                ? "Querying HydraDB graph…"
-                : isLive
-                  ? "Live query · re-run"
-                  : "Run live HydraDB query"}
+              {!ready
+                ? "Live query · loading…"
+                : isLiveLoading
+                  ? "Querying HydraDB graph…"
+                  : isLive
+                    ? "Live query · re-run"
+                    : "Run live HydraDB query"}
             </button>
 
             {/* Secondary: view the captured real HydraDB sample (offline proof),
@@ -282,7 +376,7 @@ export default function GraphPage() {
               reduced-motion safe. */}
           {liveState.status !== "idle" && (
             <div
-              className="mono"
+              className="mono graph-live-status"
               role="status"
               aria-live="polite"
               style={{
@@ -319,6 +413,7 @@ export default function GraphPage() {
             coordTicks={coordTicks}
             captured={showCapturedSample && !isLive}
             live={isLive}
+            reveal={reveal}
           />
         </div>
 

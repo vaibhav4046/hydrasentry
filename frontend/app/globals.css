@@ -1100,6 +1100,24 @@
   }
 }
 
+/* On phones (≤430, covers the 390 reference) the live-query proof line and the
+   SOURCE · LIVE badge sit in the same top band and crowd each other. Stack them:
+   the SOURCE badge wraps to two lines and caps its width so it stays clear of
+   the wrapped control buttons, and the proof line gets the full plate width
+   below the controls instead of a 70% column that runs under the badge. */
+@media (max-width: 430px) {
+  .atlas-source-badge {
+    flex-wrap: wrap;
+    max-width: 56%;
+    row-gap: 2px;
+    justify-content: flex-end;
+  }
+  .graph-live-status {
+    max-width: calc(100% - 32px) !important;
+    top: 96px !important;
+  }
+}
+
 /* Honor reduced-motion: kill transitions/animations and scroll smoothing. */
 @media (prefers-reduced-motion: reduce) {
   html {

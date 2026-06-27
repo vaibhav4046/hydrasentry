@@ -109,6 +109,10 @@ export function JudgeDemoController({
     setStageIdx(0);
 
     let elapsed = 0;
+    // `lastStageAt` is when the final stage (CERTIFICATE) lands; the run is
+    // visually DONE at that instant, so the running flag must clear THEN (not on
+    // a later cosmetic buffer) or the nav "Running…" label lags past stage 6.
+    let lastStageAt = 0;
     for (let i = 0; i < JUDGE_STAGES.length; i += 1) {
       const dwell = JUDGE_STAGES[i].dwellMs;
       if (i > 0) {
@@ -117,15 +121,18 @@ export function JudgeDemoController({
         timersRef.current.push(
           setTimeout(() => setStageIdx(idx), at),
         );
+        lastStageAt = at;
       }
       elapsed += dwell;
     }
-    // Mark complete shortly after the final stage lands.
+    // Settle to done exactly when the final stage lights so the header button +
+    // announcement strip resolve from "Running…" to idle/done at stage 6, with
+    // no trailing lag.
     timersRef.current.push(
       setTimeout(() => {
         setRunning(false);
         setComplete(true);
-      }, elapsed + 400),
+      }, lastStageAt),
     );
   }, [clearTimers]);
 
@@ -158,7 +165,14 @@ export function JudgeDemoController({
     }
   }, [judgeRunNonce, start]);
 
-  useEffect(() => clearTimers, [clearTimers]);
+  // On unmount, clear timers AND release the shared "running" flag so a route
+  // change mid-sequence can never leave the nav stuck on "Running…".
+  useEffect(() => {
+    return () => {
+      clearTimers();
+      setStoreRunning(false);
+    };
+  }, [clearTimers, setStoreRunning]);
 
   // Mirror the local running flag into the store so the header button label
   // ("Running…") stays accurate while the in-place sequence plays.

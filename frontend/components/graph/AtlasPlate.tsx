@@ -46,6 +46,12 @@ interface AtlasPlateProps {
   captured?: boolean;
   /** When true, the REAL source is a genuine just-now live HydraDB query. */
   live?: boolean;
+  /**
+   * Cinematic build progress [0..1] forwarded to the canvas. 1 (default) is the
+   * normal, fully-materialized plate. The page ramps it 0 → 1 while a live
+   * HydraDB query is in flight so the constellation draws itself in.
+   */
+  reveal?: number;
 }
 
 export function AtlasPlate({
@@ -57,6 +63,7 @@ export function AtlasPlate({
   coordTicks = ATLAS_COORD_TICKS,
   captured = false,
   live = false,
+  reveal = 1,
 }: AtlasPlateProps) {
   const [hoverId, setHoverId] = useState<string | null>(null);
   const onHover = useCallback((id: string | null) => setHoverId(id), []);
@@ -88,6 +95,7 @@ export function AtlasPlate({
         hoverId={hoverId}
         onHover={onHover}
         onSelect={handleSelect}
+        reveal={reveal}
       />
 
       {/* plate header: catalogue designation */}
@@ -232,6 +240,7 @@ function SourceBadge({
   const dotColor = isLive ? "#FFFFFF" : isReal ? "#EAF0FA" : "#5F6875";
   return (
     <div
+      className="atlas-source-badge"
       style={{
         position: "absolute",
         top: 14,
