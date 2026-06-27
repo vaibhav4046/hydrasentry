@@ -95,7 +95,7 @@ export function ObservatoryNav() {
             padding: "2px 7px",
           }}
         >
-          LIVE DEMO
+          LIVE RUN
         </span>
         <span
           style={{
@@ -104,7 +104,7 @@ export function ObservatoryNav() {
             color: "#8B94A1",
           }}
         >
-          Watch HydraSentry catch a poisoned memory in one click ·{" "}
+          Run a real poisoned-memory attack against the live backend ·{" "}
           <span style={{ color: "#D9DEE7" }}>
             {isRunning ? "running…" : "run it"}
           </span>

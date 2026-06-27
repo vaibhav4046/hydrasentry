@@ -20,7 +20,8 @@ const MONO = "var(--font-geist-mono), 'JetBrains Mono', monospace";
 
 /**
  * Castellan top bar (ported 1:1): a mono breadcrumb over the page title, a
- * command-search input with a ⌘K chip, a DEMO pill, a live risk chip whose
+ * command-search input with a ⌘K chip, a live posture pill (STANDBY → LIVE once
+ * a real run loads), a live risk chip whose
  * value/color is driven by the REAL run (12/NOMINAL idle → e.g. 87/CRITICAL
  * after the judge demo), and the white→silver gradient Run Demo button that
  * triggers the real run through the shared store. Sticky, hairline bottom
@@ -161,17 +162,22 @@ export function CockpitTopBar({ title, crumb, actions, onMenu }: CockpitTopBarPr
       <div style={{ flex: "none", display: "flex", alignItems: "center", gap: 10 }}>
         {actions}
         <span
+          title={
+            v.poisoned
+              ? "A real run is loaded; tiles reflect the live /runs/real outcome."
+              : "Live operations. Trigger a run to populate the cockpit from the real backend."
+          }
           style={{
             fontFamily: MONO,
             fontSize: 10,
             letterSpacing: "0.12em",
-            color: C.muted,
-            border: "1px solid rgba(255,255,255,0.12)",
+            color: v.poisoned ? C.ink : C.muted,
+            border: `1px solid ${v.poisoned ? "rgba(255,255,255,0.32)" : "rgba(255,255,255,0.12)"}`,
             borderRadius: 8,
             padding: "8px 11px",
           }}
         >
-          DEMO
+          {v.poisoned ? "LIVE" : "STANDBY"}
         </span>
         <div
           style={{

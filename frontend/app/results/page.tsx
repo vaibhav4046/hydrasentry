@@ -101,7 +101,7 @@ export default function ResultsPage() {
                   padding: "4px 10px",
                 }}
               >
-                Demo data · run to generate a finding
+                Fallback data · run to generate a finding
               </span>
             )
           )}

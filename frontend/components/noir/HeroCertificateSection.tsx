@@ -10,9 +10,9 @@
  * overlaid with the live run artifact when one exists (so a real backend's
  * canonical numbers win); otherwise it shows the deterministic canonical MIC.
  *
- * Honesty: when the artifact is derived/demo (not a real HydraDB query_paths
- * run), the panel surfaces a "derived scenario · demo data" note. The report
- * markdown is the run's report (canonical demo report as the offline default).
+ * Honesty: when the artifact is a derived scenario (not a real HydraDB
+ * query_paths run), the panel surfaces a "derived scenario · offline" note. The
+ * report markdown is the run's report (canonical report as the offline default).
  */
 import { useMemo, useState } from "react";
 import { FileText } from "lucide-react";

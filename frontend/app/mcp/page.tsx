@@ -74,7 +74,7 @@ async function invoke(tool: string): Promise<McpToolResult | null> {
  * console + recent-calls log. The tool catalog comes from the REAL /mcp/manifest;
  * selecting a tool issues its REAL MCP call and the live response renders in the
  * console + appends to recent calls. Write tools are gated by the shared secret
- * exactly as the backend enforces (unauthorized without it in demo mode).
+ * exactly as the backend enforces (write calls are unauthorized without it).
  */
 export default function McpPage() {
   const { run, isRunning } = useRunDemo();
@@ -184,7 +184,7 @@ export default function McpPage() {
                 {secretConfigured ? "Shared secret enforced" : "Shared secret not set"}
               </div>
               <div style={{ fontFamily: MONO, fontSize: 10, color: C.muted }}>
-                {secretConfigured ? "Write actions require X-MCP-Secret" : "Write actions run in demo mode only"}
+                {secretConfigured ? "Write actions require X-MCP-Secret" : "Write actions are unauthenticated until a shared secret is set"}
               </div>
             </div>
           </div>

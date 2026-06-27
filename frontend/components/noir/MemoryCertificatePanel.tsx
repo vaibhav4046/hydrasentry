@@ -173,9 +173,9 @@ export function MemoryCertificatePanel({
             {certificate.derived && (
               <span
                 className="mono rounded-full border border-white/15 bg-white/[0.03] px-3 py-1.5 text-[9.5px] uppercase tracking-[0.14em] text-muted"
-                title="Demo / derived scenario graph — not a live HydraDB query_paths result."
+                title="Derived scenario graph (offline) — not a live HydraDB query_paths result."
               >
-                Derived scenario · demo data
+                Derived scenario · offline
               </span>
             )}
             {action}

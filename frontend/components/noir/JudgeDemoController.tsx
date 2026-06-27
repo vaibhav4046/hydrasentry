@@ -95,11 +95,13 @@ export function JudgeDemoController({
   const setStoreRunning = useDemoStore((s) => s.setRunning);
   const judgeRunNonce = useDemoStore((s) => s.judgeRunNonce);
 
-  // T2: the REAL run is the product. The deterministic 6-stage strip is the
-  // intro; the RESULT below it is the genuine /runs/real outcome (real Groq
-  // answers + real computed score/band) — or, on backend error/overrun, the
-  // honestly-labelled deterministic fallback. `realPending` gates the
-  // "computing" affordance; `realRun` holds the resolved result.
+  // T2: the REAL run is the product, so it LEADS the section. The genuine
+  // /runs/real outcome (real Groq baseline vs poisoned answers + real computed
+  // score/band + real judge) renders ABOVE the masthead+graph once triggered —
+  // or, on backend error/overrun, the honestly-labelled deterministic fallback.
+  // The deterministic 6-stage strip is demoted to a slim pipeline progress
+  // indicator below. `realPending` gates the "computing" affordance; `realRun`
+  // holds the resolved result.
   const [realRun, setRealRun] = useState<RealRun | null>(null);
   const [realPending, setRealPending] = useState(false);
 
@@ -228,6 +230,31 @@ export function JudgeDemoController({
 
   return (
     <section id="hero" className="relative scroll-mt-24 pb-12 pt-10 md:pt-14">
+      {/* ===== REAL RUN RESULT (leads the page): the genuine /runs/real outcome.
+          Once the run is triggered this is the prominent payoff — real Groq
+          baseline vs poisoned answers + real computed score/band + real judge —
+          so the page reads "this just really happened", not "watch a canned
+          animation". The deterministic stage strip below is the slim progress
+          indicator, not the headline. ===== */}
+      {(realPending || realRun) && (
+        <div className="mb-12">
+          <div className="mb-4 flex items-center gap-3">
+            <span
+              aria-hidden
+              className="h-px w-7"
+              style={{ background: "rgba(217,222,231,0.4)" }}
+            />
+            <h2 className="mono text-[11px] uppercase tracking-[0.24em] text-ink">
+              Live run result
+            </h2>
+            <span className="mono text-[10px] uppercase tracking-[0.18em] text-faint">
+              {realPending && !realRun ? "computing…" : "just ran"}
+            </span>
+          </div>
+          <RealRunResult pending={realPending} result={realRun} reduced={reduced} />
+        </div>
+      )}
+
       <div className="grid grid-cols-1 items-center gap-12 lg:grid-cols-[0.96fr_1.04fr] lg:gap-10">
         {/* ============ LEFT: copy + CTAs + live console ============ */}
         <m.div
@@ -301,10 +328,10 @@ export function JudgeDemoController({
                 <Play className="h-4 w-4" strokeWidth={1.9} />
               )}
               {running
-                ? "Running pipeline"
+                ? "Running live attack"
                 : complete
                   ? "Run again"
-                  : "Run Judge Demo"}
+                  : "Run live attack"}
             </button>
             <a
               href={`#${certificateAnchorId}`}
@@ -409,15 +436,17 @@ export function JudgeDemoController({
             />
           </div>
 
-          {/* stage rail */}
+          {/* stage rail — slim progress indicator for the attack pipeline,
+              secondary to the live run result that leads the section. */}
+          <div className="mt-6 flex items-center gap-2.5">
+            <span className="mono text-[9px] uppercase tracking-[0.2em] text-faint">
+              {idle ? "Pipeline · idle" : running ? "Pipeline · running" : "Pipeline · complete"}
+            </span>
+            <span aria-hidden className="h-px flex-1 bg-white/10" />
+          </div>
           <StageRail activeKey={active?.key ?? null} running={running} />
         </m.div>
       </div>
-
-      {/* ===== REAL RUN RESULT (T2): the genuine /runs/real outcome ===== */}
-      {(realPending || realRun) && (
-        <RealRunResult pending={realPending} result={realRun} reduced={reduced} />
-      )}
 
       {/* primitive strip */}
       <m.ul
@@ -478,7 +507,7 @@ function StageRail({
   running: boolean;
 }) {
   return (
-    <ol className="mt-6 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
+    <ol className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
       {JUDGE_STAGES.map((s) => {
         const isActive = activeKey === s.key;
         const reached =
