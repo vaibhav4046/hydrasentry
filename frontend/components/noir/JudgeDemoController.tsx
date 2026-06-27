@@ -203,14 +203,6 @@ export function JudgeDemoController({
     <section id="hero" className="relative scroll-mt-24 pb-12 pt-10 md:pt-14">
       <div className="grid grid-cols-1 items-center gap-12 lg:grid-cols-[0.96fr_1.04fr] lg:gap-10">
         {/* ============ LEFT: copy + CTAs + live console ============ */}
-        {/* The "First Light" masthead cascade plays on mount (initial="hidden"
-            animate="show"). This is the verified-working contract: switching the
-            container to initial={false} stopped the 6-stage Judge Demo from
-            advancing under LazyMotion strict, so it must stay "hidden"→"show". In
-            production the cascade resolves to fully visible; the only place it can
-            appear stuck at opacity:0 is the dev server inside an isolated headless
-            tab (HMR socket fails → client never fully hydrates), which is a
-            capture artifact, not a deployed-build behaviour. */}
         <m.div
           className="relative z-20 flex flex-col items-start"
           variants={mastheadContainer}
@@ -239,20 +231,15 @@ export function JudgeDemoController({
 
           <m.h1
             variants={mastheadLine}
-            className="obs-display max-w-[15ch] text-balance text-[clamp(38px,5.2vw,68px)] font-semibold leading-[0.98] tracking-[-0.035em] text-ink"
+            className="obs-display max-w-[16ch] text-balance text-[clamp(34px,4.6vw,60px)] font-semibold leading-[1.02] tracking-[-0.03em] text-ink"
           >
             {HEADLINE}
           </m.h1>
 
           <m.p
             variants={mastheadLine}
-            className="mt-6 flex items-center gap-3 text-[clamp(15px,1.4vw,19px)] font-medium leading-snug text-ink"
+            className="mt-5 text-[clamp(15px,1.4vw,19px)] font-medium leading-snug text-ink"
           >
-            <span
-              aria-hidden
-              className="inline-block h-4 w-px"
-              style={{ background: "rgba(217,222,231,0.5)" }}
-            />
             Graph-native proof, not prompt vibes.
           </m.p>
 

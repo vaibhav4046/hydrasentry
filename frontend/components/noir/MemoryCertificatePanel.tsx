@@ -2,13 +2,10 @@
 
 /**
  * MemoryCertificatePanel — the signed-document artifact for a Memory Integrity
- * Certificate (MIC). A premium, monochrome, sealed-document surface designed to
- * read like something you would frame: an engraved double frame, a guilloché
- * security wash, a microprinted rule line, an embossed wax seal, a two-column
- * field ledger with a deliberate SCALE jump on the verdict (Decision BLOCKED /
- * Risk 87 set in the display face, large, glowing), hairline rules between
- * fields, and a signature line. Danger reads as intensity (brighter ink, heavier
- * glow) on the verdict, never as hue.
+ * Certificate (MIC). A premium, monochrome, sealed-document surface: a wax-seal
+ * glyph, an embossed title, a two-column field ledger, a perforation hairline,
+ * and a signature line. Danger reads as intensity (brighter ink, heavier glow)
+ * on the Risk Score / Decision rows, never as hue.
  *
  * Reused in three places (see the brief): the hero product canvas / certificate
  * anchor, the Results Center, and the report modal. The exact field record comes
@@ -16,19 +13,16 @@
  * identical document. A `derived` certificate surfaces an honest "derived /
  * demo" provenance note rather than ever claiming a real HydraDB query path.
  *
- * BLANKING-PROOF ENTRANCE. The document is ALWAYS rendered fully opaque (no
- * opacity:0 initial). The "surface from the dark" entrance is a pure CSS
- * `@keyframes` (mic-rise) whose 100% keyframe IS the resting visible state, so
- * if animations are disabled (prefers-reduced-motion, or a headless capture that
- * never crosses an IntersectionObserver threshold) the certificate is still
- * fully legible — it simply skips the rise. This replaces the prior framer
- * whileInView entrance, which could leave the panel stuck at opacity:0 when the
- * in-view trigger did not fire. Nothing critical is ever hidden behind
- * opacity:0 and no text is gradient-clipped (solid ink throughout).
+ * Reduced motion: the seal ring and glow are static; no field is hidden behind
+ * opacity:0 and no text is gradient-clipped (solid ink throughout), so the whole
+ * document is fully legible without motion.
  */
 import type { ReactNode } from "react";
+import { m } from "framer-motion";
 import { ShieldCheck, FileText } from "lucide-react";
 import { cn } from "@/lib/cn";
+import { EASE_OUT_EXPO } from "@/lib/motion";
+import { useReducedMotionSafe } from "@/hooks/useReducedMotionSafe";
 import {
   certificateRows,
   type MemoryCertificate,
@@ -43,36 +37,39 @@ interface MemoryCertificatePanelProps {
   className?: string;
 }
 
-/** Rows promoted out of the ledger into the large "verdict" band at the top. */
-const VERDICT_LABELS = new Set(["Risk Score", "Decision"]);
-
 export function MemoryCertificatePanel({
   certificate,
   compact = false,
   action,
   className,
 }: MemoryCertificatePanelProps) {
+  // Hydration-safe: the Seal below renders a pulsing ring element only when motion
+  // is allowed, so the raw useReducedMotion() (false on the server, true on the
+  // client's first render under Reduced Motion) made the SSR and client markup
+  // differ in element presence and threw React hydration error #418. The safe hook
+  // emits the same value (false) on the server and first client render, then
+  // settles to the live preference on the next commit.
+  const prefersReduced = useReducedMotionSafe();
   const rows = certificateRows(certificate);
-  const ledgerRows = rows.filter((r) => !VERDICT_LABELS.has(r.label));
-
-  const riskValue = `${certificate.riskScore}`;
-  const decision = certificate.decision;
-  const isBlocked = decision.toUpperCase() === "BLOCKED";
 
   return (
-    <article
+    <m.article
+      initial={prefersReduced ? false : { opacity: 0, y: 18, filter: "blur(8px)" }}
+      whileInView={prefersReduced ? undefined : { opacity: 1, y: 0, filter: "blur(0px)" }}
+      viewport={{ once: true, margin: "-60px" }}
+      transition={{ duration: 0.7, ease: EASE_OUT_EXPO }}
       aria-label="Memory Integrity Certificate"
       className={cn(
-        "mic-document relative overflow-hidden rounded-2xl",
+        "relative overflow-hidden rounded-2xl",
         compact ? "p-6" : "p-7 sm:p-9",
         className,
       )}
       style={{
         background:
-          "linear-gradient(168deg, rgba(19,22,28,0.94) 0%, rgba(11,13,17,0.96) 46%, rgba(6,8,11,0.98) 100%)",
-        border: "1px solid rgba(255,255,255,0.16)",
+          "linear-gradient(165deg, rgba(17,20,26,0.92), rgba(8,10,13,0.96))",
+        border: "1px solid rgba(255,255,255,0.14)",
         boxShadow:
-          "0 60px 170px -50px rgba(0,0,0,0.9), 0 10px 30px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.10), inset 0 0 0 1px rgba(255,255,255,0.02)",
+          "0 40px 120px -40px rgba(0,0,0,0.8), inset 0 1px 0 rgba(255,255,255,0.08), inset 0 0 0 1px rgba(255,255,255,0.02)",
       }}
     >
       {/* engraved double border, the classic certificate frame */}
@@ -80,36 +77,17 @@ export function MemoryCertificatePanel({
         aria-hidden
         className="pointer-events-none absolute rounded-xl"
         style={{
-          inset: compact ? 9 : 13,
-          border: "1px solid rgba(255,255,255,0.10)",
+          inset: compact ? 10 : 14,
+          border: "1px solid rgba(255,255,255,0.08)",
         }}
       />
-      {/* inner hairline, a second thin rule for the engraved-plate read */}
+      {/* faint guilloché wash so the surface reads as printed stock */}
       <span
         aria-hidden
-        className="pointer-events-none absolute rounded-[10px]"
-        style={{
-          inset: compact ? 13 : 17,
-          border: "1px solid rgba(255,255,255,0.045)",
-        }}
-      />
-      {/* guilloché / printed-stock security wash + a faint top sheen */}
-      <span
-        aria-hidden
-        className="pointer-events-none absolute inset-0"
-        style={{
-          opacity: 0.55,
-          background:
-            "radial-gradient(130% 90% at 100% -4%, rgba(255,255,255,0.06), transparent 46%), radial-gradient(90% 80% at -6% 104%, rgba(255,255,255,0.04), transparent 52%)",
-        }}
-      />
-      {/* a single bright specular line skimming the top edge (the lit lip) */}
-      <span
-        aria-hidden
-        className="pointer-events-none absolute inset-x-0 top-0 h-px"
+        className="pointer-events-none absolute inset-0 opacity-[0.5]"
         style={{
           background:
-            "linear-gradient(90deg, transparent, rgba(255,255,255,0.40), transparent)",
+            "radial-gradient(120% 90% at 100% 0%, rgba(255,255,255,0.05), transparent 45%), radial-gradient(90% 80% at 0% 100%, rgba(255,255,255,0.035), transparent 50%)",
         }}
       />
 
@@ -117,93 +95,33 @@ export function MemoryCertificatePanel({
         {/* ---- masthead: seal + title ---- */}
         <header className="flex items-start justify-between gap-4">
           <div className="flex flex-col gap-2">
-            <span className="mono text-[10px] uppercase tracking-[0.34em] text-faint">
+            <span className="mono text-[10px] uppercase tracking-[0.32em] text-faint">
               HydraSentry · Verified Artifact
             </span>
             <h3
               className={cn(
-                "cockpit-display font-semibold leading-[1.04] text-ink",
-                compact ? "text-[19px]" : "text-[clamp(22px,2.4vw,31px)]",
+                "cockpit-display font-semibold leading-tight text-ink",
+                compact ? "text-[19px]" : "text-[clamp(22px,2.4vw,30px)]",
               )}
             >
               Memory Integrity Certificate
             </h3>
-            <span className="mono text-[11px] tracking-[0.16em] text-muted">
+            <span className="mono text-[11px] tracking-[0.14em] text-muted">
               {certificate.certificateId}
             </span>
           </div>
 
-          <Seal compact={compact} />
+          <Seal reduced={Boolean(prefersReduced)} compact={compact} />
         </header>
-
-        {/* microprint rule: a repeating-caps hairline that reads as security
-            microtext from a distance and as a label up close. */}
-        <div
-          aria-hidden
-          className="mono mic-microprint mt-6 select-none overflow-hidden whitespace-nowrap text-[6px] uppercase leading-none tracking-[0.5em] text-white/[0.14]"
-        >
-          {"HYDRASENTRY · MEMORY INTEGRITY · MCP FIREWALL · ".repeat(8)}
-        </div>
-
-        {/* ---- VERDICT band: the SCALE jump. Decision + Risk set large in the
-            display face, glowing when the finding is a block. This is the line a
-            judge photographs. ---- */}
-        <div
-          className="mt-5 grid grid-cols-[1.4fr_1fr] gap-4 rounded-xl border border-white/10 px-5 py-4"
-          style={{
-            background:
-              "linear-gradient(180deg, rgba(255,255,255,0.05), rgba(255,255,255,0.012))",
-            boxShadow: "inset 0 1px 0 rgba(255,255,255,0.06)",
-          }}
-        >
-          <div className="flex flex-col gap-1.5">
-            <span className="mono text-[9.5px] uppercase tracking-[0.22em] text-faint">
-              Firewall Decision
-            </span>
-            <span
-              className={cn(
-                "cockpit-display font-semibold leading-none",
-                compact ? "text-[26px]" : "text-[clamp(28px,3vw,40px)]",
-                isBlocked ? "text-ink" : "text-silver",
-              )}
-              style={
-                isBlocked
-                  ? { textShadow: "0 0 26px rgba(255,255,255,0.45)" }
-                  : undefined
-              }
-            >
-              {decision}
-            </span>
-          </div>
-          <div className="flex flex-col items-end gap-1.5 border-l border-white/[0.08] pl-4">
-            <span className="mono text-[9.5px] uppercase tracking-[0.22em] text-faint">
-              Risk · {certificate.riskBand}
-            </span>
-            <span className="flex items-baseline gap-1">
-              <span
-                className={cn(
-                  "cockpit-display font-semibold leading-none tabular-nums text-ink",
-                  compact ? "text-[26px]" : "text-[clamp(28px,3vw,40px)]",
-                )}
-                style={{ textShadow: "0 0 24px rgba(255,255,255,0.4)" }}
-              >
-                {riskValue}
-              </span>
-              <span className="cockpit-display text-[15px] font-medium text-muted">
-                /100
-              </span>
-            </span>
-          </div>
-        </div>
 
         {/* perforation hairline */}
         <div
           aria-hidden
-          className="my-5"
+          className="my-6"
           style={{
             height: 1,
             background:
-              "repeating-linear-gradient(90deg, rgba(255,255,255,0.24) 0 5px, transparent 5px 11px)",
+              "repeating-linear-gradient(90deg, rgba(255,255,255,0.22) 0 6px, transparent 6px 12px)",
           }}
         />
 
@@ -214,10 +132,10 @@ export function MemoryCertificatePanel({
             compact && "gap-x-6",
           )}
         >
-          {ledgerRows.map((r) => (
+          {rows.map((r) => (
             <div
               key={r.label}
-              className="mic-ledger-row flex items-center justify-between gap-4 border-b border-white/[0.06] py-2.5"
+              className="flex items-center justify-between gap-4 border-b border-white/[0.06] py-2.5"
             >
               <dt className="mono text-[10px] uppercase tracking-[0.16em] text-faint">
                 {r.label}
@@ -241,20 +159,10 @@ export function MemoryCertificatePanel({
 
         {/* ---- signature line ---- */}
         <footer className="mt-7 flex flex-wrap items-end justify-between gap-4">
-          <div className="flex flex-col gap-1.5">
+          <div className="flex flex-col gap-1">
             <span
+              className="block w-44 border-b border-white/30 pb-1"
               aria-hidden
-              className="block w-48"
-              style={{
-                height: 22,
-                // an "ink" signature mark: a hand-drawn-ish stroke in pure white
-                background:
-                  "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='22'%3E%3Cpath d='M3 15 C 18 4, 28 20, 40 12 S 62 2, 78 13 96 18, 112 8 134 4, 150 14 168 16, 177 9' fill='none' stroke='%23ffffff' stroke-width='1.4' stroke-linecap='round' opacity='0.78'/%3E%3C/svg%3E\") left center / contain no-repeat",
-              }}
-            />
-            <span
-              aria-hidden
-              className="block w-48 border-b border-white/30"
             />
             <span className="mono text-[9.5px] uppercase tracking-[0.18em] text-faint">
               MCP Firewall · Authorized Signatory
@@ -274,71 +182,43 @@ export function MemoryCertificatePanel({
           </div>
         </footer>
       </div>
-    </article>
+    </m.article>
   );
 }
 
-/** The wax-seal glyph: an embossed disc with a notched/scalloped rim, concentric
- *  rings, a shield, and a soft white glow. The pulse ring is a pure CSS
- *  animation (no framer initial), so it never blanks under reduced motion. */
-function Seal({ compact }: { compact: boolean }) {
-  const size = compact ? 58 : 72;
-  const ticks = 24;
+/** The wax-seal glyph: concentric rings + shield, soft white glow. */
+function Seal({ reduced, compact }: { reduced: boolean; compact: boolean }) {
+  const size = compact ? 56 : 68;
   return (
     <div
       className="relative shrink-0"
       style={{ width: size, height: size }}
       aria-hidden
     >
-      {/* scalloped wax rim: short radial ticks around the disc */}
-      <svg
-        viewBox="0 0 100 100"
-        width={size}
-        height={size}
-        className="absolute inset-0"
-        style={{ filter: "drop-shadow(0 0 10px rgba(255,255,255,0.18))" }}
-      >
-        <g stroke="rgba(255,255,255,0.32)" strokeWidth={1.4}>
-          {Array.from({ length: ticks }).map((_, i) => {
-            const a = (i / ticks) * Math.PI * 2;
-            const r1 = 46;
-            const r2 = 49.5;
-            return (
-              <line
-                key={i}
-                x1={50 + Math.cos(a) * r1}
-                y1={50 + Math.sin(a) * r1}
-                x2={50 + Math.cos(a) * r2}
-                y2={50 + Math.sin(a) * r2}
-              />
-            );
-          })}
-        </g>
-      </svg>
-      {/* slow breathing ring (CSS only) */}
-      <span className="mic-seal-pulse absolute inset-[6px] rounded-full" />
-      {/* the embossed disc */}
+      {!reduced && (
+        <m.span
+          className="absolute inset-0 rounded-full"
+          style={{ border: "1px solid rgba(255,255,255,0.28)" }}
+          animate={{ opacity: [0.3, 0.65, 0.3], scale: [1, 1.08, 1] }}
+          transition={{ duration: 3.2, ease: "easeInOut", repeat: Infinity }}
+        />
+      )}
       <span
-        className="absolute inset-[9px] rounded-full"
+        className="absolute inset-[3px] rounded-full"
         style={{
-          border: "1px solid rgba(255,255,255,0.5)",
+          border: "1px solid rgba(255,255,255,0.45)",
           boxShadow:
-            "0 0 30px rgba(255,255,255,0.26), inset 0 0 16px rgba(255,255,255,0.14), inset 0 2px 4px rgba(255,255,255,0.18)",
+            "0 0 28px rgba(255,255,255,0.24), inset 0 0 14px rgba(255,255,255,0.12)",
           background:
-            "radial-gradient(circle at 50% 34%, rgba(255,255,255,0.20), rgba(255,255,255,0.02) 72%)",
+            "radial-gradient(circle at 50% 38%, rgba(255,255,255,0.16), rgba(255,255,255,0.02) 70%)",
         }}
-      />
-      {/* inner ring (the seal's keyline) */}
-      <span
-        className="absolute inset-[15px] rounded-full"
-        style={{ border: "1px solid rgba(255,255,255,0.28)" }}
       />
       <span className="absolute inset-0 grid place-items-center">
         <ShieldCheck
           className="text-ink"
-          style={{ filter: "drop-shadow(0 0 9px rgba(255,255,255,0.45))" }}
-          width={compact ? 21 : 25}
-          height={compact ? 21 : 25}
+          style={{ filter: "drop-shadow(0 0 10px rgba(255,255,255,0.4))" }}
+          width={compact ? 22 : 26}
+          height={compact ? 22 : 26}
           strokeWidth={1.6}
         />
       </span>

@@ -365,8 +365,8 @@ export function ArtifactTreeGraph({ stage, className }: ArtifactTreeGraphProps) 
           </filter>
           {/* radial node fill, bright core fading to glass */}
           <radialGradient id="atg-node" cx="50%" cy="42%" r="62%">
-            <stop offset="0%" stopColor="rgba(255,255,255,0.98)" />
-            <stop offset="50%" stopColor="rgba(217,222,231,0.34)" />
+            <stop offset="0%" stopColor="rgba(255,255,255,0.96)" />
+            <stop offset="55%" stopColor="rgba(217,222,231,0.30)" />
             <stop offset="100%" stopColor="rgba(255,255,255,0.04)" />
           </radialGradient>
           <radialGradient id="atg-node-dim" cx="50%" cy="42%" r="62%">
@@ -374,31 +374,7 @@ export function ArtifactTreeGraph({ stage, className }: ArtifactTreeGraphProps) 
             <stop offset="60%" stopColor="rgba(217,222,231,0.12)" />
             <stop offset="100%" stopColor="rgba(255,255,255,0.02)" />
           </radialGradient>
-          {/* atmospheric depth-fog: a soft brighten at the graph's heart that
-              collapses to void at the edges, so the figure sits in a lit chamber
-              rather than on a flat black plate. */}
-          <radialGradient id="atg-fog" cx="50%" cy="46%" r="62%">
-            <stop offset="0%" stopColor="rgba(150,166,190,0.10)" />
-            <stop offset="42%" stopColor="rgba(90,102,124,0.05)" />
-            <stop offset="100%" stopColor="rgba(0,0,0,0)" />
-          </radialGradient>
-          {/* edge-vignette so the plate reads as an instrument, deepening corners */}
-          <radialGradient id="atg-vignette" cx="50%" cy="50%" r="72%">
-            <stop offset="58%" stopColor="rgba(0,0,0,0)" />
-            <stop offset="100%" stopColor="rgba(2,3,5,0.55)" />
-          </radialGradient>
         </defs>
-
-        {/* atmosphere behind everything: depth-fog then a corner vignette */}
-        <rect x={0} y={0} width={VB_W} height={VB_H} fill="url(#atg-fog)" />
-        <rect
-          x={0}
-          y={0}
-          width={VB_W}
-          height={VB_H}
-          fill="url(#atg-vignette)"
-          pointerEvents="none"
-        />
 
         {/* ---- INIT scaffold: depth grid + concentric rings (always visible) ---- */}
         <DepthScaffold animated={isAnimated} />
@@ -487,24 +463,12 @@ function DepthScaffold({ animated }: { animated: boolean }) {
   }
   return (
     <g>
-      {/* sparse depth dot-grid, brighter near the core (falls off radially) */}
-      <g fill="rgba(214,222,236,0.06)">
-        {dots.map((d, i) => {
-          const dist = Math.hypot(d.x - cx, d.y - cy);
-          const near = Math.max(0, 1 - dist / 360);
-          return (
-            <circle
-              key={i}
-              cx={d.x}
-              cy={d.y}
-              r={0.8 + near * 0.5}
-              opacity={0.35 + near * 0.55}
-            />
-          );
-        })}
+      <g fill="rgba(255,255,255,0.05)">
+        {dots.map((d, i) => (
+          <circle key={i} cx={d.x} cy={d.y} r={0.9} />
+        ))}
       </g>
-      {/* concentric depth rings, hairline, gently breathing */}
-      <g fill="none" stroke="rgba(214,222,236,0.085)" strokeWidth={1}>
+      <g fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth={1}>
         {rings.map((r, i) =>
           animated ? (
             <m.circle
@@ -512,8 +476,8 @@ function DepthScaffold({ animated }: { animated: boolean }) {
               cx={cx}
               cy={cy}
               r={r}
-              initial={false}
-              animate={{ opacity: [0.28, 0.5, 0.28] }}
+              initial={{ opacity: 0.3 }}
+              animate={{ opacity: [0.18, 0.42, 0.18] }}
               transition={{
                 duration: 6 + i * 1.4,
                 ease: "easeInOut",
@@ -521,23 +485,16 @@ function DepthScaffold({ animated }: { animated: boolean }) {
               }}
             />
           ) : (
-            <circle key={r} cx={cx} cy={cy} r={r} opacity={0.4} />
+            <circle key={r} cx={cx} cy={cy} r={r} opacity={0.3} />
           ),
         )}
-        {/* a single bright azimuth tick ring with quarter ticks (instrument) */}
-        <circle cx={cx} cy={cy} r={rings[1]} stroke="rgba(214,222,236,0.05)" />
-      </g>
-      {/* faint cross-hair at the core, the chart's anchor */}
-      <g stroke="rgba(214,222,236,0.12)" strokeWidth={1}>
-        <line x1={cx - 16} y1={cy} x2={cx + 16} y2={cy} />
-        <line x1={cx} y1={cy - 16} x2={cx} y2={cy + 16} />
       </g>
       {/* core glow at the heart of the rings */}
       <circle
         cx={cx}
         cy={cy}
         r={6}
-        fill="rgba(255,255,255,0.55)"
+        fill="rgba(255,255,255,0.5)"
         filter="url(#atg-glow)"
       />
     </g>
@@ -561,10 +518,10 @@ function EdgeView({
 }) {
   const stroke = live
     ? tainted
-      ? "rgba(255,255,255,0.98)"
-      : "rgba(217,222,231,0.68)"
-    : "rgba(214,222,236,0.16)";
-  const width = live ? (tainted ? 2.2 : 1.5) : 1;
+      ? "rgba(255,255,255,0.96)"
+      : "rgba(217,222,231,0.6)"
+    : "rgba(255,255,255,0.1)";
+  const width = live ? (tainted ? 2.1 : 1.4) : 1;
 
   return (
     <g>

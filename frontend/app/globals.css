@@ -37,136 +37,14 @@
   --hs-safe: #d9dee7;
   --hs-warning: #b7bec9;
 
-  /* ----------------------------------------------------------------
-     DEPTH SCALE. A deliberate three-step ramp so layering is consistent
-     across every surface: soft (resting cards), medium (elevated panels,
-     modals), intense (the certificate seal / hero plate). Glow and shadow
-     are separate axes — shadow seats a surface in the void, glow signals
-     brightness/danger (never hue). The two legacy aliases are kept so no
-     consumer of --hs-shadow-soft / --hs-glow-white breaks.
-     ---------------------------------------------------------------- */
-  --hs-shadow-soft: 0 18px 60px rgba(0, 0, 0, 0.5),
-    0 2px 8px rgba(0, 0, 0, 0.4);
-  --hs-shadow-medium: 0 36px 110px rgba(0, 0, 0, 0.7),
-    0 6px 18px rgba(0, 0, 0, 0.5);
-  --hs-shadow-intense: 0 60px 170px rgba(0, 0, 0, 0.88),
-    0 10px 30px rgba(0, 0, 0, 0.6);
+  --hs-shadow-soft: 0 24px 90px rgba(0, 0, 0, 0.55);
+  --hs-glow-white: 0 0 32px rgba(255, 255, 255, 0.22);
 
-  --hs-glow-soft: 0 0 14px rgba(255, 255, 255, 0.14);
-  --hs-glow-medium: 0 0 28px rgba(255, 255, 255, 0.24);
-  --hs-glow-intense: 0 0 52px rgba(255, 255, 255, 0.42);
-  --hs-glow-white: var(--hs-glow-medium); /* legacy alias */
-
-  /* Inset top-edge highlight that gives glass/cards a lit lip. Reused so the
-     "catching the light" read is identical everywhere. */
-  --hs-inset-hairline: inset 0 1px 0 rgba(255, 255, 255, 0.08);
-  --hs-inset-lip: inset 0 1px 0 rgba(255, 255, 255, 0.06);
-
-  /* ----------------------------------------------------------------
-     SURFACE LIBRARY. Locked gradient + border + inset bundles so no surface
-     hand-authors its own one-off gradient. Brightness climbs base -> glass.
-     ---------------------------------------------------------------- */
-  --hs-surface-card: linear-gradient(
-    180deg,
-    rgba(255, 255, 255, 0.03),
-    rgba(255, 255, 255, 0.013)
-  );
-  --hs-surface-panel: linear-gradient(
-    180deg,
-    rgba(255, 255, 255, 0.05),
-    rgba(255, 255, 255, 0.022)
-  );
-  --hs-surface-elevated: linear-gradient(
-    180deg,
-    rgba(255, 255, 255, 0.07),
-    rgba(255, 255, 255, 0.03)
-  );
-  --hs-surface-glass: linear-gradient(
-    180deg,
-    rgba(255, 255, 255, 0.085),
-    rgba(255, 255, 255, 0.045)
-  );
-
-  /* ----------------------------------------------------------------
-     RADIUS RAMP. One radius everywhere reads cheap; a small ramp gives
-     hierarchy (chips < cards < hero plate). --hs-radius stays the large
-     default so existing rounded-xl2 consumers are unchanged.
-     ---------------------------------------------------------------- */
-  --hs-radius-xs: 0.4rem;
-  --hs-radius-sm: 0.65rem;
-  --hs-radius-md: 0.9rem;
-  --hs-radius-lg: 1.25rem;
-  --hs-radius: var(--hs-radius-lg);
-
-  /* ----------------------------------------------------------------
-     SPACING RHYTHM. Modular 4/8px scale. Ad-hoc px values across surfaces
-     should reach for these so vertical rhythm is intentional, not uniform.
-     ---------------------------------------------------------------- */
-  --hs-space-1: 4px;
-  --hs-space-2: 8px;
-  --hs-space-3: 12px;
-  --hs-space-4: 16px;
-  --hs-space-5: 20px;
-  --hs-space-6: 24px;
-  --hs-space-8: 32px;
-  --hs-space-10: 40px;
-  --hs-space-12: 48px;
-  --hs-space-16: 64px;
-  --hs-space-20: 80px;
-
-  /* ----------------------------------------------------------------
-     TYPE SCALE. A real modular ladder (~1.22 ratio at the top end) with
-     paired line-height + tracking so hierarchy comes from SCALE contrast,
-     not weight alone. Display tightens as it grows (optical), body stays
-     open for legibility, mono/eyebrows track wide. The three faces are the
-     layout's contract: display = Space Grotesk, text = Inter, mono =
-     JetBrains Mono.
-     ---------------------------------------------------------------- */
-  --hs-text-2xs: 10px;
-  --hs-text-xs: 11px;
-  --hs-text-sm: 12.5px;
-  --hs-text-base: 14px;
-  --hs-text-md: 15px;
-  --hs-text-lg: 18px;
-  --hs-text-xl: 22px;
-  --hs-text-2xl: 28px;
-  --hs-text-3xl: clamp(30px, 3.4vw, 44px);
-  --hs-text-display: clamp(40px, 6.6vw, 82px);
-
-  --hs-leading-tight: 1.04;
-  --hs-leading-snug: 1.22;
-  --hs-leading-normal: 1.5;
-  --hs-leading-prose: 1.65;
-
-  --hs-tracking-tighter: -0.038em; /* large display */
-  --hs-tracking-tight: -0.02em; /* headings / big numbers */
-  --hs-tracking-snug: -0.01em; /* UI text */
-  --hs-tracking-normal: 0;
-  --hs-tracking-wide: 0.14em; /* eyebrow caps */
-  --hs-tracking-wider: 0.22em; /* tiny section labels */
-
-  --hs-weight-regular: 400;
-  --hs-weight-medium: 500;
-  --hs-weight-semibold: 600;
-  --hs-weight-bold: 700;
-
-  /* ----------------------------------------------------------------
-     MOTION. A curve scale with intent, not one expo for everything.
-     reveal  = cinematic entrance (slow, decisive settle)
-     out     = UI affordances leaving rest (snappier)
-     in-out  = symmetric, for things that move and return (toggles)
-     The fast/normal/slow durations pair with these.
-     ---------------------------------------------------------------- */
-  --hs-ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
-  --hs-ease-reveal: cubic-bezier(0.16, 1, 0.3, 1);
-  --hs-ease-out: cubic-bezier(0.33, 1, 0.68, 1);
-  --hs-ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
-  --hs-ease-linear: linear;
+  --hs-radius: 1.25rem;
 
   --hs-duration-fast: 150ms;
-  --hs-duration-normal: 280ms;
-  --hs-duration-slow: 520ms;
-  --hs-reveal-duration: 2600ms;
+  --hs-duration-normal: 300ms;
+  --hs-ease-out-expo: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 /* Tailwind v4 CSS-first theme. Exposes tokens as utilities, e.g.
@@ -191,18 +69,11 @@
 
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-  --font-display: var(--font-display);
 
   --radius-xl2: var(--hs-radius);
-  --radius-card: var(--hs-radius-md);
 
   --shadow-noir: var(--hs-shadow-soft);
-  --shadow-noir-medium: var(--hs-shadow-medium);
-  --shadow-noir-intense: var(--hs-shadow-intense);
-  --shadow-glow: var(--hs-glow-medium);
-
-  --ease-reveal: var(--hs-ease-reveal);
-  --ease-out-soft: var(--hs-ease-out);
+  --shadow-glow: var(--hs-glow-white);
 }
 
 @layer base {
@@ -219,53 +90,6 @@
     text-rendering: optimizeLegibility;
     /* Castellan tabular figures across the whole surface. */
     font-variant-numeric: tabular-nums;
-    letter-spacing: var(--hs-tracking-snug);
-  }
-
-  /* ----------------------------------------------------------------
-     Atmosphere. A fixed, behind-everything depth-fog + vignette + faint
-     monochrome grain layer painted on the document itself. This is a single
-     non-animated, pointer-events:none pseudo-element on <body> sitting at the
-     very back (z negative) so it costs nothing per frame and can never blank
-     or intercept content — it only deepens the corners to black and lays a
-     barely-there filmic texture over the void, the same Skyfall-noir frame the
-     WebGL hero gets, now unified across every route. Component backgrounds
-     (NoirBackground, ObservatoryBackground) still render above it.
-     ---------------------------------------------------------------- */
-  body::before {
-    content: "";
-    position: fixed;
-    inset: 0;
-    z-index: -1;
-    pointer-events: none;
-    /* depth-fog: a soft off-center brighten near the top so the void reads as
-       lit from above, collapsing to pure black at the edges (vignette). */
-    background: radial-gradient(
-        130% 100% at 50% -8%,
-        rgba(22, 27, 36, 0.55) 0%,
-        rgba(8, 10, 14, 0.18) 34%,
-        transparent 62%
-      ),
-      radial-gradient(
-        120% 110% at 50% 50%,
-        transparent 56%,
-        rgba(2, 3, 5, 0.5) 86%,
-        rgba(2, 3, 5, 0.82) 100%
-      );
-  }
-  /* Grain: a static tiled SVG fractal-noise plate at very low opacity,
-     monochrome, multiply-blended so it textures shadows without lifting the
-     blacks. Separate layer from the fog so each can be tuned independently. */
-  body::after {
-    content: "";
-    position: fixed;
-    inset: 0;
-    z-index: -1;
-    pointer-events: none;
-    opacity: 0.05;
-    mix-blend-mode: overlay;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-    background-size: 160px 160px;
   }
 
   /* On the homepage only, clip horizontal overflow from the full-bleed fixed
@@ -438,7 +262,11 @@
     overflow: hidden;
     /* Slightly more opaque fill compensates for the cheaper blur below so the
        panel still reads as frosted glass. */
-    background: var(--hs-surface-glass);
+    background: linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.085),
+      rgba(255, 255, 255, 0.045)
+    );
     border: 1px solid var(--hs-border);
     /* backdrop-filter is the #1 scroll-jank source: the compositor re-samples
        the blurred backdrop every frame, and cost scales with radius x area.
@@ -446,7 +274,7 @@
        this opacity. */
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
-    box-shadow: var(--hs-shadow-medium), var(--hs-inset-hairline);
+    box-shadow: var(--hs-shadow-soft), inset 0 1px 0 rgba(255, 255, 255, 0.08);
   }
   .hydra-glass::before {
     content: "";
@@ -462,57 +290,42 @@
     pointer-events: none;
   }
 
-  /* Primary: white -> silver gradient, black text, inner highlight + soft
-     glow. A three-stop gradient (bright crown, body, silver heel) reads more
-     dimensional than a flat two-stop; the inset top line is the "lit lip", the
-     inset bottom shade gives the chip thickness. Hover lifts 1px and the glow
-     blooms; active presses back to rest with a tightened glow. */
+  /* Primary: white -> silver gradient, black text, white glow. */
   .hydra-button-primary {
-    background: linear-gradient(180deg, #ffffff 0%, #e7eaf0 46%, #c4cad6 100%);
+    background: linear-gradient(180deg, #ffffff, #c9ced8);
     color: #050608;
-    border: 1px solid rgba(255, 255, 255, 0.7);
-    box-shadow: 0 12px 36px rgba(255, 255, 255, 0.12), var(--hs-glow-soft),
-      inset 0 1px 0 rgba(255, 255, 255, 0.95),
-      inset 0 -1px 0 rgba(140, 148, 162, 0.4);
-    transition: transform var(--hs-duration-fast) var(--hs-ease-out),
-      box-shadow var(--hs-duration-normal) var(--hs-ease-out),
-      filter var(--hs-duration-normal) var(--hs-ease-out);
+    border: 1px solid rgba(255, 255, 255, 0.65);
+    box-shadow: 0 14px 42px rgba(255, 255, 255, 0.14),
+      inset 0 1px 0 rgba(255, 255, 255, 0.9);
+    transition: filter var(--hs-duration-normal) var(--hs-ease-out-expo),
+      transform var(--hs-duration-fast) var(--hs-ease-out-expo),
+      box-shadow var(--hs-duration-normal) var(--hs-ease-out-expo);
   }
   .hydra-button-primary:hover {
-    transform: translateY(-1px);
-    filter: brightness(1.05);
-    box-shadow: 0 18px 48px rgba(255, 255, 255, 0.2), var(--hs-glow-medium),
-      inset 0 1px 0 rgba(255, 255, 255, 1),
-      inset 0 -1px 0 rgba(140, 148, 162, 0.45);
+    filter: brightness(1.08);
+    box-shadow: 0 18px 52px rgba(255, 255, 255, 0.22),
+      inset 0 1px 0 rgba(255, 255, 255, 0.95);
   }
   .hydra-button-primary:active {
-    transform: translateY(0) scale(0.992);
-    box-shadow: 0 8px 22px rgba(255, 255, 255, 0.12), var(--hs-glow-soft),
-      inset 0 1px 0 rgba(255, 255, 255, 0.9),
-      inset 0 -1px 0 rgba(140, 148, 162, 0.5);
+    transform: scale(0.99);
   }
 
-  /* Secondary: black glass, white text, thin silver border + subtle glow.
-     Same lift-on-hover language as primary so the two CTAs feel like one
-     family; the silver border brightens and a faint outer glow blooms. */
+  /* Secondary: black glass, white text, thin silver border. */
   .hydra-button-secondary {
-    background: var(--hs-surface-panel);
+    background: rgba(255, 255, 255, 0.04);
     color: var(--hs-text-primary);
     border: 1px solid var(--hs-border-strong);
-    box-shadow: var(--hs-inset-lip);
-    transition: background var(--hs-duration-normal) var(--hs-ease-out),
-      border-color var(--hs-duration-normal) var(--hs-ease-out),
-      box-shadow var(--hs-duration-normal) var(--hs-ease-out),
-      transform var(--hs-duration-fast) var(--hs-ease-out);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+    transition: background var(--hs-duration-normal) var(--hs-ease-out-expo),
+      border-color var(--hs-duration-normal) var(--hs-ease-out-expo),
+      transform var(--hs-duration-fast) var(--hs-ease-out-expo);
   }
   .hydra-button-secondary:hover {
-    transform: translateY(-1px);
-    background: var(--hs-surface-elevated);
-    border-color: rgba(217, 222, 231, 0.4);
-    box-shadow: var(--hs-glow-soft), var(--hs-inset-lip);
+    background: rgba(255, 255, 255, 0.07);
+    border-color: rgba(255, 255, 255, 0.32);
   }
   .hydra-button-secondary:active {
-    transform: translateY(0) scale(0.992);
+    transform: scale(0.99);
   }
 
   /* Ghost: barely-there fill. */
@@ -565,90 +378,7 @@
   .cockpit-display {
     font-family: var(--font-display), "Space Grotesk", system-ui, sans-serif;
     font-feature-settings: "tnum" 1;
-    letter-spacing: var(--hs-tracking-tight);
-  }
-
-  /* ----------------------------------------------------------------
-     TYPE-SCALE UTILITIES. Opt-in classes that bundle the right
-     face + size + line-height + tracking + weight for each rung of the
-     ladder, so a surface reaches for `.hs-h1` instead of re-deriving the
-     clamp + tracking by hand. Additive only — existing inline type is
-     untouched; these exist so future hierarchy stays on-system.
-     ---------------------------------------------------------------- */
-  .hs-display {
-    font-family: var(--font-display), "Space Grotesk", system-ui, sans-serif;
-    font-size: var(--hs-text-display);
-    line-height: var(--hs-leading-tight);
-    letter-spacing: var(--hs-tracking-tighter);
-    font-weight: var(--hs-weight-semibold);
-  }
-  .hs-h1 {
-    font-family: var(--font-display), "Space Grotesk", system-ui, sans-serif;
-    font-size: var(--hs-text-3xl);
-    line-height: var(--hs-leading-tight);
-    letter-spacing: var(--hs-tracking-tight);
-    font-weight: var(--hs-weight-semibold);
-  }
-  .hs-h2 {
-    font-family: var(--font-display), "Space Grotesk", system-ui, sans-serif;
-    font-size: var(--hs-text-xl);
-    line-height: var(--hs-leading-snug);
-    letter-spacing: var(--hs-tracking-tight);
-    font-weight: var(--hs-weight-medium);
-  }
-  .hs-lead {
-    font-size: var(--hs-text-lg);
-    line-height: var(--hs-leading-snug);
-    letter-spacing: var(--hs-tracking-snug);
-    color: var(--hs-text-secondary);
-  }
-  .hs-body {
-    font-size: var(--hs-text-base);
-    line-height: var(--hs-leading-prose);
-    letter-spacing: var(--hs-tracking-snug);
-  }
-  .hs-caption {
-    font-size: var(--hs-text-sm);
-    line-height: var(--hs-leading-normal);
-    letter-spacing: var(--hs-tracking-normal);
-    color: var(--hs-text-secondary);
-  }
-  .hs-label {
-    font-family: var(--font-geist-mono), ui-monospace, monospace;
-    font-size: var(--hs-text-2xs);
-    line-height: 1;
-    letter-spacing: var(--hs-tracking-wider);
-    text-transform: uppercase;
-    color: var(--hs-text-muted);
-  }
-  /* Big-number metric: display face, tight, tabular, used for the count-up
-     stats so the figures read as one instrument family. */
-  .hs-metric {
-    font-family: var(--font-display), "Space Grotesk", system-ui, sans-serif;
-    font-size: var(--hs-text-2xl);
-    line-height: var(--hs-leading-tight);
-    letter-spacing: var(--hs-tracking-tight);
-    font-weight: var(--hs-weight-semibold);
-    font-variant-numeric: tabular-nums;
-  }
-
-  /* ----------------------------------------------------------------
-     GLOBAL FOCUS RING. One keyboard-visible affordance for every
-     interactive element so focus never falls back to the UA outline or
-     vanishes on custom controls. Pointer focus stays quiet (focus-visible).
-     The observatory landing keeps its own slightly brighter ring (defined
-     later, more specific) — this is the baseline for the cockpit + the rest.
-     ---------------------------------------------------------------- */
-  a:focus-visible,
-  button:focus-visible,
-  [role="button"]:focus-visible,
-  input:focus-visible,
-  textarea:focus-visible,
-  select:focus-visible,
-  [tabindex]:focus-visible {
-    outline: 1px solid rgba(255, 255, 255, 0.55);
-    outline-offset: 3px;
-    border-radius: 3px;
+    letter-spacing: -0.02em;
   }
 
   /* ==========================================================
@@ -672,18 +402,24 @@
      glassy landing panels, the cockpit reads as a quiet instrument, not a hero. */
   .cockpit-card {
     position: relative;
-    background: var(--hs-surface-card);
+    background: linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.026),
+      rgba(255, 255, 255, 0.012)
+    );
     border: 1px solid var(--hs-border);
-    border-radius: var(--hs-radius-md);
-    box-shadow: var(--hs-shadow-soft), var(--hs-inset-lip);
-    transition: border-color var(--hs-duration-normal) var(--hs-ease-out),
-      background var(--hs-duration-normal) var(--hs-ease-out),
-      box-shadow var(--hs-duration-normal) var(--hs-ease-out);
+    border-radius: 0.9rem;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    transition: border-color var(--hs-duration-normal) var(--hs-ease-out-expo),
+      background var(--hs-duration-normal) var(--hs-ease-out-expo);
   }
   .cockpit-card-hover:hover {
     border-color: var(--hs-border-strong);
-    background: var(--hs-surface-panel);
-    box-shadow: var(--hs-shadow-medium), var(--hs-inset-hairline);
+    background: linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.04),
+      rgba(255, 255, 255, 0.018)
+    );
   }
 
   /* Sidebar nav item. Active = subtle filled pill + left edge tick. */
@@ -1380,77 +1116,6 @@
     max-width: calc(100% - 32px) !important;
     top: 96px !important;
   }
-}
-
-/* ============================================================
-   MEMORY INTEGRITY CERTIFICATE (MemoryCertificatePanel). The signed-document
-   artifact. Blanking-proof: the document is always rendered fully opaque; the
-   "surface from the dark" entrance is a pure CSS keyframe whose end state IS the
-   resting visible state, so disabling animation (reduced-motion / a headless
-   capture that never crosses an in-view threshold) leaves it fully legible. No
-   framer initial:opacity:0 is used anywhere on this surface.
-   ============================================================ */
-@keyframes mic-rise {
-  from {
-    opacity: 0;
-    transform: translateY(16px);
-    filter: blur(8px);
-  }
-  to {
-    opacity: 1;
-    transform: none;
-    filter: blur(0);
-  }
-}
-.mic-document {
-  /* play once on mount; `both` holds the final (visible) frame, and since the
-     element's natural state is already visible, a skipped animation is a no-op. */
-  animation: mic-rise 0.85s cubic-bezier(0.16, 1, 0.3, 1) both;
-}
-/* The seal's slow breathing ring. CSS-only so it can never gate visibility. */
-.mic-seal-pulse {
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  animation: mic-seal-breathe 3.4s ease-in-out infinite;
-}
-@keyframes mic-seal-breathe {
-  0%,
-  100% {
-    opacity: 0.3;
-    transform: scale(1);
-  }
-  50% {
-    opacity: 0.66;
-    transform: scale(1.07);
-  }
-}
-/* Microprint security rule: a faint left→right shimmer that reads as a moving
-   ink line on the printed stock. Compositor-cheap (background-position only on a
-   masked layer); idle-pausable via [data-anim]. */
-.mic-microprint {
-  -webkit-mask-image: linear-gradient(
-    90deg,
-    transparent,
-    #000 8%,
-    #000 92%,
-    transparent
-  );
-  mask-image: linear-gradient(
-    90deg,
-    transparent,
-    #000 8%,
-    #000 92%,
-    transparent
-  );
-}
-/* Ledger rows brighten their rule + value on hover so the document feels tactile
-   when a judge runs the cursor down it. GPU-cheap (color/border only). */
-.mic-ledger-row {
-  transition: border-color var(--hs-duration-normal) var(--hs-ease-out),
-    background var(--hs-duration-normal) var(--hs-ease-out);
-}
-.mic-ledger-row:hover {
-  border-bottom-color: rgba(255, 255, 255, 0.22) !important;
-  background: rgba(255, 255, 255, 0.015);
 }
 
 /* Honor reduced-motion: kill transitions/animations and scroll smoothing. */
