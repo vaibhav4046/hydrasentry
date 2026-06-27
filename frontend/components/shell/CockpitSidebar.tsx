@@ -27,6 +27,15 @@ const MONO = "var(--font-geist-mono), 'JetBrains Mono', monospace";
 export function CockpitSidebar({ onNavigate, engaged }: CockpitSidebarProps) {
   const pathname = usePathname();
 
+  // Active = the LONGEST nav href that prefixes the current path. This keeps
+  // a parent route (/console) from staying lit on a child route (/console/keys)
+  // that has its own nav item, while still lighting /console for
+  // /console/incidents/<id> which has no dedicated item.
+  const activeHref = COCKPIT_NAV.flatMap((g) => g.items)
+    .map((i) => i.href)
+    .filter((href) => pathname === href || pathname.startsWith(`${href}/`))
+    .sort((a, b) => b.length - a.length)[0];
+
   return (
     <aside
       style={{
@@ -103,8 +112,7 @@ export function CockpitSidebar({ onNavigate, engaged }: CockpitSidebarProps) {
               {group.label}
             </div>
             {group.items.map((item) => {
-              const on =
-                pathname === item.href || pathname.startsWith(`${item.href}/`);
+              const on = activeHref === item.href;
               const badge =
                 item.badgeWhenEngaged && !engaged ? "" : item.badge ?? "";
               return (

@@ -28,6 +28,13 @@ export interface CockpitNavGroup {
 
 export const COCKPIT_NAV: CockpitNavGroup[] = [
   {
+    label: "CONSOLE",
+    items: [
+      { label: "Incidents", href: "/console", icon: "console" },
+      { label: "API Keys", href: "/console/keys", icon: "keys" },
+    ],
+  },
+  {
     label: "OPERATIONS",
     items: [
       { label: "Observatory", href: "/mission", icon: "mission" },
@@ -75,6 +82,21 @@ export const ROUTE_META: Record<
   string,
   { title: string; section: string; crumb: string }
 > = {
+  "/console": {
+    title: "Incidents",
+    section: "Console",
+    crumb: "HYDRASENTRY / CONSOLE",
+  },
+  "/console/keys": {
+    title: "API Keys",
+    section: "Console",
+    crumb: "HYDRASENTRY / CONSOLE / KEYS",
+  },
+  "/console/incidents": {
+    title: "Incident",
+    section: "Console",
+    crumb: "HYDRASENTRY / CONSOLE / INCIDENT",
+  },
   "/mission": {
     title: "Command",
     section: "Operations",

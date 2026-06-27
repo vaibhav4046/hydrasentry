@@ -149,6 +149,21 @@
       transform: scale(1.18);
     }
   }
+
+  @keyframes spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+  /* Console grids collapse to a single column on narrow viewports. */
+  @media (max-width: 760px) {
+    .console-analytics-grid,
+    .console-keys-grid,
+    .console-replay-grid {
+      grid-template-columns: 1fr !important;
+    }
+  }
   @keyframes hsUp {
     from {
       transform: translateY(10px);

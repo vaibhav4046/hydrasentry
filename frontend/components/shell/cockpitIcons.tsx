@@ -13,7 +13,9 @@ export type CockpitIconKey =
   | "mcp"
   | "scheduled"
   | "results"
-  | "settings";
+  | "settings"
+  | "console"
+  | "keys";
 
 const ICON_D: Record<CockpitIconKey, string> = {
   mission:
@@ -26,6 +28,10 @@ const ICON_D: Record<CockpitIconKey, string> = {
   scheduled: "M12 3a9 9 0 100 18 9 9 0 000-18M12 7.2v5l3.2 2",
   results: "M4 20.5V10M10 20.5V4M16 20.5v-8M22 20.5H2",
   settings: "M3.5 7h17M3.5 12h17M3.5 17h17M8.5 5v4M16 10v4M11.5 15v4",
+  console:
+    "M3.5 5.5h17v13h-17zM6.5 9l3 2.5-3 2.5M11.5 14.5h4",
+  keys:
+    "M15.5 8.5a3.5 3.5 0 11-3.5 3.5h-9M5 12v3M8 12v2",
 };
 
 interface CockpitIconProps {
