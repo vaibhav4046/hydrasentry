@@ -1,8 +1,12 @@
-﻿fastapi==0.115.6
+fastapi==0.115.6
 uvicorn[standard]==0.34.0
 httpx==0.28.1
-pydantic==2.10.4
+pydantic==2.13.4
 python-dotenv==1.0.1
 sse-starlette==2.2.1
+# Phase 1: Postgres app store (multi-tenant persistence).
+sqlmodel==0.0.39
+SQLAlchemy==2.0.51
+psycopg2-binary==2.9.12
 pytest==8.3.4
 pytest-asyncio==0.25.2

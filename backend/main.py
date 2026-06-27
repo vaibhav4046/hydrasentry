@@ -33,15 +33,38 @@ import skillmake_marketplace
 import skillmake_scanner
 import storage
 from config import key_status, settings
+from db import persistence
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("hydrasentry.main")
+
+
+def _init_app_db() -> None:
+    """Bring the Postgres app DB up to schema and seed the demo tenant.
+
+    Fail-soft at startup: if the app DB is unreachable the service still boots
+    (the legacy sqlite/runs path and the real value path keep working), and the
+    error is logged. Persistence then fails closed per-request, surfacing the
+    error in the response -- it is never silently faked.
+    """
+    try:
+        from db import migrate
+
+        migrate.upgrade()
+        migrate.seed()
+        logger.info("app DB migrated + seeded (demo tenant)")
+    except Exception as exc:  # noqa: BLE001 -- boot even if app DB is down
+        logger.warning(
+            "app DB init skipped (%s): persistence will fail closed per-request",
+            type(exc).__name__,
+        )
 
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
     storage.init_db()
     scheduler.seed_agents()
+    _init_app_db()
     # Touch OTA packs so they are present/validated at startup.
     ota.list_packs()
     logger.info("HydraSentry startup complete (mode=%s)", settings.app_mode)
@@ -199,7 +222,9 @@ async def judge_demo() -> JSONResponse:
 
 
 @app.post("/runs/real")
-async def runs_real() -> JSONResponse:
+async def runs_real(
+    x_tenant_slug: Optional[str] = Header(default=None),
+) -> JSONResponse:
     """Genuinely-real run: live HydraDB context (clean + poisoned sub-tenants) +
     real Groq agent answers + a computed risk score (rules + real Groq judge).
 
@@ -209,6 +234,12 @@ async def runs_real() -> JSONResponse:
     untouched. Hard ~9s wall-clock cap: on any HydraDB/Groq failure or overrun it
     returns the deterministic result labelled ``mode:"deterministic_fallback"``
     as HTTP 200 — never a 500, never a hang.
+
+    The result is persisted as a tenant-scoped Incident (+ Certificate when the
+    run is blocked/high-risk) under the tenant resolved from ``X-Tenant-Slug``
+    (default ``demo`` until Phase 2 auth). Persistence is fail-closed: if the app
+    DB is down the run still returns, with a ``persistence`` block surfacing the
+    error -- it is never silently faked.
     """
     try:
         result = await asyncio.to_thread(real_run.run_real)
@@ -219,6 +250,12 @@ async def runs_real() -> JSONResponse:
              "fallback_reason": f"endpoint error: {type(exc).__name__}"},
             status_code=200,
         )
+
+    tenant_slug = persistence.resolve_tenant_slug(x_tenant_slug)
+    persist = await asyncio.to_thread(
+        persistence.persist_run, result, tenant_slug, "runs_real"
+    )
+    result["persistence"] = persist
     return JSONResponse(result, status_code=200)
 
 
@@ -365,6 +402,95 @@ async def skillmake_examples() -> JSONResponse:
 @app.get("/results/summary")
 async def results_summary() -> JSONResponse:
     return ok(storage.results_summary())
+
+
+# --- Tenant-scoped incidents (Postgres app store) ---------------------------
+# Every read here goes through the BOLA-safe tenant-scoped repo: the tenant is
+# resolved from X-Tenant-Slug (default 'demo' until Phase 2 auth). A row owned by
+# another tenant is invisible -- GET /incidents/{id} returns 404, never the data.
+
+def _incident_dto(inc: Any) -> dict[str, Any]:
+    return {
+        "id": inc.id,
+        "tenant_id": inc.tenant_id,
+        "scenario": inc.scenario,
+        "risk_score": inc.risk_score,
+        "band": inc.band,
+        "decision": inc.decision,
+        "attack_type": inc.attack_type,
+        "graph_source": inc.graph_source,
+        "confidence": inc.confidence,
+        "llm_provider": inc.llm_provider,
+        "mode": inc.mode,
+        "baseline_answer": inc.baseline_answer,
+        "poisoned_answer": inc.poisoned_answer,
+        "created_at": inc.created_at.isoformat() if inc.created_at else None,
+    }
+
+
+def _resolve_tenant_or_none(x_tenant_slug: Optional[str]):
+    from db.repo import TenantRepo
+
+    slug = persistence.resolve_tenant_slug(x_tenant_slug)
+    return TenantRepo.get_by_slug(slug)
+
+
+@app.get("/incidents")
+async def list_incidents(
+    x_tenant_slug: Optional[str] = Header(default=None),
+) -> JSONResponse:
+    """Tenant-scoped incident list, newest first. Fail-closed if DB is down."""
+    try:
+        from db.repo import AuditLogRepo, IncidentRepo
+
+        tenant = await asyncio.to_thread(_resolve_tenant_or_none, x_tenant_slug)
+        if tenant is None:
+            return ok([])
+        rows = await asyncio.to_thread(IncidentRepo.list, tenant.id)
+        await asyncio.to_thread(
+            AuditLogRepo.create, tenant.id,
+            action="list_incidents", actor="api",
+            detail={"count": len(rows)},
+        )
+        return ok([_incident_dto(r) for r in rows])
+    except Exception as exc:  # noqa: BLE001 -- fail closed, surface honestly
+        logger.warning("list_incidents failed: %s", type(exc).__name__)
+        return err("incident store unavailable", status=503,
+                   kind=type(exc).__name__)
+
+
+@app.get("/incidents/{incident_id}")
+async def get_incident(
+    incident_id: str,
+    x_tenant_slug: Optional[str] = Header(default=None),
+) -> JSONResponse:
+    """Tenant-scoped single incident. 404 if not in this tenant (BOLA gate)."""
+    try:
+        from db.repo import AuditLogRepo, IncidentRepo
+
+        tenant = await asyncio.to_thread(_resolve_tenant_or_none, x_tenant_slug)
+        if tenant is None:
+            return err(f"incident '{incident_id}' not found", status=404)
+        inc = await asyncio.to_thread(IncidentRepo.get, tenant.id, incident_id)
+        if inc is None:
+            # Either the id does not exist or it belongs to a different tenant.
+            # Both collapse to 404 so cross-tenant probing leaks nothing.
+            await asyncio.to_thread(
+                AuditLogRepo.create, tenant.id,
+                action="get_incident_denied", actor="api",
+                detail={"incident_id": incident_id},
+            )
+            return err(f"incident '{incident_id}' not found", status=404)
+        await asyncio.to_thread(
+            AuditLogRepo.create, tenant.id,
+            action="get_incident", actor="api",
+            detail={"incident_id": incident_id},
+        )
+        return ok(_incident_dto(inc))
+    except Exception as exc:  # noqa: BLE001 -- fail closed, surface honestly
+        logger.warning("get_incident failed: %s", type(exc).__name__)
+        return err("incident store unavailable", status=503,
+                   kind=type(exc).__name__)
 
 
 # Outer bound on accepted memories at the HTTP edge. The local_scan engine caps
