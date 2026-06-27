@@ -384,23 +384,108 @@ export default function GraphPage() {
                 top: 56,
                 left: 18,
                 zIndex: 4,
-                maxWidth: "70%",
-                fontSize: "9px",
-                letterSpacing: "0.06em",
-                lineHeight: 1.5,
-                color: isLive ? "#EAF0FA" : C.silver,
+                maxWidth: "72%",
                 pointerEvents: "none",
               }}
             >
-              {isLiveLoading && "Querying HydraDB graph… (live query_paths traversal)"}
-              {isLive &&
-                `Live HydraDB query_paths · ${
-                  liveState.data.triplet_count ??
-                  liveState.data.graph.query_paths.length
-                } triplets · ${
-                  liveState.data.query_ms ?? liveState.data.elapsed_ms ?? 0
-                }ms · tenant ${liveState.data.tenant_id ?? "hydrasentry-owned-test"}`}
-              {liveState.status === "fallback" && liveState.note}
+              {isLiveLoading && (
+                <span
+                  style={{
+                    fontSize: "9px",
+                    letterSpacing: "0.06em",
+                    lineHeight: 1.5,
+                    color: C.silver,
+                  }}
+                >
+                  Querying HydraDB graph… (live query_paths traversal)
+                </span>
+              )}
+              {/* LIVE proof: a designed telemetry readout — labelled fields seated
+                  in a glass strip, the numbers brighter than their captions. Reads
+                  as instrument confirmation, not a sentence. */}
+              {isLive && (
+                <span
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "stretch",
+                    gap: 0,
+                    padding: "0",
+                    borderRadius: 8,
+                    border: "1px solid rgba(234,240,250,0.22)",
+                    background:
+                      "linear-gradient(180deg, rgba(234,240,250,0.06), rgba(8,10,13,0.6))",
+                    boxShadow:
+                      "0 8px 24px -12px rgba(0,0,0,0.8), inset 0 1px 0 rgba(255,255,255,0.08)",
+                    backdropFilter: "blur(8px)",
+                    WebkitBackdropFilter: "blur(8px)",
+                    overflow: "hidden",
+                  }}
+                >
+                  {(
+                    [
+                      [
+                        "TRIPLETS",
+                        String(
+                          liveState.data.triplet_count ??
+                            liveState.data.graph.query_paths.length,
+                        ),
+                      ],
+                      [
+                        "QUERY",
+                        `${liveState.data.query_ms ?? liveState.data.elapsed_ms ?? 0}ms`,
+                      ],
+                      [
+                        "TENANT",
+                        liveState.data.tenant_id ?? "hydrasentry-owned-test",
+                      ],
+                    ] as const
+                  ).map(([k, v], i) => (
+                    <span
+                      key={k}
+                      style={{
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: 2,
+                        padding: "6px 11px",
+                        borderLeft:
+                          i > 0 ? "1px solid rgba(234,240,250,0.12)" : "none",
+                      }}
+                    >
+                      <span
+                        style={{
+                          fontSize: "7.5px",
+                          letterSpacing: "0.18em",
+                          color: "#5F6875",
+                        }}
+                      >
+                        {k}
+                      </span>
+                      <span
+                        style={{
+                          fontSize: "10px",
+                          letterSpacing: "0.04em",
+                          color: "#EAF0FA",
+                          textShadow: "0 0 8px rgba(234,240,250,0.3)",
+                        }}
+                      >
+                        {v}
+                      </span>
+                    </span>
+                  ))}
+                </span>
+              )}
+              {liveState.status === "fallback" && (
+                <span
+                  style={{
+                    fontSize: "9px",
+                    letterSpacing: "0.06em",
+                    lineHeight: 1.5,
+                    color: C.silver,
+                  }}
+                >
+                  {liveState.note}
+                </span>
+              )}
             </div>
           )}
 
@@ -417,34 +502,74 @@ export default function GraphPage() {
           />
         </div>
 
-        {/* Node inspector */}
+        {/* Node inspector — a premium instrument readout for the selected star:
+            an eyebrow + a status lamp, the entity type at scale, the chunk id,
+            then a hairline field ledger and the risk reason. Tainted nodes read
+            hot (brighter ink, a lit border) — danger as intensity, never hue. */}
         <div
           style={{
-            border: "1px solid rgba(255,255,255,0.08)",
+            position: "relative",
+            border: `1px solid ${taintNode ? "rgba(255,255,255,0.22)" : "rgba(255,255,255,0.08)"}`,
             borderRadius: 18,
-            background: "rgba(255,255,255,0.014)",
+            background:
+              "linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.008))",
+            boxShadow: taintNode
+              ? "0 0 36px -10px rgba(255,255,255,0.16), inset 0 1px 0 rgba(255,255,255,0.06)"
+              : "inset 0 1px 0 rgba(255,255,255,0.05)",
             padding: 18,
             display: "flex",
             flexDirection: "column",
+            overflow: "hidden",
           }}
         >
+          {/* lit lip at the top edge */}
+          <span
+            aria-hidden
+            style={{
+              position: "absolute",
+              insetInline: 0,
+              top: 0,
+              height: 1,
+              background:
+                "linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent)",
+            }}
+          />
           <div
             style={{
-              fontFamily: MONO,
-              fontSize: "9.5px",
-              letterSpacing: "0.16em",
-              color: C.faint,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: 8,
             }}
           >
-            NODE INSPECTOR
+            <span
+              style={{
+                fontFamily: MONO,
+                fontSize: "9.5px",
+                letterSpacing: "0.18em",
+                color: C.faint,
+              }}
+            >
+              NODE INSPECTOR
+            </span>
+            <span
+              aria-hidden
+              style={{
+                width: 7,
+                height: 7,
+                borderRadius: "50%",
+                background: taintNode ? "#FFFFFF" : "#5F6875",
+                boxShadow: taintNode ? "0 0 9px rgba(255,255,255,0.7)" : "none",
+              }}
+            />
           </div>
           <div
             className="cockpit-display"
-            style={{ marginTop: 10, fontSize: 18, fontWeight: 600, letterSpacing: "-0.02em", color: inspColor }}
+            style={{ marginTop: 12, fontSize: 21, fontWeight: 600, letterSpacing: "-0.025em", color: inspColor, lineHeight: 1.1, textShadow: taintNode ? "0 0 18px rgba(255,255,255,0.3)" : "none" }}
           >
             {insp?.type ?? "·"}
           </div>
-          <div style={{ fontFamily: MONO, fontSize: 11, color: C.muted, marginTop: 2 }}>
+          <div style={{ fontFamily: MONO, fontSize: 11, color: C.muted, marginTop: 3 }}>
             {insp && insp.chunk !== "·" ? insp.chunk : (selected?.id ?? "")}
           </div>
           <div

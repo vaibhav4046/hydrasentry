@@ -247,35 +247,56 @@ function SourceBadge({
         right: 16,
         display: "flex",
         alignItems: "center",
-        gap: 8,
+        gap: 9,
         pointerEvents: "none",
-        padding: "4px 10px",
+        padding: "5px 11px 5px 9px",
         borderRadius: 999,
         border: `1px solid ${
           isLive
-            ? "rgba(255,255,255,0.55)"
+            ? "rgba(255,255,255,0.6)"
             : isReal
-              ? "rgba(234,240,250,0.3)"
-              : "rgba(255,255,255,0.12)"
+              ? "rgba(234,240,250,0.32)"
+              : "rgba(255,255,255,0.13)"
         }`,
+        // Layered glass: a faint top-lit gradient + an inner lip so the chip reads
+        // as a seated instrument readout, not a flat pill. LIVE reads brightest.
         background: isLive
-          ? "rgba(255,255,255,0.08)"
+          ? "linear-gradient(180deg, rgba(255,255,255,0.12), rgba(255,255,255,0.04))"
           : isReal
-            ? "rgba(234,240,250,0.05)"
-            : "rgba(255,255,255,0.02)",
+            ? "linear-gradient(180deg, rgba(234,240,250,0.07), rgba(234,240,250,0.02))"
+            : "linear-gradient(180deg, rgba(255,255,255,0.035), rgba(255,255,255,0.01))",
+        boxShadow: isLive
+          ? "0 0 22px rgba(255,255,255,0.18), inset 0 1px 0 rgba(255,255,255,0.16)"
+          : "inset 0 1px 0 rgba(255,255,255,0.06)",
+        backdropFilter: "blur(8px)",
+        WebkitBackdropFilter: "blur(8px)",
       }}
     >
+      {/* status dot inside a faint well, so it reads as a seated indicator lamp */}
       <span
         aria-hidden
         style={{
-          width: 6,
-          height: 6,
+          position: "relative",
+          width: 7,
+          height: 7,
           borderRadius: "50%",
           background: dotColor,
-          boxShadow: isReal ? `0 0 ${isLive ? 9 : 7}px ${dotColor}` : "none",
+          boxShadow: isReal
+            ? `0 0 ${isLive ? 10 : 7}px ${dotColor}, inset 0 0 2px rgba(0,0,0,0.4)`
+            : "inset 0 0 2px rgba(0,0,0,0.4)",
+          animation: isLive ? "hsPulseDot 2.2s ease-in-out infinite" : "none",
         }}
       />
-      <span className="mono" style={{ fontSize: "8.5px", letterSpacing: "0.16em", color: "#5F6875" }}>
+      <span
+        className="mono"
+        style={{
+          fontSize: "8px",
+          letterSpacing: "0.2em",
+          color: "#5F6875",
+          borderRight: "1px solid rgba(255,255,255,0.1)",
+          paddingRight: 8,
+        }}
+      >
         SOURCE
       </span>
       <span
@@ -284,6 +305,7 @@ function SourceBadge({
           fontSize: "9px",
           letterSpacing: "0.1em",
           color: isLive ? "#FFFFFF" : isReal ? "#EAF0FA" : "#9BA3AF",
+          textShadow: isLive ? "0 0 10px rgba(255,255,255,0.45)" : "none",
         }}
       >
         {isReal ? realLabel : "DERIVED SCENARIO GRAPH FALLBACK"}
