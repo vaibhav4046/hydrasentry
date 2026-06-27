@@ -36,9 +36,12 @@ import { m } from "framer-motion";
 import { ArrowRight, Play, Loader2, RotateCcw, Check } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { EASE_OUT_EXPO, mastheadContainer, mastheadLine } from "@/lib/motion";
-import { runJudgeDemo } from "@/lib/api";
+import { runJudgeDemo, runReal } from "@/lib/api";
 import { useDemoStore } from "@/store/useDemoStore";
 import { useCountUp } from "@/hooks/useCountUp";
+import { useReducedMotionSafe } from "@/hooks/useReducedMotionSafe";
+import type { RealRun } from "@/lib/types";
+import { RealRunResult } from "./RealRunResult";
 import {
   JUDGE_STAGES,
   JUDGE_STAGE_COUNT,
@@ -92,6 +95,22 @@ export function JudgeDemoController({
   const setStoreRunning = useDemoStore((s) => s.setRunning);
   const judgeRunNonce = useDemoStore((s) => s.judgeRunNonce);
 
+  // T2: the REAL run is the product. The deterministic 6-stage strip is the
+  // intro; the RESULT below it is the genuine /runs/real outcome (real Groq
+  // answers + real computed score/band) — or, on backend error/overrun, the
+  // honestly-labelled deterministic fallback. `realPending` gates the
+  // "computing" affordance; `realRun` holds the resolved result.
+  const [realRun, setRealRun] = useState<RealRun | null>(null);
+  const [realPending, setRealPending] = useState(false);
+
+  // T1: reduced-motion safety. Under prefers-reduced-motion the masthead must
+  // render at its composed resting state — never behind the variants' hidden
+  // `opacity:0` initial. We drop `initial="hidden"` and let the children sit at
+  // their `show` values, so the headline/metrics/CTAs are guaranteed visible
+  // (opacity 1) regardless of MotionConfig timing. Full motion is unchanged.
+  const reduced = useReducedMotionSafe();
+  const mastheadInitial = reduced ? false : ("hidden" as const);
+
   const timersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
   const startedNonceRef = useRef<number>(judgeRunNonce);
 
@@ -136,19 +155,27 @@ export function JudgeDemoController({
     );
   }, [clearTimers]);
 
-  // The on-page run entry point: kick the deterministic show immediately, and
-  // fire the real backend in parallel to persist the canonical artifact.
+  // The on-page run entry point: kick the deterministic intro animation
+  // immediately, then do REAL work. Two backend calls fire in parallel:
+  //  - runReal() is the product: a genuine /runs/real (live Groq + HydraDB,
+  //    computed score). Its result is surfaced below the strip as the RESULT.
+  //  - runJudgeDemo() still persists the canonical RunArtifact to the store so
+  //    /results, the certificate, and the cockpit pages stay populated.
+  // The visible deterministic strip never gates on either; the show always
+  // plays. The real RESULT replaces nothing critical — it is additive.
   const start = useCallback(() => {
     if (running) return;
     playSequence();
     setStoreStage("running_judge_demo");
+    setRealRun(null);
+    setRealPending(true);
+    void runReal().then((result) => {
+      setRealPending(false);
+      if (result.ok) setRealRun(result.data);
+    });
     void runJudgeDemo().then((result) => {
-      if (result.ok) {
-        setRun(result.data);
-        setStoreStage("complete");
-      } else {
-        setStoreStage("complete");
-      }
+      if (result.ok) setRun(result.data);
+      setStoreStage("complete");
     });
   }, [running, playSequence, setRun, setStoreStage]);
 
@@ -206,7 +233,7 @@ export function JudgeDemoController({
         <m.div
           className="relative z-20 flex flex-col items-start"
           variants={mastheadContainer}
-          initial="hidden"
+          initial={mastheadInitial}
           animate="show"
         >
           <div
@@ -385,6 +412,11 @@ export function JudgeDemoController({
           <StageRail activeKey={active?.key ?? null} running={running} />
         </m.div>
       </div>
+
+      {/* ===== REAL RUN RESULT (T2): the genuine /runs/real outcome ===== */}
+      {(realPending || realRun) && (
+        <RealRunResult pending={realPending} result={realRun} reduced={reduced} />
+      )}
 
       {/* primitive strip */}
       <m.ul

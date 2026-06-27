@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { PageShell } from "@/components/shared/PageShell";
 import { getProviders, testProvider } from "@/lib/api";
 import { C } from "@/lib/cockpit/derive";
+import { ProviderLogo } from "@/components/brand/ProviderLogos";
 import type { ProviderStatus } from "@/lib/types";
 
 const MONO = "var(--font-geist-mono), 'JetBrains Mono', monospace";
@@ -89,7 +90,7 @@ export default function SettingsPage() {
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                   <span style={{ width: 9, height: 9, borderRadius: "50%", background: dot, boxShadow: `0 0 8px ${dot}` }} />
-                  <span style={{ fontSize: 15, fontWeight: 600, color: C.ink }}>{pv.name}</span>
+                  <ProviderLogo name={pv.name} />
                 </div>
                 <span
                   style={{

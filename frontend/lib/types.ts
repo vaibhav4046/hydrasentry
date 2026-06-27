@@ -248,6 +248,61 @@ export interface RunArtifact {
   stages: Stage[];
 }
 
+// --- Real run (POST /runs/real) --------------------------------------------
+
+/**
+ * The judge's own verdict on the poisoned answer, present only on a genuine
+ * real run (mode:"real"). Null on the deterministic fallback.
+ */
+export interface RealRunJudge {
+  score: number;
+  confidence: number;
+  rationale: string;
+}
+
+/**
+ * Response of `POST /runs/real` — the GENUINELY-real run, distinct from the
+ * deterministic RunArtifact. Within a ~9s budget the backend queries live
+ * HydraDB (clean + poisoned owned sub-tenants), runs the real Groq agent on
+ * each context, and computes a real risk score (rules + real Groq judge).
+ *
+ * HONESTY CONTRACT (mirrors backend/real_run.py):
+ *  - `real:true` + `mode:"real"` → live Groq answers + a computed score. The UI
+ *    may show a "REAL RUN" label only in this case.
+ *  - `real:false` + `mode:"deterministic_fallback"` → on any HydraDB/Groq
+ *    failure or wall-clock overrun the backend returns the deterministic
+ *    canonical answers + score, with `fallback_reason`. The UI must label this
+ *    as offline/deterministic, never as a real run.
+ */
+export interface RealRun {
+  ok: boolean;
+  real: boolean;
+  mode: "real" | "deterministic_fallback" | (string & {});
+  fallback_reason?: string;
+  scenario_id: string;
+  task: string;
+  baseline_answer: string;
+  poisoned_answer: string;
+  behavior_diff?: BehaviorDiff;
+  risk: {
+    score: number;
+    band: RiskBand;
+    confidence: number;
+    computed: boolean;
+    attack_type?: string;
+    components?: RiskComponents;
+    rules_fired?: string[];
+    judge?: RealRunJudge | null;
+  };
+  graph?: Graph;
+  clean_sub_tenant?: string;
+  poisoned_sub_tenant?: string;
+  tenant_id?: string;
+  llm_provider?: string;
+  llm_model?: string;
+  timings?: Record<string, number>;
+}
+
 // --- Auxiliary endpoint payloads -------------------------------------------
 
 export interface HealthStatus {

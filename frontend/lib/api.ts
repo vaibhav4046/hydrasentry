@@ -29,6 +29,7 @@ import type {
   ProviderStatus,
   ProviderTestResult,
   Quarantine,
+  RealRun,
   ResultsSummary,
   RunArtifact,
   ScenarioSummary,
@@ -710,6 +711,69 @@ export async function queryRealGraph(): Promise<ApiResult<LiveGraphQuery>> {
     if (!res.ok) {
       return { ok: false, error: `Request failed (${res.status})` };
     }
+    return { ok: false, error: "Malformed response from backend" };
+  } catch (error: unknown) {
+    return { ok: false, error: errorMessage(error) };
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+// --- Real run (genuine /runs/real: live Groq + HydraDB, computed score) ------
+
+/** Client budget for the real run. The backend itself caps at ~9s and
+ * fail-closes to the deterministic result, so 11s leaves slack for a cold
+ * start without freezing the UI. */
+const REAL_RUN_TIMEOUT_MS = 11000;
+
+/**
+ * Execute the GENUINELY-real judge run via `POST /runs/real` and return the
+ * parsed body (the RealRun shape, NOT the { ok, data } envelope).
+ *
+ * Like queryRealGraph, this is an explicit, user-initiated call that genuinely
+ * wants the real backend, so it:
+ *  - targets the deployed backend directly (the public site ships with
+ *    NEXT_PUBLIC_BACKEND_URL unset for the standalone demo; an explicit value,
+ *    in local dev, still wins),
+ *  - uses a longer timeout than the default request budget, and
+ *  - bypasses the session "backend unreachable" latch.
+ *
+ * Honors the no-throw ApiResult contract. The backend itself never 500s and
+ * fail-closes to { ok:true, real:false, mode:"deterministic_fallback" } on any
+ * HydraDB/Groq error or overrun; that body is surfaced verbatim so the caller
+ * can label it honestly. This function never fabricates real:true — only the
+ * backend sets it. On a transport/parse failure (or client timeout) it returns
+ * ok:false so the caller falls back to the deterministic intro.
+ */
+export async function runReal(): Promise<ApiResult<RealRun>> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), REAL_RUN_TIMEOUT_MS);
+  try {
+    const res = await fetch(`${LIVE_QUERY_BACKEND_URL}/runs/real`, {
+      method: "POST",
+      headers: { Accept: "application/json" },
+      cache: "no-store",
+      signal: controller.signal,
+    });
+
+    let payload: RealRun | null = null;
+    try {
+      payload = (await res.json()) as RealRun;
+    } catch {
+      payload = null;
+    }
+
+    if (
+      payload &&
+      typeof payload === "object" &&
+      payload.ok === true &&
+      payload.risk &&
+      typeof payload.baseline_answer === "string" &&
+      typeof payload.poisoned_answer === "string"
+    ) {
+      return { ok: true, data: payload };
+    }
+    if (!res.ok) return { ok: false, error: `Request failed (${res.status})` };
     return { ok: false, error: "Malformed response from backend" };
   } catch (error: unknown) {
     return { ok: false, error: errorMessage(error) };
