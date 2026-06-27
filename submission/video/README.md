@@ -14,23 +14,36 @@ the value path is mocked, and every real-vs-derived state is labelled on screen.
 
 ## Primary deliverable
 
-**`constellan_screencap.mp4` is the primary video.** It is a real-UI capture of
-the live product: headless Chrome driving the live Vercel frontend and backend
-(backend verified healthy, mode=demo), with the "Run live attack" button really
-clicked and the live Groq result rendered in place. This is the cut to submit,
-because every frame is the actual deployed product, not an animation.
+**`constellan_master.mp4` is the primary video.** It is the assembled master cut:
+a short Remotion title intro, then the real-UI screen capture of the live product
+as the core, then the Remotion closing wordmark, with the narration burned in as
+captions over the screen-capture section. 60.2s, 1920x1080, h264, 30fps, faststart.
+Every frame of the core is the actual deployed product; the intro and outro are
+clearly the rendered title/wordmark, so the honesty rule holds. This is the cut to
+submit.
 
-**`constellan_film.mp4` is the polished companion.** It is a Remotion render
-(noir/monochrome motion design) of the same story across eight scenes, ending on
-the signed Memory Integrity Certificate and the REPLAY / TRACE / BLOCK / CERTIFY
-wordmark. Use it as a title-card opener, a fallback if a screen capture stutters,
-or a higher-production b-roll cut. It is rendered art, not a live capture, and is
-labelled as such.
+Segment breakdown: Remotion intro (film 2.0s to 13.0s, the HydraSentry title card
+"Agents do not fail at the prompt. They fail at memory.") -> real screen capture
+(full 43.67s, six burned-in caption cues) -> Remotion outro (film 64.5s to 70.0s,
+the signed certificate resolving to REPLAY / TRACE / BLOCK / CERTIFY).
 
-Both tell the same true story (refund agent on HydraDB memory, poisoned policy,
-87 / HIGH deterministic vs ~90 / CRITICAL live Groq, query_paths taint chain, MCP
-firewall block, signed certificate). Pick the screen capture as the headline
-submission; attach the Remotion film as the cinematic version.
+**`constellan_screencap.mp4` is the raw real-UI capture (core source).** Headless
+Chrome driving the live Vercel frontend and backend (backend verified healthy,
+mode=demo), with the "Run live attack" button really clicked and the live Groq
+result rendered in place. Every frame is the actual deployed product, not an
+animation. Used as the middle of the master cut.
+
+**`constellan_film.mp4` is the polished Remotion companion (intro/outro source).**
+A Remotion render (noir/monochrome motion design) of the same story across eight
+scenes, ending on the signed Memory Integrity Certificate and the REPLAY / TRACE /
+BLOCK / CERTIFY wordmark. The master cut draws its intro and outro from this film.
+It is rendered art, not a live capture, and is labelled as such.
+
+All three tell the same true story (refund agent on HydraDB memory, poisoned
+policy, 87 / HIGH deterministic vs ~90 / CRITICAL live Groq, query_paths taint
+chain, MCP firewall block, signed certificate). Submit `constellan_master.mp4`;
+the screen capture and the film remain available as the raw core and the cinematic
+cut.
 
 ---
 
@@ -40,10 +53,13 @@ submission; attach the Remotion film as the cinematic version.
 
 | File | Kind | Duration | Resolution | Codec / fps | Size | Notes |
 |------|------|----------|------------|-------------|------|-------|
-| `constellan_screencap.mp4` | Real-UI screen capture (PRIMARY) | 43.67s | 1920x1080 | h264 / 12fps | ~3.9 MB | Live frontend + live backend, "Run live attack" really clicked, live Groq CRITICAL result, /graph live HydraDB query, /mcp firewall block, /console incidents. |
-| `constellan_film.mp4` | Remotion render (companion) | 70.06s | 1920x1080 | h264 / 30fps | ~10.8 MB | 8-scene noir motion film of the same story; ends on signed certificate + moat strip + REPLAY · TRACE · BLOCK · CERTIFY wordmark. |
+| `constellan_master.mp4` | Assembled master cut (PRIMARY) | 60.20s | 1920x1080 | h264 / 30fps | ~6.1 MB | Remotion intro + real screen capture (burned-in captions) + Remotion outro wordmark. yuv420p, faststart, AAC stereo. The cut to submit. |
+| `constellan_screencap.mp4` | Real-UI screen capture (core source) | 43.67s | 1920x1080 | h264 / 12fps | ~3.9 MB | Live frontend + live backend, "Run live attack" really clicked, live Groq CRITICAL result, /graph live HydraDB query, /mcp firewall block, /console incidents. |
+| `constellan_film.mp4` | Remotion render (intro/outro source) | 70.06s | 1920x1080 | h264 / 30fps | ~10.8 MB | 8-scene noir motion film of the same story; ends on signed certificate + moat strip + REPLAY · TRACE · BLOCK · CERTIFY wordmark. |
 
-Both MP4s verified: duration > 0, one h264 video stream, 1920x1080. Both play.
+All three MP4s verified with ffprobe: duration > 0, one h264 video stream,
+1920x1080. The master cut is 30fps, SAR 1:1, yuv420p, faststart, with one AAC
+stereo audio track (silent over the screen-capture section). All play.
 
 ### Captions
 
