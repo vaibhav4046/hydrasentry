@@ -408,7 +408,7 @@ npm run dev                          # http://localhost:3000
 
 ```bash
 cd backend
-pytest                # 147 passed, 6 skipped offline (153 collected); the 6
+pytest                # 183 passed, 6 skipped offline (189 collected); the 6
                       # skips are live Gemini-embeddings cases needing a key
 ```
 
@@ -491,6 +491,17 @@ This gateway speaks **HTTP** (MCP-inspired) and powers the web UI. For driving H
 ## Demo
 
 A 2-minute Saturday demo script and the Sunday deep-dive talking points are in [DEMO.md](DEMO.md). The fastest path: open the live frontend and press **Run Demo**, or `POST /runs/judge-demo` (against the live backend or a local one) for the one-click canonical run (poisoned-memory replay + skill scan + scheduled scan + self-refinement), all deterministic.
+
+### Video
+
+The full demo video package lives in [`submission/video/`](submission/video/). The cut to watch is the master:
+
+- **[`submission/video/constellan_master.mp4`](submission/video/constellan_master.mp4)** is the **primary** cut (60s, 1920x1080). A short rendered title intro, then the **real-UI screen capture** of the live deployed product as the core (the "Run live attack" button really clicked, the live Groq result rendered in place), then the closing wordmark, narration burned in as captions. Every frame of the core is the actual deployed product; the intro and outro are clearly the rendered title card, so the honesty rule holds.
+- `submission/video/constellan_screencap.mp4` is the raw real-UI capture (the core source: live frontend + live backend, nothing animated).
+- `submission/video/constellan_film.mp4` is the polished Remotion companion (rendered noir motion design; the cinematic cut, labelled as rendered).
+- `submission/video/captions.srt`, `stills/`, `poster.png`, `thumbnail.png`, and `DEMO_SCRIPT.md` (the 90-second and 60-second shot scripts) round out the package. See [`submission/video/README.md`](submission/video/README.md) for the full asset index and the rendered-vs-real-captured breakdown.
+
+All three cuts tell the same true story: a refund agent on HydraDB memory, a poisoned policy, **87 / HIGH** deterministic vs **~90 / CRITICAL** live Groq, the `query_paths` taint chain, the MCP firewall block, and the signed Memory Integrity Certificate.
 
 ### Judge notes (read this first)
 
