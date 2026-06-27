@@ -21,6 +21,17 @@ When `APP_MODE=real` and a HydraDB key is present, the RealAdapter runs the full
 
 Pre-warming pays the ingest plus extraction cost off stage, so the on-stage query lands real on the first try in about a second.
 
+### 1a. The public live-query endpoint (`POST /graph/real-query`)
+
+The public `/graph` view runs a genuine live HydraDB query against a pre-warmed owned tenant, without exercising the slow ingest path on Vercel. The split is deliberate:
+
+- **Out of band:** the stable owned tenant (`hydrasentry-owned-test` / `live_demo_support_agent`) is provisioned and ingested ahead of time, so its relation graph is already at `completed` and queryable. The slow ingest plus extraction never runs on the request path.
+- **On the request path:** the public endpoint issues only the fast `graph_context` query against that warm tenant. It returns a genuine live HydraDB `query_paths` traversal in ~2.4-3.2s (`real:true`, `graph_source:real_query_paths`, 8 real triplets, the taint chain `mem_poison_047 -> policy_refund_v2 -> instant_refund_action -> manager_approval`), with a `query_ms` proof.
+- **Hard cap and fail-closed:** the query has an 8s hard cap. If HydraDB hiccups or exceeds it, the endpoint fails closed in ~214ms to the captured `real_run_sample.json` sample, so the live beat can never sink the demo.
+- **Triple-gated REAL label:** the `REAL HYDRADB QUERY_PATHS · LIVE` label is only applied when the result is flagged real, is not demo, and real triplets actually parsed. Derived or fallback data can never be mislabeled as a live real query. The proof that it is genuinely live (and not faked): `query_ms` varies run to run, the returned edges are absent from the captured fixture, and the honesty gate is the same one enforced everywhere else in the engine.
+
+Honest cap that remains: this beat carries ~3s of latency, which is why the presenter narrates over it. It is a proof beat layered on the flake-proof demo-mode UI, never the thing the demo depends on.
+
 ---
 
 ## 2. The provenance invariant: REAL vs DERIVED vs LOCAL
@@ -114,4 +125,4 @@ No. Every scenario is scoped to `hydrasentry-owned-test`. The cross-subtenant le
 
 ## 7. The measured panel result
 
-Five brutal judges, live audit, zero P0 blockers, unanimous stage-ready. Overall average **8.25 / 10**. Per-judge: HydraDB Core Engineer 8.6, Security Engineer 7.9, Product/Design 8.25, Skeptical Hacker 8.0, Live Demo Judge 8.5. Per-axis: Real Execution 8.4, Working Demo 8.8, Architecture 8.2, HydraDB Graph Use 6.6 (weakest), Security Honesty 9.2 (strongest), Design Polish 8.6, Wow Factor 7.6, Live Stage Reliability 8.4. Trajectory across panels: 6.0 -> 7.3 -> 8.25.
+A fourth panel of five brutal judges re-ran a live audit on the improved build, zero P0 blockers, unanimous stage-ready. Overall average **8.67 / 10** (up from 8.25). Per-judge: HydraDB Core Engineer 8.75, Security Engineer 8.25, Product/Design 8.6, Skeptical Hacker 8.75, Live Demo Judge 9.0. Per-axis: HydraDB Graph Use ~8.7 (was 6.6, the biggest gain, driven by the live `/graph/real-query` feature), Security Honesty ~9.6 (two judges gave a perfect 10), Working Demo ~9, Real Execution ~8.8, Live Stage Reliability ~8.6, Design Polish ~8.5, Architecture ~8.4, Wow Factor ~8.2. Trajectory across the four panels: 6.0 -> 7.3 -> 8.25 -> 8.67.

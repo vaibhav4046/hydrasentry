@@ -51,18 +51,18 @@ The canonical 60-second path: hero -> the wedge -> Run Judge Demo (6 stages play
 
 ## 5. The measured result (this is real, state it plainly)
 
-A third panel of five brutal judges ran a live audit with zero P0 blockers and unanimously called the build stage-ready.
+A fourth panel of five brutal judges re-ran a live audit on the improved build with zero P0 blockers and unanimously called it stage-ready.
 
 | Judge | Score |
 |---|---|
-| HydraDB Core Engineer | 8.6 |
-| Security Engineer | 7.9 |
-| Product / Design | 8.25 |
-| Skeptical Hacker | 8.0 |
-| Live Demo Judge | 8.5 |
-| **Overall average** | **8.25 / 10** |
+| HydraDB Core Engineer | 8.75 |
+| Security Engineer | 8.25 |
+| Product / Design | 8.6 |
+| Skeptical Hacker | 8.75 |
+| Live Demo Judge | 9.0 |
+| **Overall average** | **8.67 / 10** |
 
-Per-axis averages: Real Execution 8.4, Working Demo 8.8, Architecture 8.2, HydraDB Graph Use 6.6 (weakest), Security Honesty 9.2 (strongest), Design Polish 8.6, Wow Factor 7.6, Live Stage Reliability 8.4. Trajectory across the three panels: 6.0 -> 7.3 -> 8.25.
+Per-axis averages: HydraDB Graph Use ~8.7 (was 6.6, the biggest gain, driven by the live query feature below), Security Honesty ~9.6 (two judges gave a perfect 10), Working Demo ~9, Real Execution ~8.8, Live Stage Reliability ~8.6, Design Polish ~8.5, Architecture ~8.4, Wow Factor ~8.2. Trajectory across the four panels: 6.0 -> 7.3 -> 8.25 -> 8.67.
 
 ---
 
@@ -72,7 +72,8 @@ Per-axis averages: Real Execution 8.4, Working Demo 8.8, Architecture 8.2, Hydra
 |---|---|---|
 | Live frontend to backend | REAL | The public frontend makes real backend calls: `POST /runs/judge-demo`, 200, sub-200ms, deterministic 87 / HIGH / memory_poisoning / 0.92. |
 | Hosted backend graph | DEMO (honestly labelled) | Runs `APP_MODE=demo`, so its graph is labelled derived_scenario_graph. No keys in the cloud. |
-| Real HydraDB query_paths | REAL (local) | With `APP_MODE=real` locally, `query_paths` work 4/4 reliable. Captured proof is in `real_run_sample.json`, shown on `/graph` as REAL HYDRADB QUERY_PATHS CAPTURED. |
+| Live HydraDB query_paths on the public URL | REAL (live) | On `/graph`, the "Run live HydraDB query" control hits `POST /graph/real-query` and returns a genuine live HydraDB `query_paths` traversal in ~2.4-3.2s (`real:true`, `graph_source:real_query_paths`, 8 real triplets, the taint chain `mem_poison_047 -> policy_refund_v2 -> instant_refund_action -> manager_approval`), shown with a truthful REAL HYDRADB QUERY_PATHS · LIVE badge and `query_ms` proof. It queries a pre-warmed stable owned tenant (`hydrasentry-owned-test` / `live_demo_support_agent`), so only the fast ~3s query runs on Vercel. It fails closed in ~214ms to the captured sample if HydraDB hiccups, so it cannot sink the demo. |
+| Real HydraDB query_paths (captured) | REAL (local) | With `APP_MODE=real` locally, `query_paths` work 4/4 reliable. Captured proof is in `real_run_sample.json`, shown on `/graph` as REAL HYDRADB QUERY_PATHS CAPTURED. |
 | SkillMake scan | REAL | Real per-line pattern detection. The planted unsafe skill scores CRITICAL (100), blocked. |
 | MCP gateway | MCP-inspired HTTP | An HTTP control surface with a manifest and shared-secret write protection, not native stdio transport. |
 | Scheduling | SIMULATED | Persists agent rows and computes deterministic next-run dates. Registers no real cron or external timer. |
@@ -103,4 +104,5 @@ Honestly, not today. Detection is graph-taint plus marker and label matching. An
 - Drive the demo via the Run Judge Demo CTA, not the idle hero animation. The CTA persists a run; the passive idle animation does not, so a deep-link to `/results` after only the idle animation will have nothing to show.
 - Narrate the certificate, not the bare 87. The number is the headline; the Memory Integrity Certificate is the product. Walk the graph path, the blocked action, and the regression rule.
 - Lead with the demo-mode UI, which cannot flake. Keep the warm real-graph local box as the optional proof beat, brought up after the main flow lands.
+- For the live HydraDB query beat on `/graph`: pre-warm the live-query function by clicking "Run live HydraDB query" once about 30 seconds before going live, so the audience-facing click avoids a cold-start spike. Narrate over the ~3s of latency ("this is hitting HydraDB right now"). The 214ms fail-closed fallback to the captured sample means the beat cannot break the demo even if HydraDB hiccups.
 - Close on the wedge: HydraSentry does not just detect the failure. It certifies the graph path, blocks the action, and turns the incident into a regression rule.

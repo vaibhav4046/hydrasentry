@@ -32,10 +32,15 @@ The stages animate in sequence:
 **0:45 - Open the Memory Integrity Certificate.**
 > "And here is the artifact: the Memory Integrity Certificate. MIC dash 2026 dash REFUND dash 001, signed. The tainted node, the graph path, the blocked action, the regression rule. One signed record of the whole incident."
 
-**0:52 - Optional proof beats.**
-> "The same scanner catches malicious skills before they load. This SkillMake skill is CRITICAL. And this graph is a real HydraDB query_paths capture, not a drawing."
+**0:50 - Live HydraDB query proof.**
+> "And this is not a drawing. Open the graph, run a live HydraDB query, and we are hitting HydraDB right now."
 
-On screen: `/skillmake` showing CRITICAL, and `/graph` showing the REAL HYDRADB QUERY_PATHS CAPTURED sample. Skip either if time is tight; the certificate is the headline.
+On screen: open `/graph`, click "Run live HydraDB query". After about three seconds the REAL HYDRADB QUERY_PATHS · LIVE badge, the real triplets, and the `query_ms` proof appear. Narrate over the ~3s.
+
+**0:55 - Optional proof beats.**
+> "The same scanner catches malicious skills before they load. This SkillMake skill is CRITICAL."
+
+On screen: `/skillmake` showing CRITICAL. Skip if time is tight; the certificate is the headline.
 
 **0:58 - Close.**
 > "HydraSentry does not just detect the failure. It certifies the graph path, blocks the action, and turns the incident into a regression rule."
@@ -44,7 +49,7 @@ On screen: `/skillmake` showing CRITICAL, and `/graph` showing the REAL HYDRADB 
 
 ## The path in one line
 
-hero -> the wedge -> Run Judge Demo (BASELINE SAFE -> POISON -> ATTACKED -> GRAPH taint path -> MCP FIREWALL block -> CERTIFICATE 87/100 BLOCKED QUARANTINED) -> open Memory Integrity Certificate modal (MIC-2026-REFUND-001, signed) -> optional SkillMake CRITICAL + real captured HydraDB sample -> close line.
+hero -> the wedge -> Run Judge Demo (BASELINE SAFE -> POISON -> ATTACKED -> GRAPH taint path -> MCP FIREWALL block -> CERTIFICATE 87/100 BLOCKED QUARANTINED) -> open Memory Integrity Certificate modal (MIC-2026-REFUND-001, signed) -> live HydraDB query on /graph (REAL HYDRADB QUERY_PATHS · LIVE, ~3s, query_ms proof) -> optional SkillMake CRITICAL -> close line.
 
 ## Reminders
 
