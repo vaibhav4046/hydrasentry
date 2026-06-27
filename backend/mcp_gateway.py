@@ -1,12 +1,15 @@
 ﻿"""MCP-inspired gateway for HydraSentry.
 
 Exposes a manifest of tools and resources. Write actions require the
-``X-MCP-Secret`` header to equal MCP_SHARED_SECRET; if the secret is unset the
-call is allowed but tagged with a demo-mode warning. A bounded recent-calls log
-is kept for the UI.
+``X-MCP-Secret`` header to equal MCP_SHARED_SECRET. The secret check is
+FAIL-CLOSED (operating rule #3): if MCP_SHARED_SECRET is UNSET, write tools are
+refused (``unauthorized``), not silently allowed. The compare is constant-time
+(``hmac.compare_digest``) so a timing side channel cannot leak the secret. A
+bounded recent-calls log is kept for the UI.
 """
 from __future__ import annotations
 
+import hmac
 import logging
 from collections import deque
 from datetime import datetime, timezone
@@ -166,14 +169,21 @@ def _shared_secret() -> str:
 
 
 def _secret_guard(tool: str, provided_secret: Optional[str]) -> dict[str, Any]:
-    """Authorise a write tool. Returns {allowed, warning}."""
+    """Authorise a write tool. Returns {allowed, warning}.
+
+    Fail-closed (operating rule #3): an UNSET MCP_SHARED_SECRET refuses every
+    write tool rather than allowing it, so a misconfigured deploy cannot silently
+    accept anonymous writes. The compare is constant-time to avoid leaking the
+    secret through response timing.
+    """
     if tool not in WRITE_TOOLS:
         return {"allowed": True, "warning": None}
     expected = _shared_secret()
     if not expected:
-        return {"allowed": True,
-                "warning": "MCP_SHARED_SECRET not set; demo mode only"}
-    if provided_secret == expected:
+        # No secret configured -> deny write tools (was previously allowed).
+        return {"allowed": False,
+                "warning": "MCP_SHARED_SECRET not configured; write tools refused"}
+    if provided_secret and hmac.compare_digest(provided_secret, expected):
         return {"allowed": True, "warning": None}
     return {"allowed": False, "warning": "invalid or missing X-MCP-Secret"}
 

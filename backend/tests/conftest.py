@@ -69,6 +69,18 @@ def clean_app_db():
 
 
 @pytest.fixture(autouse=True)
+def _reset_rate_limiter():
+    """Clear the in-process rate-limit buckets before each test so a burst in
+    one test never spuriously 429s an unrelated later test (the limiter is a
+    process-global, so without this the suite order would matter)."""
+    import rate_limit
+
+    rate_limit.reset()
+    yield
+    rate_limit.reset()
+
+
+@pytest.fixture(autouse=True)
 def _disable_semantic_detection_by_default(monkeypatch):
     """Force the lexical-only path for the legacy suite so existing band
     assertions stay deterministic and no test makes a live embeddings call.

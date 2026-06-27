@@ -24,6 +24,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 import mcp_gateway
 import model_router
 import ota
+import rate_limit
 import real_graph
 import real_run
 import scenario_engine
@@ -84,6 +85,26 @@ app.add_middleware(
 )
 
 
+# --- Security headers (finding #3) ------------------------------------------
+# Add hardening response headers to EVERY API response. These are cheap, static,
+# and safe for a JSON API: nosniff stops content-type confusion, DENY blocks
+# clickjacking framing, and the referrer policy avoids leaking full URLs
+# cross-origin. Applied in middleware so it also covers error envelopes.
+_SECURITY_HEADERS = {
+    "X-Content-Type-Options": "nosniff",
+    "X-Frame-Options": "DENY",
+    "Referrer-Policy": "strict-origin-when-cross-origin",
+}
+
+
+@app.middleware("http")
+async def _security_headers(request: Request, call_next):
+    response = await call_next(request)
+    for header, value in _SECURITY_HEADERS.items():
+        response.headers.setdefault(header, value)
+    return response
+
+
 def ok(data: Any, **extra: Any) -> JSONResponse:
     payload = {"ok": True, "data": data}
     payload.update(extra)
@@ -94,6 +115,27 @@ def err(message: str, status: int = 400, **extra: Any) -> JSONResponse:
     payload = {"ok": False, "error": message}
     payload.update(extra)
     return JSONResponse(payload, status_code=status)
+
+
+def _rate_limited(limit_name: str, identity: Optional[Identity],
+                  request: Request) -> Optional[JSONResponse]:
+    """Enforce a named rate limit. Returns a 429 JSONResponse when over limit,
+    or None to proceed (finding #1). The 429 carries a clear JSON body and a
+    ``Retry-After`` header so a caller backs off cleanly. Read paths do not call
+    this, so deterministic reads are never throttled into uselessness."""
+    key = rate_limit.identity_key(identity) if identity is not None else None
+    verdict = rate_limit.check(limit_name, key, request)
+    if verdict["allowed"]:
+        return None
+    retry_after = verdict["retry_after"]
+    resp = err(
+        "rate limit exceeded; slow down and retry",
+        status=429,
+        limit=limit_name,
+        retry_after=retry_after,
+    )
+    resp.headers["Retry-After"] = str(retry_after)
+    return resp
 
 
 # --- Never-500 contract -----------------------------------------------------
@@ -149,6 +191,27 @@ class ApiKeyCreateBody(BaseModel):
     name: Optional[str] = None
 
 
+class RuleCreateBody(BaseModel):
+    name: str
+    signature_text: str
+    attack_type: Optional[str] = None
+    severity: Optional[str] = None
+    enabled: Optional[bool] = True
+
+
+class RuleUpdateBody(BaseModel):
+    name: Optional[str] = None
+    signature_text: Optional[str] = None
+    attack_type: Optional[str] = None
+    severity: Optional[str] = None
+    enabled: Optional[bool] = None
+
+
+class RuleImportBody(BaseModel):
+    version: Optional[str] = None
+    rules: list[dict[str, Any]]
+
+
 class McpScenarioBody(BaseModel):
     scenario_id: str
 
@@ -199,16 +262,35 @@ async def health() -> JSONResponse:
 
 
 @app.get("/config/status")
-async def config_status() -> JSONResponse:
-    return ok({
+async def config_status(
+    identity: Identity = Depends(current_identity),
+) -> JSONResponse:
+    """Mode + provider config status (finding #4: recon-trimmed for anon).
+
+    Unauthenticated callers get ONLY the coarse mode flags ``{app_mode,
+    is_real_mode}`` -- enough for the public demo to know if it is in real mode,
+    but not the provider/model/fingerprint matrix that aids reconnaissance. The
+    detailed matrix (which providers are configured, their models, key
+    fingerprints, CORS origins) is returned ONLY to a signed-in user (JWT). A
+    present-but-invalid credential is already 401 from the dependency.
+    """
+    base = {
         "app_mode": settings.app_mode,
         "is_real_mode": settings.is_real_mode,
+    }
+    # Only a real signed-in user (not demo, not an API-key agent) sees the
+    # detailed config. require_user-equivalent gate, inline so anon still gets
+    # the coarse flags rather than a 401.
+    if identity.auth_method != "jwt" or not identity.user_id:
+        return ok(base)
+    base.update({
         "hydra": settings.hydra.masked(),
         "mcp_shared_secret": key_status(settings.mcp_shared_secret),
         "providers": model_router.provider_status(),
         "cors_origins": settings.cors_origins,
         "frontend_url": settings.frontend_url,
     })
+    return ok(base)
 
 
 @app.get("/scenarios")
@@ -217,8 +299,14 @@ async def get_scenarios() -> JSONResponse:
 
 
 @app.post("/runs/judge-demo")
-async def judge_demo() -> JSONResponse:
+async def judge_demo(request: Request) -> JSONResponse:
     # Defined before the parametrised /runs/{scenario_id} so the literal wins.
+    # Rate-limited GENEROUSLY (finding #1): this writes a demo row, but it is the
+    # canonical one-click a judge clicks repeatedly, so the cap is loose enough
+    # to stay usable (burst 12, ~1 every 2s) and only blunts an abusive flood.
+    limited = _rate_limited("judge_demo", None, request)
+    if limited is not None:
+        return limited
     try:
         artifact = await asyncio.to_thread(scenario_engine.run_judge_demo)
     except Exception as exc:  # noqa: BLE001 -- never-500 contract
@@ -229,6 +317,7 @@ async def judge_demo() -> JSONResponse:
 
 @app.post("/runs/real")
 async def runs_real(
+    request: Request,
     identity: Identity = Depends(current_identity),
 ) -> JSONResponse:
     """Genuinely-real run: live HydraDB context (clean + poisoned sub-tenants) +
@@ -248,7 +337,14 @@ async def runs_real(
     credential is already a 401 from the dependency (fail-closed). Persistence is
     fail-closed: if the app DB is down the run still returns with a
     ``persistence`` block surfacing the error -- never silently faked.
+
+    Rate-limited TIGHTLY (finding #1): this is the real-Groq-spend path, so a
+    burst is capped (5 burst, ~1 every 6s) keyed on the authenticated caller or
+    the client IP. Over-limit returns 429 with Retry-After before any spend.
     """
+    limited = _rate_limited("runs_real", identity, request)
+    if limited is not None:
+        return limited
     try:
         result = await asyncio.to_thread(real_run.run_real)
     except Exception as exc:  # noqa: BLE001 -- belt-and-braces, never-500 contract
@@ -331,7 +427,17 @@ async def stream_run(run_id: str) -> EventSourceResponse:
 
 
 @app.post("/runs/{run_id}/quarantine")
-async def quarantine_run(run_id: str) -> JSONResponse:
+async def quarantine_run(
+    run_id: str,
+    identity: Identity = Depends(current_identity),
+) -> JSONResponse:
+    """Quarantine a run's poisoned memory (finding #5: no anon write to shared
+    state). The run store is GLOBAL/shared demo state, not tenant-scoped, so an
+    unauthenticated caller must not persist into it. A signed-in user performs
+    the real, persisted quarantine; an anonymous demo viewer gets a coherent
+    SIMULATED preview (HTTP 200, ``simulated: true``) that computes the same
+    target but writes nothing -- so the public dashboard still demonstrates the
+    action without an anon mutation to shared state."""
     artifact = storage.load_run(run_id)
     if artifact is None:
         return err(f"run '{run_id}' not found", status=404)
@@ -344,6 +450,11 @@ async def quarantine_run(run_id: str) -> JSONResponse:
                 mem_id = n["source_chunk_id"]
                 break
     new_state = {"memory_id": mem_id, "status": "quarantined" if mem_id else "no_target"}
+    if not identity.is_authenticated:
+        # Anonymous demo: simulate without persisting to shared state.
+        preview = dict(new_state)
+        preview["status"] = "quarantined_preview" if mem_id else "no_target"
+        return ok({"run_id": run_id, "quarantine": preview, "simulated": True})
     artifact["quarantine"] = new_state
     storage.save_run(artifact)
     return ok({"run_id": run_id, "quarantine": new_state})
@@ -360,15 +471,47 @@ async def get_scheduled_agents() -> JSONResponse:
 
 
 @app.post("/scheduled-agents/{agent_id}/toggle")
-async def toggle_scheduled_agent(agent_id: str) -> JSONResponse:
+async def toggle_scheduled_agent(
+    agent_id: str,
+    identity: Identity = Depends(current_identity),
+) -> JSONResponse:
+    """Toggle a simulated scheduled agent (finding #5: no anon write to shared
+    state). The scheduled-agents store is GLOBAL/shared demo state, so an
+    unauthenticated caller must not flip a flag everyone else sees. A signed-in
+    user performs the real toggle; an anonymous demo viewer gets a coherent
+    SIMULATED preview (HTTP 200, ``simulated: true``) showing what the toggle
+    WOULD do, without persisting -- keeping the public demo coherent."""
+    agents = scheduler.list_agents()
+    current = next((a for a in agents if a.get("id") == agent_id), None)
+    if current is None:
+        return err(f"agent '{agent_id}' not found", status=404)
+    if not identity.is_authenticated:
+        # Anonymous demo: report the would-be state without persisting.
+        preview = dict(current)
+        preview["enabled"] = not current.get("enabled", False)
+        preview["simulated"] = True
+        return ok(preview)
     result = scheduler.toggle(agent_id)
     if result is None:
         return err(f"agent '{agent_id}' not found", status=404)
     return ok(result)
 
 
+# Outer bound on a single SKILL.md the static scanner will accept. The scanner
+# is synchronous, so an unbounded body would block the worker; this rejects an
+# obviously oversized payload before any scan work (it is an unauthenticated
+# endpoint, so the cap is a cheap DoS guard).
+_SKILL_SCAN_MAX_CHARS = 100_000
+
+
 @app.post("/skillmake/scan")
 async def skillmake_scan(body: SkillScanBody) -> JSONResponse:
+    if len(body.content) > _SKILL_SCAN_MAX_CHARS:
+        return err(
+            f"skill content too large: {len(body.content)} "
+            f"chars (max {_SKILL_SCAN_MAX_CHARS})",
+            status=413,
+        )
     try:
         scan = skillmake_scanner.scan_skill(body.content, name=body.name)
         storage.save_skill_scan(scan)
@@ -379,14 +522,24 @@ async def skillmake_scan(body: SkillScanBody) -> JSONResponse:
 
 
 @app.post("/skillmake/scan-url")
-async def skillmake_scan_url(body: SkillScanUrlBody) -> JSONResponse:
+async def skillmake_scan_url(
+    body: SkillScanUrlBody,
+    request: Request,
+    identity: Identity = Depends(current_identity),
+) -> JSONResponse:
     """Pull a real SKILL.md from skillmake.xyz by slug, then scan it.
 
     OPT-IN and additive: this is never on the canonical /runs/judge-demo path.
     The fetch fails closed (a clean JSON error, never a 500) and falls back to a
     pre-cached real fixture so the live demo survives offline. The fetched text
     is piped through the same deterministic scanner that powers /skillmake/scan.
+
+    Rate-limited TIGHTLY (finding #1): this makes an OUTBOUND fetch, so a burst
+    is capped (5 burst, ~1 every 6s) keyed on the caller or client IP.
     """
+    limited = _rate_limited("scan_url", identity, request)
+    if limited is not None:
+        return limited
     fetched = await asyncio.to_thread(skillmake_marketplace.fetch_skill, body.name)
     if not fetched.get("ok"):
         return ok({
@@ -562,10 +715,17 @@ async def list_api_keys(
 @app.post("/api-keys")
 async def create_api_key(
     body: ApiKeyCreateBody,
+    request: Request,
     identity: Identity = Depends(require_user),
 ) -> JSONResponse:
     """Create an API key for the caller. The RAW key is returned exactly ONCE
-    here and is never stored or shown again. JWT required."""
+    here and is never stored or shown again. JWT required.
+
+    Rate-limited (finding #1): key creation is a write, capped per authenticated
+    user (10 burst, ~1 every 3s) so a script cannot mint keys in a tight loop."""
+    limited = _rate_limited("api_key_create", identity, request)
+    if limited is not None:
+        return limited
     try:
         from db.repo import ApiKeyRepo
 
@@ -610,6 +770,177 @@ async def revoke_api_key(
                    kind=type(exc).__name__)
 
 
+# --- Per-tenant detection rule store (Phase 5) ------------------------------
+# A signed-in user manages their OWN tenant's poison/regression signatures, which
+# feed THAT tenant's semantic detection (real effect, not decorative). All
+# endpoints resolve the tenant from current_identity and go through the BOLA-safe
+# tenant-scoped repo: a cross-tenant id collapses to 404, never another tenant's
+# rule. The shared public 'demo' tenant is READ-ONLY here (the global/default
+# signatures power the public showcase; an anon caller cannot mutate them).
+
+def _rule_tenant_or_error(identity: Identity) -> tuple[Optional[str], Optional[JSONResponse]]:
+    """Resolve the caller's tenant for a rule operation, or an error response.
+
+    Reads are allowed for any resolved tenant (incl. demo). The caller checks
+    ``_is_demo_readonly`` separately for writes."""
+    if not identity.tenant_id:
+        return None, err("rule store unavailable", status=503)
+    return identity.tenant_id, None
+
+
+def _demo_write_blocked(identity: Identity) -> Optional[JSONResponse]:
+    """Block a WRITE to the shared demo tenant (read-only public showcase).
+
+    A write is allowed only for an authenticated caller (JWT user or API-key
+    agent) operating on their own non-demo tenant. The unauthenticated demo
+    caller gets 403 -- it can READ the demo ruleset but never mutate shared
+    state (consistent with finding #5)."""
+    if not identity.is_authenticated or identity.tenant_slug == persistence.DEFAULT_TENANT_SLUG:
+        return err("the demo tenant ruleset is read-only; sign in to manage rules",
+                   status=403)
+    return None
+
+
+@app.get("/rules")
+async def list_rules(
+    identity: Identity = Depends(current_identity),
+) -> JSONResponse:
+    """List the caller tenant's detection rules (newest first). Any resolved
+    tenant may read its own rules; cross-tenant rows are never returned."""
+    import rules_store
+
+    tenant_id, error = _rule_tenant_or_error(identity)
+    if error is not None:
+        return error
+    try:
+        rows = await asyncio.to_thread(rules_store.list_rules, tenant_id)
+        return ok(rows)
+    except Exception as exc:  # noqa: BLE001 -- fail closed, surface honestly
+        logger.warning("list_rules failed: %s", type(exc).__name__)
+        return err("rule store unavailable", status=503, kind=type(exc).__name__)
+
+
+@app.post("/rules")
+async def create_rule(
+    body: RuleCreateBody,
+    identity: Identity = Depends(current_identity),
+) -> JSONResponse:
+    """Create a detection rule for the caller tenant. The signature_text is
+    embedded so it actually affects that tenant's semantic detection; if
+    embeddings are unavailable the rule is stored as PENDING (honest, never
+    faked). Writing to the shared demo tenant is blocked (read-only showcase)."""
+    import rules_store
+
+    blocked = _demo_write_blocked(identity)
+    if blocked is not None:
+        return blocked
+    try:
+        dto = await asyncio.to_thread(
+            rules_store.create_rule, identity.tenant_id, body.model_dump(),
+            identity.auth_method,
+        )
+        return ok(dto)
+    except rules_store.RuleValidationError as exc:
+        return err(str(exc), status=400)
+    except Exception as exc:  # noqa: BLE001 -- fail closed, surface honestly
+        logger.warning("create_rule failed: %s", type(exc).__name__)
+        return err("rule store unavailable", status=503, kind=type(exc).__name__)
+
+
+@app.patch("/rules/{rule_id}")
+async def update_rule(
+    rule_id: str,
+    body: RuleUpdateBody,
+    identity: Identity = Depends(current_identity),
+) -> JSONResponse:
+    """Edit / toggle a rule the caller tenant owns. Cross-tenant id -> 404."""
+    import rules_store
+
+    blocked = _demo_write_blocked(identity)
+    if blocked is not None:
+        return blocked
+    try:
+        dto = await asyncio.to_thread(
+            rules_store.update_rule, identity.tenant_id, rule_id,
+            body.model_dump(exclude_unset=True), identity.auth_method,
+        )
+        if dto is None:
+            return err(f"rule '{rule_id}' not found", status=404)
+        return ok(dto)
+    except rules_store.RuleValidationError as exc:
+        return err(str(exc), status=400)
+    except Exception as exc:  # noqa: BLE001 -- fail closed, surface honestly
+        logger.warning("update_rule failed: %s", type(exc).__name__)
+        return err("rule store unavailable", status=503, kind=type(exc).__name__)
+
+
+@app.delete("/rules/{rule_id}")
+async def delete_rule(
+    rule_id: str,
+    identity: Identity = Depends(current_identity),
+) -> JSONResponse:
+    """Delete a rule the caller tenant owns. Cross-tenant id -> 404 (BOLA gate)."""
+    import rules_store
+
+    blocked = _demo_write_blocked(identity)
+    if blocked is not None:
+        return blocked
+    try:
+        deleted = await asyncio.to_thread(
+            rules_store.delete_rule, identity.tenant_id, rule_id,
+            identity.auth_method,
+        )
+        if not deleted:
+            return err(f"rule '{rule_id}' not found", status=404)
+        return ok({"id": rule_id, "deleted": True})
+    except Exception as exc:  # noqa: BLE001 -- fail closed, surface honestly
+        logger.warning("delete_rule failed: %s", type(exc).__name__)
+        return err("rule store unavailable", status=503, kind=type(exc).__name__)
+
+
+@app.get("/rules/export")
+async def export_rules(
+    identity: Identity = Depends(current_identity),
+) -> JSONResponse:
+    """Export the caller tenant's ruleset as a JSON document (re-importable)."""
+    import rules_store
+
+    tenant_id, error = _rule_tenant_or_error(identity)
+    if error is not None:
+        return error
+    try:
+        ruleset = await asyncio.to_thread(rules_store.export_rules, tenant_id)
+        return ok(ruleset)
+    except Exception as exc:  # noqa: BLE001 -- fail closed, surface honestly
+        logger.warning("export_rules failed: %s", type(exc).__name__)
+        return err("rule store unavailable", status=503, kind=type(exc).__name__)
+
+
+@app.post("/rules/import")
+async def import_rules(
+    body: RuleImportBody,
+    identity: Identity = Depends(current_identity),
+) -> JSONResponse:
+    """Import a JSON ruleset into the caller tenant. Schema-validated, deduped by
+    signature, tenant-scoped. Writing to the demo tenant is blocked."""
+    import rules_store
+
+    blocked = _demo_write_blocked(identity)
+    if blocked is not None:
+        return blocked
+    try:
+        result = await asyncio.to_thread(
+            rules_store.import_rules, identity.tenant_id, body.model_dump(),
+            identity.auth_method,
+        )
+        return ok(result)
+    except rules_store.RuleValidationError as exc:
+        return err(str(exc), status=400)
+    except Exception as exc:  # noqa: BLE001 -- fail closed, surface honestly
+        logger.warning("import_rules failed: %s", type(exc).__name__)
+        return err("rule store unavailable", status=503, kind=type(exc).__name__)
+
+
 # Outer bound on accepted memories at the HTTP edge. The local_scan engine caps
 # again internally; this rejects an obviously oversized batch before any work so
 # the endpoint cannot be used as a CPU sink. Generous vs the engine cap (200).
@@ -617,7 +948,11 @@ _SCAN_LOCAL_MAX_MEMORIES = 500
 
 
 @app.post("/scan/local")
-async def scan_local(body: LocalScanBody) -> JSONResponse:
+async def scan_local(
+    body: LocalScanBody,
+    request: Request,
+    identity: Identity = Depends(current_identity),
+) -> JSONResponse:
     """Zero-setup local scan: run the full pipeline on caller-supplied memories
     with NO HydraDB key, account, or network. The graph is a transparent local
     heuristic graph (``local_graph``), never presented as real HydraDB. Additive
@@ -627,8 +962,15 @@ async def scan_local(body: LocalScanBody) -> JSONResponse:
     ``{ok: false, error}`` envelope (4xx), never a bare 500. Pydantic validates
     the body shape; this adds a size guard and a defensive catch so an
     unexpected engine error still surfaces as a clean error.
+
+    Rate-limited LOOSELY (finding #1): no spend, but it is CPU work, so a flood
+    is blunted (20 burst, ~2/s) keyed on the caller or client IP.
     """
     from adapters.local_scan import run_local_scan
+
+    limited = _rate_limited("scan_local", identity, request)
+    if limited is not None:
+        return limited
 
     if len(body.memories) > _SCAN_LOCAL_MAX_MEMORIES:
         return err(
@@ -638,8 +980,21 @@ async def scan_local(body: LocalScanBody) -> JSONResponse:
         )
 
     payload = body.model_dump(exclude_none=True)
+    # Phase 5: consult the CALLER tenant's own enabled rules in its detection.
+    # The demo tenant has none (it uses the global defaults), so the public
+    # showcase is unchanged; an authenticated tenant's rules take real effect.
+    tenant_signatures: list[str] = []
+    if identity.tenant_id:
+        try:
+            import rules_store
+
+            tenant_signatures = await asyncio.to_thread(
+                rules_store.enabled_signature_texts, identity.tenant_id
+            )
+        except Exception as exc:  # noqa: BLE001 -- rule blip must not break scan
+            logger.warning("tenant rule load failed: %s", type(exc).__name__)
     try:
-        result = await asyncio.to_thread(run_local_scan, payload)
+        result = await asyncio.to_thread(run_local_scan, payload, tenant_signatures)
     except Exception as exc:  # noqa: BLE001 -- never-500 contract, log + envelope
         logger.exception("local scan failed: %s", exc)
         return err("local scan failed", status=400, kind=type(exc).__name__)

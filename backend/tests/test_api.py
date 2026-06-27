@@ -50,19 +50,29 @@ def test_unknown_scenario_404():
 
 
 def test_config_status_masks_secrets():
+    # Finding #4: anonymous callers get ONLY the coarse mode flags -- no provider
+    # matrix, no key fingerprints. The detailed view requires a signed-in user
+    # (proven separately in test_auth.py).
     resp = client.get("/config/status")
     assert resp.status_code == 200
     data = resp.json()["data"]
     blob = resp.text
-    # No raw key material: every key field is a masked dict.
-    hydra_key = data["hydra"]["key"]
-    assert set(hydra_key) == {"configured", "fingerprint", "length"}
-    if hydra_key["configured"]:
-        assert FINGERPRINT_RE.match(hydra_key["fingerprint"])
-    # MCP secret masked too.
-    assert set(data["mcp_shared_secret"]) == {"configured", "fingerprint", "length"}
+    assert set(data) == {"app_mode", "is_real_mode"}
+    # The detailed recon surface is absent for anon.
+    assert "hydra" not in data
+    assert "providers" not in data
+    assert "mcp_shared_secret" not in data
     # Sanity: the literal example 64-char hydra key value is never echoed.
     assert "Bearer " not in blob
+
+
+def test_config_status_masks_have_no_length_field():
+    """key_status no longer exposes a length (finding #4). Verified on the
+    provider listing, which is public and uses the same masker."""
+    resp = client.get("/settings/providers")
+    assert resp.status_code == 200
+    for p in resp.json()["data"]:
+        assert set(p["key"]) == {"configured", "fingerprint"}
 
 
 def test_settings_providers_masked():
@@ -71,7 +81,7 @@ def test_settings_providers_masked():
     providers = resp.json()["data"]
     assert len(providers) >= 5
     for p in providers:
-        assert set(p["key"]) == {"configured", "fingerprint", "length"}
+        assert set(p["key"]) == {"configured", "fingerprint"}
         if p["key"]["configured"] and p["key"]["fingerprint"]:
             assert FINGERPRINT_RE.match(p["key"]["fingerprint"])
         assert "api_key" not in p

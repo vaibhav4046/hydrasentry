@@ -23,8 +23,10 @@ response dict or None out) so it can be unit-tested without a subprocess.
 """
 from __future__ import annotations
 
+import hmac
 import json
 import logging
+import os
 import sys
 from pathlib import Path
 from typing import Any, Optional
@@ -43,6 +45,36 @@ logger = logging.getLogger("hydrasentry.mcp_server")
 SERVER_NAME = "hydrasentry-mcp"
 # MCP protocol revision this server speaks. Clients negotiate against this.
 PROTOCOL_VERSION = "2024-11-05"
+
+# Env var holding the shared secret that authorises WRITE tools (real outbound
+# work / real spend). stdio MCP has no per-request headers, so the secret comes
+# from the server's own environment -- the launching client sets it.
+_MCP_SECRET_ENV = "HYDRASENTRY_MCP_SECRET"
+
+
+def _mcp_secret() -> str:
+    return os.getenv(_MCP_SECRET_ENV, "")
+
+
+def _authorize_write(name: Optional[str], arguments: dict[str, Any]) -> Optional[str]:
+    """Authorise a write tool. Returns None if allowed, or an error string.
+
+    Fail-closed (operating rule #3): a write tool is refused when
+    HYDRASENTRY_MCP_SECRET is UNSET, and otherwise requires a matching ``secret``
+    argument compared in constant time (``hmac.compare_digest``). Read tools are
+    always allowed (return None). The matched ``secret`` is popped from
+    ``arguments`` by the caller so it never reaches the tool handler.
+    """
+    if name not in schemas.WRITE_TOOLS:
+        return None
+    expected = _mcp_secret()
+    if not expected:
+        return (f"write tool {name!r} refused: {_MCP_SECRET_ENV} not configured "
+                "(fail-closed)")
+    provided = arguments.get("secret") or ""
+    if isinstance(provided, str) and provided and hmac.compare_digest(provided, expected):
+        return None
+    return f"write tool {name!r} refused: invalid or missing 'secret' argument"
 
 # JSON-RPC error codes (subset we use).
 _PARSE_ERROR = -32700
@@ -81,10 +113,18 @@ def _call_tool(params: dict[str, Any]) -> dict[str, Any]:
     ``isError: true`` and an honest message, never silently dropped.
     """
     name = params.get("name")
-    arguments = params.get("arguments") or {}
+    arguments = dict(params.get("arguments") or {})
     handler = schemas.get_handler(name)
     if handler is None:
         return _tool_error(f"unknown tool: {name!r}")
+
+    # Fail-closed write-tool authorisation. The ``secret`` argument (if any) is
+    # consumed here and never forwarded to the handler.
+    denied = _authorize_write(name, arguments)
+    if denied is not None:
+        logger.warning("write tool %s refused", name)
+        return _tool_error(denied)
+    arguments.pop("secret", None)
 
     try:
         output = handler(arguments)

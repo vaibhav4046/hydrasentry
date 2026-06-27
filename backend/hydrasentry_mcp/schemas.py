@@ -11,6 +11,12 @@ from typing import Any, Callable
 
 from . import tools
 
+# Tools that trigger real outbound work or real spend (the stdio analogue of the
+# HTTP gateway's WRITE_TOOLS): a live HydraDB query and the real Groq agent
+# attack run. These are refused unless HYDRASENTRY_MCP_SECRET is configured AND
+# matched (fail-closed, constant-time) -- see ``server._authorize_write``.
+WRITE_TOOLS: frozenset[str] = frozenset({"query_memory_graph", "run_memory_attack"})
+
 # Each tool: name -> (description, inputSchema, handler). Handlers receive the
 # parsed ``arguments`` dict and return a plain dict.
 TOOLS: dict[str, dict[str, Any]] = {

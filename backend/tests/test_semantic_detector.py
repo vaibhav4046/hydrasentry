@@ -86,8 +86,8 @@ def fake_embeddings(monkeypatch):
     monkeypatch.setattr(semantic_detector, "_provider_key", lambda: "test-key")
     monkeypatch.setattr(semantic_detector, "_embed_one", _fake_embed)
     # Force a clean cache rebuild against the fake space for each test.
-    monkeypatch.setattr(semantic_detector, "_CACHE",
-                        {"sig_key": None, "sig_emb": None, "anchor_emb": None})
+    semantic_detector._SIG_CACHE.clear()
+    monkeypatch.setattr(semantic_detector, "_ANCHOR_CACHE", {"emb": None})
     # Don't let a persisted regression store leak across tests.
     monkeypatch.setattr(semantic_detector, "_load_store_signatures", lambda: [])
     return monkeypatch
@@ -196,8 +196,8 @@ def test_benign_scan_stays_low(fake_embeddings):
 def test_regression_add_then_paraphrase_of_it_is_caught(monkeypatch, tmp_path):
     monkeypatch.setenv("HYDRASENTRY_SEMANTIC_DETECTION", "1")
     monkeypatch.setattr(semantic_detector, "_provider_key", lambda: "test-key")
-    monkeypatch.setattr(semantic_detector, "_CACHE",
-                        {"sig_key": None, "sig_emb": None, "anchor_emb": None})
+    semantic_detector._SIG_CACHE.clear()
+    monkeypatch.setattr(semantic_detector, "_ANCHOR_CACHE", {"emb": None})
     # Isolate the store to a temp file so the test never touches the repo store.
     store = tmp_path / "sigs.json"
     monkeypatch.setattr(semantic_detector, "_STORE_PATH", store)
@@ -254,8 +254,8 @@ def test_fail_closed_when_no_key(monkeypatch):
 def test_fail_closed_when_endpoint_down(monkeypatch):
     monkeypatch.setenv("HYDRASENTRY_SEMANTIC_DETECTION", "1")
     monkeypatch.setattr(semantic_detector, "_provider_key", lambda: "test-key")
-    monkeypatch.setattr(semantic_detector, "_CACHE",
-                        {"sig_key": None, "sig_emb": None, "anchor_emb": None})
+    semantic_detector._SIG_CACHE.clear()
+    monkeypatch.setattr(semantic_detector, "_ANCHOR_CACHE", {"emb": None})
     monkeypatch.setattr(semantic_detector, "_embed_one",
                         lambda *a, **k: None)  # every embed call "fails"
     out = semantic_detector.detect([{"chunk_id": "m", "text": _PARAPHRASES[0]}])

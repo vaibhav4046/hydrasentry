@@ -42,7 +42,26 @@ from db.repo import TenantRepo
 # ``api_keys`` table on both fresh and existing databases, but it never ALTERs an
 # existing table -- so the new column on the already-live ``users`` table is
 # added explicitly and reversibly below.
-MIGRATION_VERSION = "0002_api_keys_and_user_sub"
+#
+# 0003_rule_store adds the Phase 5 per-tenant rule-store columns to the existing
+# ``regression_rules`` table (signature_text, attack_type, severity, enabled,
+# embedded). On a fresh DB ``create_all`` makes them; on an already-live table
+# they are added explicitly + reversibly, same pattern as 0002.
+MIGRATION_VERSION = "0003_rule_store"
+
+# Phase 5 columns added to the live regression_rules table, with the DDL type and
+# the default backfill for existing rows. Ordered so the downgrade drops them in
+# reverse. The boolean columns use BOOLEAN so the type matches what SQLModel's
+# ``bool`` field creates via ``create_all`` on a fresh DB: Postgres has a native
+# boolean (an INTEGER column would reject the boolean literal psycopg2 sends),
+# and sqlite stores BOOLEAN as numeric, so TRUE/FALSE defaults are valid on both.
+_RULE_STORE_COLUMNS: list[tuple[str, str, str]] = [
+    ("signature_text", "VARCHAR", "''"),
+    ("attack_type", "VARCHAR", "'memory_poisoning'"),
+    ("severity", "VARCHAR", "'MEDIUM'"),
+    ("enabled", "BOOLEAN", "TRUE"),
+    ("embedded", "BOOLEAN", "FALSE"),
+]
 
 DEFAULT_TENANT_SLUG = "demo"
 DEFAULT_TENANT_NAME = "Demo Tenant"
@@ -100,6 +119,102 @@ def _drop_user_sub_column() -> bool:
     return True
 
 
+def _rule_columns() -> set[str]:
+    insp = inspect(get_engine())
+    if "regression_rules" not in set(insp.get_table_names()):
+        return set()
+    return {c["name"] for c in insp.get_columns("regression_rules")}
+
+
+def _rule_column_types() -> dict[str, str]:
+    insp = inspect(get_engine())
+    if "regression_rules" not in set(insp.get_table_names()):
+        return {}
+    return {c["name"]: str(c["type"]).upper() for c in insp.get_columns("regression_rules")}
+
+
+def _fix_bool_column_types() -> list[str]:
+    """Self-heal the enabled/embedded columns to BOOLEAN on Postgres.
+
+    An earlier build added these as INTEGER, which Postgres rejects when SQLModel
+    sends a boolean literal. This converts an INTEGER column to BOOLEAN in place
+    (idempotent: a no-op once the type is already boolean, and skipped entirely
+    on sqlite, which is typeless for these). Reversible -- the downgrade drops
+    the columns wholesale, so no inverse cast is needed.
+    """
+    engine = get_engine()
+    if engine.dialect.name != "postgresql":
+        return []
+    types = _rule_column_types()
+    # The INTEGER default (1 / 0) cannot auto-cast to boolean during the TYPE
+    # change, so drop the default first, cast the type, then restore a boolean
+    # default. Done per column inside one transaction so a failure rolls back.
+    bool_defaults = {"enabled": "TRUE", "embedded": "FALSE"}
+    fixed: list[str] = []
+    with engine.begin() as conn:
+        for name in ("enabled", "embedded"):
+            current = types.get(name, "")
+            if current and "BOOL" not in current:
+                conn.execute(text(
+                    f"ALTER TABLE regression_rules ALTER COLUMN {name} DROP DEFAULT"
+                ))
+                conn.execute(text(
+                    f"ALTER TABLE regression_rules ALTER COLUMN {name} "
+                    f"TYPE BOOLEAN USING ({name} <> 0)"
+                ))
+                conn.execute(text(
+                    f"ALTER TABLE regression_rules ALTER COLUMN {name} "
+                    f"SET DEFAULT {bool_defaults[name]}"
+                ))
+                fixed.append(name)
+    return fixed
+
+
+def _add_rule_store_columns() -> list[str]:
+    """Add the Phase 5 rule-store columns to an existing regression_rules table.
+
+    Returns the list of columns actually added (empty if all present). Each
+    column is added with a default that backfills existing rows, so a live row
+    created before Phase 5 reads back as an enabled rule with empty
+    signature_text. Idempotent: re-checks the live schema first; on a fresh DB
+    ``create_all`` already made them and this is a no-op.
+    """
+    present = _rule_columns()
+    if not present:  # table absent on a brand-new DB; create_all handles it
+        return []
+    added: list[str] = []
+    engine = get_engine()
+    with engine.begin() as conn:
+        for name, ddl_type, default in _RULE_STORE_COLUMNS:
+            if name in present:
+                continue
+            conn.execute(text(
+                f"ALTER TABLE regression_rules ADD COLUMN {name} {ddl_type} "
+                f"DEFAULT {default}"
+            ))
+            added.append(name)
+    return added
+
+
+def _drop_rule_store_columns() -> list[str]:
+    """Reverse of :func:`_add_rule_store_columns`. Drops the Phase 5 columns in
+    reverse order. Postgres supports DROP COLUMN; on sqlite < 3.35 the test
+    round-trip uses whole-table drop_all so this is exercised on Postgres."""
+    present = _rule_columns()
+    dropped: list[str] = []
+    engine = get_engine()
+    with engine.begin() as conn:
+        for name, _ddl, _default in reversed(_RULE_STORE_COLUMNS):
+            if name not in present:
+                continue
+            try:
+                conn.execute(text(f"ALTER TABLE regression_rules DROP COLUMN {name}"))
+                dropped.append(name)
+            except Exception:  # noqa: BLE001 -- sqlite < 3.35 cannot drop columns
+                pass
+    return dropped
+
+
 def _existing_tables() -> set[str]:
     insp = inspect(get_engine())
     return set(insp.get_table_names())
@@ -118,6 +233,8 @@ def upgrade() -> dict[str, Any]:
     before = _existing_tables()
     SQLModel.metadata.create_all(engine, checkfirst=True)
     sub_added = _add_user_sub_column()
+    rule_cols_added = _add_rule_store_columns()
+    rule_cols_fixed = _fix_bool_column_types()
     after = _existing_tables()
     created = sorted((after - before) & set(_TABLE_NAMES))
     return {
@@ -125,6 +242,8 @@ def upgrade() -> dict[str, Any]:
         "version": MIGRATION_VERSION,
         "created": created,
         "user_sub_column_added": sub_added,
+        "rule_store_columns_added": rule_cols_added,
+        "rule_bool_columns_fixed": rule_cols_fixed,
         "tables_present": sorted(after & set(_TABLE_NAMES)),
         "ok": set(_TABLE_NAMES).issubset(after),
     }
@@ -134,9 +253,10 @@ def downgrade() -> dict[str, Any]:
     """Drop all tables in reverse FK order. Idempotent (``checkfirst``)."""
     engine = get_engine()
     before = _existing_tables()
-    # Drop the added column first (it lives on a table about to be dropped, but
-    # dropping it explicitly keeps the migration a clean inverse if a future
+    # Drop the added columns first (they live on tables about to be dropped, but
+    # dropping them explicitly keeps the migration a clean inverse if a future
     # downgrade is column-only rather than whole-table).
+    _drop_rule_store_columns()
     _drop_user_sub_column()
     # Drop children before parents. SQLModel.metadata.drop_all already sorts in
     # reverse dependency order, but pass checkfirst so a partial state is fine.

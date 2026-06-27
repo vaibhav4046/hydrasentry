@@ -24,7 +24,8 @@ python -m hydrasentry_mcp # equivalent
         "HYDRA_DB_API_KEY": "your-hydradb-key-optional",
         "APP_MODE": "real",
         "GROQ_API_KEY": "your-groq-key-optional",
-        "HYDRASENTRY_CERT_SECRET": "any-strong-secret-optional"
+        "HYDRASENTRY_CERT_SECRET": "any-strong-secret-optional",
+        "HYDRASENTRY_MCP_SECRET": "required-to-enable-write-tools"
       }
     }
   }
@@ -46,6 +47,18 @@ python -m hydrasentry_mcp # equivalent
   without them.
 - `generate_certificate(scan)` / `verify_certificate(certificate)` — issue and
   verify a tamper-evident Memory Integrity Certificate over a scan result.
+
+### Write-tool authorisation (fail-closed)
+
+`query_memory_graph` and `run_memory_attack` trigger real outbound work / real
+spend, so they are **write tools** and are gated on a shared secret:
+
+- Set `HYDRASENTRY_MCP_SECRET` in the server env, and pass a matching
+  `"secret"` argument in the tool call.
+- If `HYDRASENTRY_MCP_SECRET` is **unset**, write tools are **refused**
+  (fail-closed) — never silently run. Read tools (`scan_skill`, `scan_context`,
+  `verify_certificate`, …) are always available.
+- The compare is constant-time (`hmac.compare_digest`).
 
 Every tool calls the real HydraSentry backend. Key-gated tools fail closed with
 an honest message; they never fabricate output. Tests live in

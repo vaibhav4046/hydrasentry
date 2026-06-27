@@ -2,7 +2,9 @@
 
 Secrets are NEVER hardcoded and NEVER printed. Any key is exposed to the
 frontend only through ``key_status`` which returns a masked fingerprint
-(sha256 of the first 10 hex chars) plus length, never the value itself.
+(sha256 of the first 10 hex chars), never the value itself. The length field was
+dropped (finding #4): the fingerprint alone proves "configured" without handing
+a reconnaissance hint about the secret's size.
 """
 from __future__ import annotations
 
@@ -47,16 +49,17 @@ def _env(name: str, default: str = "") -> str:
 def key_status(value: Optional[str]) -> dict:
     """Return a masked status for a secret value.
 
-    Shape: {configured: bool, fingerprint: "sha256:<first10hex>"|None, length: int}.
-    The raw value is hashed and never revealed.
+    Shape: {configured: bool, fingerprint: "sha256:<first10hex>"|None}. The raw
+    value is hashed and never revealed, and the length is deliberately NOT
+    exposed (finding #4): the fingerprint alone proves the key is configured
+    without leaking its size as a reconnaissance hint.
     """
     if not value:
-        return {"configured": False, "fingerprint": None, "length": 0}
+        return {"configured": False, "fingerprint": None}
     digest = hashlib.sha256(value.encode("utf-8")).hexdigest()
     return {
         "configured": True,
         "fingerprint": f"sha256:{digest[:10]}",
-        "length": len(value),
     }
 
 

@@ -23,11 +23,34 @@ def test_mcp_write_requires_secret_when_set(monkeypatch):
     assert good["ok"] is True
 
 
-def test_mcp_write_allowed_with_warning_when_unset(monkeypatch):
+def test_mcp_write_refused_when_secret_unset(monkeypatch):
+    """Fail-closed (operating rule #3): an UNSET MCP_SHARED_SECRET must REFUSE
+    write tools, not silently allow them. This is finding #2 (LOW latent)."""
     monkeypatch.setattr(mcp_gateway, "_shared_secret", lambda: "")
     res = mcp_gateway.call_tool("schedule_scan", {"name": "x"})
+    assert res["ok"] is False
+    assert res["error"] == "unauthorized"
+    assert "not configured" in res.get("warning", "")
+
+
+def test_mcp_read_tool_allowed_when_secret_unset(monkeypatch):
+    """A read tool stays usable even with no secret configured -- only WRITE
+    tools fail closed, so the public read surface (manifest/findings) survives."""
+    monkeypatch.setattr(mcp_gateway, "_shared_secret", lambda: "")
+    res = mcp_gateway.call_tool("list_findings", {})
     assert res["ok"] is True
-    assert "MCP_SHARED_SECRET not set" in res.get("warning", "")
+
+
+def test_mcp_secret_compare_is_constant_time(monkeypatch):
+    """The write-tool secret compare uses hmac.compare_digest (constant-time)."""
+    import inspect
+
+    monkeypatch.setattr(mcp_gateway, "_shared_secret", lambda: "topsecret")
+    # Correct secret authorises; the guard path uses hmac.compare_digest.
+    good = mcp_gateway.call_tool("schedule_scan", {"name": "x"},
+                                 provided_secret="topsecret")
+    assert good["ok"] is True
+    assert "hmac.compare_digest" in inspect.getsource(mcp_gateway._secret_guard)
 
 
 def test_mcp_read_tool_no_secret_required(monkeypatch):

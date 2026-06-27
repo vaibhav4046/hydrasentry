@@ -52,6 +52,7 @@ import logging
 import math
 import os
 import threading
+from collections import OrderedDict
 from pathlib import Path
 from typing import Any, Optional
 
@@ -120,11 +121,16 @@ _STORE_NAME = "semantic_signatures.json"
 _REPO_STORE = BACKEND_DIR / _STORE_NAME
 _STORE_PATH = (Path("/tmp") / _STORE_NAME) if IS_SERVERLESS else _REPO_STORE
 
-# Cache of embedded signatures/anchors, keyed by the signature texts so adding a
-# regression signature transparently invalidates it. Guarded by a lock because
-# the FastAPI worker may scan concurrently.
+# Cache of embedded signatures/anchors, keyed by the joined signature texts so
+# adding a regression signature -- or a DIFFERENT tenant's rule set -- maps to a
+# different slot rather than thrashing one. Guarded by a lock because the FastAPI
+# worker may scan concurrently. Bounded so a flood of distinct tenant rule sets
+# cannot grow embeddings memory without limit (LRU-evicted past the cap).
 _CACHE_LOCK = threading.Lock()
-_CACHE: dict[str, Any] = {"sig_key": None, "sig_emb": None, "anchor_emb": None}
+_CACHE_MAX_SLOTS = 32
+_SIG_CACHE: "OrderedDict[str, dict[str, Any]]" = OrderedDict()
+# The benign anchors never change, so they are embedded once and shared.
+_ANCHOR_CACHE: dict[str, Any] = {"emb": None}
 
 
 # --- Embeddings -------------------------------------------------------------
@@ -204,12 +210,21 @@ def _load_store_signatures() -> list[str]:
     return []
 
 
-def _all_signature_texts() -> list[str]:
-    """Base signatures plus any persisted regression signatures, de-duplicated
-    (case-insensitively) with order preserved."""
+def _all_signature_texts(extra: Optional[list[str]] = None) -> list[str]:
+    """Base signatures plus persisted regression signatures plus any caller-
+    supplied ``extra`` (a tenant's enabled rule texts), de-duplicated
+    (case-insensitively) with order preserved.
+
+    ``extra`` is how the Phase 5 per-tenant rule store feeds a tenant's OWN
+    enabled poison signatures into ITS detection without polluting the global
+    default set used by the public demo tenant."""
     seen: set[str] = set()
     out: list[str] = []
-    for text in list(_BASE_SIGNATURES) + _load_store_signatures():
+    sources = list(_BASE_SIGNATURES) + _load_store_signatures() + list(extra or [])
+    for text in sources:
+        text = (text or "").strip()
+        if not text:
+            continue
         low = text.lower()
         if low not in seen:
             seen.add(low)
@@ -217,25 +232,36 @@ def _all_signature_texts() -> list[str]:
     return out
 
 
-def _ensure_cache(key: str, base_url: str) -> Optional[dict[str, Any]]:
+def _ensure_cache(key: str, base_url: str,
+                  extra: Optional[list[str]] = None) -> Optional[dict[str, Any]]:
     """Build (or reuse) the cached signature + anchor embeddings. Returns the
     cache dict on success or None if embeddings are unavailable. The cache key is
-    the tuple of signature texts, so a regression-add invalidates it."""
-    sig_texts = _all_signature_texts()
+    the tuple of signature texts (incl. any tenant ``extra`` signatures), so a
+    regression-add OR a different tenant's rule set invalidates/separates it."""
+    sig_texts = _all_signature_texts(extra)
     cache_key = "\n".join(sig_texts)
     with _CACHE_LOCK:
-        if _CACHE["sig_key"] == cache_key and _CACHE["sig_emb"] is not None:
-            return {"sig_emb": _CACHE["sig_emb"], "anchor_emb": _CACHE["anchor_emb"]}
+        slot = _SIG_CACHE.get(cache_key)
+        anchor_emb = _ANCHOR_CACHE["emb"]
+        if slot is not None and anchor_emb is not None:
+            _SIG_CACHE.move_to_end(cache_key)
+            return {"sig_emb": slot["sig_emb"], "anchor_emb": anchor_emb}
+
     sig_emb = _embed_many(sig_texts, key, base_url)
     if sig_emb is None:
         return None
-    anchor_emb = _embed_many(list(_BENIGN_ANCHORS), key, base_url)
+    anchor_emb = _ANCHOR_CACHE["emb"]
     if anchor_emb is None:
-        return None
+        anchor_emb = _embed_many(list(_BENIGN_ANCHORS), key, base_url)
+        if anchor_emb is None:
+            return None
+
     with _CACHE_LOCK:
-        _CACHE["sig_key"] = cache_key
-        _CACHE["sig_emb"] = sig_emb
-        _CACHE["anchor_emb"] = anchor_emb
+        _ANCHOR_CACHE["emb"] = anchor_emb
+        _SIG_CACHE[cache_key] = {"sig_emb": sig_emb}
+        _SIG_CACHE.move_to_end(cache_key)
+        while len(_SIG_CACHE) > _CACHE_MAX_SLOTS:
+            _SIG_CACHE.popitem(last=False)
     return {"sig_emb": sig_emb, "anchor_emb": anchor_emb}
 
 
@@ -263,8 +289,15 @@ def is_enabled() -> bool:
     )
 
 
-def detect(memories: list[dict[str, Any]]) -> dict[str, Any]:
+def detect(memories: list[dict[str, Any]],
+           extra_signatures: Optional[list[str]] = None) -> dict[str, Any]:
     """Score memory texts for SEMANTIC poison via embeddings.
+
+    ``extra_signatures`` (Phase 5) are a TENANT's own enabled rule texts, added
+    to the base + global signature set for THIS scan only -- so a tenant's custom
+    poison patterns affect its detection without touching the demo tenant's
+    default set. They flow into the same embed/compare path as the base
+    signatures (real effect, not decorative).
 
     ``memories`` is a list of ``{chunk_id?/id?, text, ...}`` dicts (the local-scan
     chunk shape). Returns a result dict:
@@ -293,12 +326,12 @@ def detect(memories: list[dict[str, Any]]) -> dict[str, Any]:
                 "reason": "gemini embeddings key not configured"}
 
     provider = PROVIDERS["gemini"]
-    cache = _ensure_cache(key, provider.base_url)
+    cache = _ensure_cache(key, provider.base_url, extra_signatures)
     if cache is None:
         return {"available": False, "fired": False,
                 "reason": "gemini embeddings endpoint unavailable"}
 
-    sig_texts = _all_signature_texts()
+    sig_texts = _all_signature_texts(extra_signatures)
     sig_emb = cache["sig_emb"]
     anchor_emb = cache["anchor_emb"]
 
@@ -404,8 +437,6 @@ def add_signature(text: str) -> dict[str, Any]:
                 "reason": f"could not write signature store: {type(exc).__name__}"}
 
     with _CACHE_LOCK:  # invalidate so the new signature takes effect immediately
-        _CACHE["sig_key"] = None
-        _CACHE["sig_emb"] = None
-        _CACHE["anchor_emb"] = None
+        _SIG_CACHE.clear()
 
     return {"ok": True, "added": True, "total_signatures": len(_all_signature_texts())}

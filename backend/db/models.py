@@ -170,7 +170,16 @@ class Certificate(SQLModel, table=True):
 
 
 class RegressionRule(SQLModel, table=True):
-    """A detection rule / regression signature registered after a finding."""
+    """A per-tenant detection rule / regression signature (Phase 5).
+
+    A signed-in user manages their own poison signatures here; the tenant's
+    ENABLED rules feed that tenant's semantic detection path (real effect, not
+    decorative). ``signature_text`` is the natural-language poison pattern that
+    gets embedded; ``attack_type``/``severity`` are metadata for the UI/report;
+    ``enabled`` gates whether the rule is consulted. The legacy ``signature``
+    column is retained (nullable) for backward compatibility with rows created
+    before Phase 5; new rows populate ``signature_text``.
+    """
 
     __tablename__ = "regression_rules"
     __table_args__ = (
@@ -181,6 +190,15 @@ class RegressionRule(SQLModel, table=True):
     tenant_id: str = Field(foreign_key="tenants.id", index=True)
     name: str
     signature: str = Field(default="")
+    # Phase 5 columns (added reversibly in migration 0003).
+    signature_text: str = Field(default="")
+    attack_type: str = Field(default="memory_poisoning")
+    severity: str = Field(default="MEDIUM")
+    enabled: bool = Field(default=True)
+    # Whether signature_text was successfully embedded into the tenant's semantic
+    # detector. False -> stored but "pending" (embeddings were unavailable);
+    # consulted only once embedded so a pending rule never fakes detection.
+    embedded: bool = Field(default=False)
     created_at: datetime = Field(default_factory=_now, sa_column=_ts_column(index=True))
 
 

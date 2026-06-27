@@ -305,12 +305,18 @@ def _apply_semantic_signal(risk: dict[str, Any],
     return out
 
 
-def run_local_scan(payload: dict[str, Any]) -> dict[str, Any]:
+def run_local_scan(payload: dict[str, Any],
+                   tenant_rule_signatures: list[str] | None = None) -> dict[str, Any]:
     """Run the full pipeline on local memories and return a compact result.
 
     Returns ``{ok, graph_source, risk, firewall, tainted_path, query_paths,
     findings, baseline, poisoned, behavior_diff, scenario_title}``. The graph
     is always labelled ``local_graph`` -- a local heuristic graph, not HydraDB.
+
+    ``tenant_rule_signatures`` (Phase 5) are the caller TENANT's own enabled rule
+    texts. They are added to the semantic detector's signature set for THIS scan
+    only, so a tenant's custom poison patterns affect its detection (real effect,
+    not decorative) without altering the global/default set the demo tenant uses.
     """
     scenario = build_local_scenario(payload)
     adapter = LocalGraphAdapter()
@@ -340,7 +346,10 @@ def run_local_scan(payload: dict[str, Any]) -> dict[str, Any]:
     # reworded policy-override poison the lexical/marker paths miss. Lift-only and
     # fail-closed -- if embeddings are unavailable the band is unchanged and the
     # result is tagged so the response reads "lexical only, semantic unavailable".
-    semantic = semantic_detector.detect(_all_scan_memories(scenario))
+    semantic = semantic_detector.detect(
+        _all_scan_memories(scenario),
+        extra_signatures=tenant_rule_signatures or None,
+    )
     risk = _apply_semantic_signal(risk, semantic)
 
     firewall = _firewall_decision(risk)
