@@ -24,11 +24,19 @@ from __future__ import annotations
 import json
 import logging
 import re
+import time
 from typing import Any, Optional
 
 from config import PROVIDERS
 
 logger = logging.getLogger("hydrasentry.real_agent")
+
+# Last Groq failure detail, set by ``_groq_chat`` on any non-success and read by
+# ``last_failure_reason`` so the orchestrator can surface WHY the real path
+# degraded (e.g. "groq 429 rate_limited") instead of an opaque "no answer".
+# A single string is enough: the real run makes its calls sequentially enough
+# that the most recent failure is the diagnostic one to report.
+_LAST_FAILURE: Optional[str] = None
 
 # The agent + judge model. A fast, non-reasoning Groq model so a single call is
 # ~0.6-1.2s and there is no chain-of-thought preamble to parse around. Kept as a
@@ -42,6 +50,16 @@ AGENT_MODEL = "llama-3.3-70b-versatile"
 # is capped tightly. Observed latency is well under this.
 _HTTP_TIMEOUT = 6.0
 
+# Groq free-tier returns 429 under rapid repeated calls (clicking "Run real
+# attack" a few times in a demo). One quick in-call retry on a transient status
+# recovers the common single-spike case without blowing the wall-clock budget.
+# The backoff honours Groq's Retry-After header when present, otherwise a short
+# fixed sleep, and is capped so two attempts still fit inside _HTTP_TIMEOUT*2.
+_RETRYABLE_STATUS = frozenset({429, 500, 502, 503, 504})
+_MAX_ATTEMPTS = 2
+_RETRY_BACKOFF_SECONDS = 0.6
+_RETRY_BACKOFF_CAP_SECONDS = 1.5
+
 _AGENT_MAX_TOKENS = 180
 _JUDGE_MAX_TOKENS = 220
 
@@ -50,11 +68,60 @@ _JUDGE_MAX_TOKENS = 220
 _THINK_RE = re.compile(r"<think>.*?</think>", re.DOTALL | re.IGNORECASE)
 
 
+def reset_failure_reason() -> None:
+    """Clear the recorded Groq failure detail at the start of a real run."""
+    global _LAST_FAILURE
+    _LAST_FAILURE = None
+
+
+def last_failure_reason() -> Optional[str]:
+    """Return the most recent Groq failure detail (e.g. "groq 429 rate_limited",
+    "groq 401 auth", "groq timeout", "groq no_key"), or None if the last call
+    succeeded. Used to make a degraded demo diagnosable in seconds."""
+    return _LAST_FAILURE
+
+
+# Maps a Groq HTTP status to a short, demo-readable label so the API response
+# distinguishes 429 quota from a dead key from a decommissioned model.
+def _status_label(status: int) -> str:
+    if status == 429:
+        return "rate_limited"
+    if status in (401, 403):
+        return "auth"
+    if status == 404:
+        return "model_not_found"
+    if status >= 500:
+        return "upstream_error"
+    return "http_error"
+
+
+def _retry_after_seconds(headers: Any) -> float:
+    """Honour Groq's Retry-After header (seconds) if present and small, else the
+    default backoff. Capped so a single retry cannot blow the wall-clock budget."""
+    raw = None
+    try:
+        raw = headers.get("retry-after") or headers.get("Retry-After")
+    except Exception:  # noqa: BLE001
+        raw = None
+    delay = _RETRY_BACKOFF_SECONDS
+    if raw:
+        try:
+            delay = float(raw)
+        except (TypeError, ValueError):
+            delay = _RETRY_BACKOFF_SECONDS
+    return min(max(delay, 0.0), _RETRY_BACKOFF_CAP_SECONDS)
+
+
 def _groq_chat(messages: list[dict[str, str]], max_tokens: int) -> Optional[str]:
-    """One Groq chat completion. Returns the content string, or None on any
-    failure (missing key, transport error, non-200). Never raises."""
+    """One Groq chat completion with one retry on a transient status. Returns the
+    content string, or None on any failure (missing key, transport error,
+    non-200). Never raises. On failure it records a diagnostic reason in
+    ``_LAST_FAILURE`` (read via ``last_failure_reason``) so a degraded demo can
+    be diagnosed from the API response instead of guesswork."""
+    global _LAST_FAILURE
     provider = PROVIDERS.get("groq")
     if provider is None or not provider.api_key:
+        _LAST_FAILURE = "groq no_key"
         return None
     url = provider.base_url.rstrip("/") + "/chat/completions"
     body = {
@@ -67,19 +134,37 @@ def _groq_chat(messages: list[dict[str, str]], max_tokens: int) -> Optional[str]
         "Authorization": f"Bearer {provider.api_key}",
         "Content-Type": "application/json",
     }
-    try:
-        import httpx
 
-        with httpx.Client(timeout=_HTTP_TIMEOUT) as client:
-            resp = client.post(url, json=body, headers=headers)
-        if resp.status_code >= 400:
-            logger.warning("groq chat non-200: %s", resp.status_code)
+    import httpx
+
+    for attempt in range(1, _MAX_ATTEMPTS + 1):
+        try:
+            with httpx.Client(timeout=_HTTP_TIMEOUT) as client:
+                resp = client.post(url, json=body, headers=headers)
+        except Exception as exc:  # noqa: BLE001 -- fail closed, never propagate
+            _LAST_FAILURE = f"groq transport {type(exc).__name__.lower()}"
+            logger.warning("groq chat transport error: %s", type(exc).__name__)
             return None
-        content = resp.json()["choices"][0]["message"]["content"]
-        return _THINK_RE.sub("", content).strip()
-    except Exception as exc:  # noqa: BLE001 -- fail closed, never propagate
-        logger.warning("groq chat failed: %s", type(exc).__name__)
+
+        status = resp.status_code
+        if status < 400:
+            _LAST_FAILURE = None
+            content = resp.json()["choices"][0]["message"]["content"]
+            return _THINK_RE.sub("", content).strip()
+
+        label = _status_label(status)
+        _LAST_FAILURE = f"groq {status} {label}"
+        # Retry once on a transient status (most importantly 429 demo bursts).
+        if status in _RETRYABLE_STATUS and attempt < _MAX_ATTEMPTS:
+            delay = _retry_after_seconds(resp.headers)
+            logger.warning("groq chat %s; retrying in %.1fs (attempt %d/%d)",
+                           status, delay, attempt, _MAX_ATTEMPTS)
+            time.sleep(delay)
+            continue
+        logger.warning("groq chat non-200: %s (%s)", status, label)
         return None
+
+    return None
 
 
 # HydraDB chunk payloads put the retrieved memory text under ``chunk_content``

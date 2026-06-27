@@ -105,6 +105,8 @@ def _build_real_run() -> dict[str, Any]:
         return {"ok": False, "reason": "hydra returned no real graph triplets"}
 
     # --- Step 2: run the real Groq agent on each context IN PARALLEL. ---
+    # Clear any stale Groq failure detail so a fallback reason reflects THIS run.
+    real_agent.reset_failure_reason()
     t1 = time.monotonic()
     with ThreadPoolExecutor(max_workers=2) as pool:
         fut_base = pool.submit(real_agent.run_agent_answer, scenario, clean_q)
@@ -114,7 +116,13 @@ def _build_real_run() -> dict[str, Any]:
     timings["agent_ms"] = int((time.monotonic() - t1) * 1000)
 
     if not baseline_answer or not poisoned_answer:
-        return {"ok": False, "reason": "groq agent produced no answer"}
+        # Surface the upstream cause (e.g. "groq 429 rate_limited") so a degraded
+        # demo is diagnosable from the response, not a guess. Falls back to the
+        # generic phrasing only when no specific Groq detail was captured.
+        detail = real_agent.last_failure_reason()
+        reason = (f"groq agent produced no answer ({detail})"
+                  if detail else "groq agent produced no answer")
+        return {"ok": False, "reason": reason}
 
     # --- Step 3: real judge + deterministic rules over the ACTUAL answers. ---
     t2 = time.monotonic()
