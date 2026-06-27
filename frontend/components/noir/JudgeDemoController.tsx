@@ -231,6 +231,7 @@ export function JudgeDemoController({
       <div className="grid grid-cols-1 items-center gap-12 lg:grid-cols-[0.96fr_1.04fr] lg:gap-10">
         {/* ============ LEFT: copy + CTAs + live console ============ */}
         <m.div
+          data-masthead
           className="relative z-20 flex flex-col items-start"
           variants={mastheadContainer}
           initial={mastheadInitial}

@@ -815,6 +815,30 @@
 /* data-reveal entrance is inherited from .castellan-landing (page.tsx keeps
    both classes), so no duplicate rule needed here. */
 
+/* ---- Reduced-motion masthead safety (T1, idle/first-paint) -------------- *
+ * Under prefers-reduced-motion the hero LEFT masthead must be fully visible at
+ * IDLE mount, before and independent of any run trigger or JS settle. The
+ * masthead uses Framer Motion variants whose hidden state is opacity:0 +
+ * y-translate + blur, revealed by an `animate="show"` tween. The JS reduced-
+ * motion read (useReducedMotionSafe) is false on the first client render
+ * (SSR snapshot), so Framer still captures the hidden inline styles at mount
+ * and tweens them in — which can read as a BLANK masthead on first paint.
+ *
+ * This CSS hard-pins the masthead and every descendant to the composed resting
+ * state at first paint, overriding the inline opacity:0 / transform / filter
+ * that Framer writes. It is CSS-media-driven (no JS timing), so it holds on the
+ * very first frame. The full-motion path is untouched: this block only applies
+ * when the user actually prefers reduced motion. The run sequence still updates
+ * content (metrics, answer line) normally — only the entrance reveal is pinned. */
+@media (prefers-reduced-motion: reduce) {
+  [data-masthead],
+  [data-masthead] * {
+    opacity: 1 !important;
+    transform: none !important;
+    filter: none !important;
+  }
+}
+
 /* Legend / instrument cards: a hairline-bordered plate where the 1px grid gap
    shows the void through, and hover lifts the cell brightness (not a transform
   , the grid is rigid, cartographic). */
