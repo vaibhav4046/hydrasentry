@@ -35,7 +35,7 @@ final scores, reported verbatim. One line of evidence each.
 | Standards | 8.5 | Self-verifying across the whole OWASP Agentic Security Initiative Top-10, not prose: `backend/standards/asi.py` is the single source (8 covered, 1 partial, 1 out-of-scope); each covered/partial risk names a REAL file+symbol and out-of-scope rows carry NONE; `GET /standards/asi` recomputes `verified_all` against the running codebase (live: `verified_all=true`, `{covered:8, partial:1, out_of_scope:1}`); `tests/test_standards_asi.py` (12) enforces honesty both directions; rendered in-app at `/standards`. |
 | Usability | 9.0 | NO login wall anywhere and NO mockup-theater controls. Home -> "Run live attack" above the fold, one click fires a real run, LIVE RUN RESULT + "Open full dashboard" CTA render inline in view; the console rail is now `position:sticky` and stays pinned on scroll across all routes (the shell uses `overflow:clip` not `hidden` so sticky holds); `/scheduled` "Run now" fires a real scan; `/replay` chips genuinely replay; `/mcp` reads live findings; mobile 390 collapses to a drawer, no horizontal overflow. |
 | Polish | 9.0 | Live frontend + backend both READY on canonical URLs; full security header set live (CSP with `frame-ancestors 'none'`/`object-src 'none'`, HSTS, X-Frame-Options DENY, nosniff, Referrer-Policy, Permissions-Policy); zero console errors on every page captured this session; refreshed 62.6s 1080p master cut over the finalized flow (adds the real `/scheduled` Run-now beat + a deep-scroll proving the sticky rail) with burned captions, plus an aligned-cert poster/thumbnail and two new stills. |
-| Security | 8.5 | Supabase magic-link auth + server-side JWKS verification (forged/expired -> 401); per-user 256-bit API keys as salted SHA-256 + prefix, constant-time verify, revocable; MCP write tools fail-closed constant-time secret-gated; BOLA tenant isolation (server-pinned demo reads); public `GET /incidents` list DTO trimmed to summary fields (no baseline/poisoned answer bodies); `config.resolve_cors()` can never emit a credentialed wildcard. One non-blocking residual: CSP still ships `script-src 'unsafe-inline'` (App Router inline hydration; section 4). |
+| Security | 8.5 | Supabase magic-link auth + server-side JWKS verification (forged/expired -> 401); per-user 256-bit API keys as salted SHA-256 + prefix, constant-time verify, revocable; MCP write tools fail-closed constant-time secret-gated; BOLA tenant isolation (server-pinned demo reads); public `GET /incidents` list DTO trimmed to summary fields (no baseline/poisoned answer bodies); `config.resolve_cors()` can never emit a credentialed wildcard. CSP now ships a per-request `script-src 'self' 'nonce-{value}' 'strict-dynamic'` with NO `'unsafe-inline'` (Next 16 `proxy.ts` nonce, live-verified two distinct nonces, 0 violations across home/console/standards; section 4). |
 | Narrative | 9.0 | One sharp thesis carried end to end: agents on graph memory inherit a blind spot prompt-testing tools cannot see (a retrieved memory silently overriding policy); grounded in MINJA / PoisonedRAG / Unit42 / MCPoison / OWASP ASI06; the public connect-your-agent surface now states WHO (teams shipping memory/RAG agents), WHY (a planted memory silently overrides policy, invisible to prompt scanners because it lives in the retrieval layer), HOW (`pip install hydrasentry-mcp` + MCP client config), and the BLOCK+certify story; the hero cert now carries the canonical `mem_poison_047` / `hydrasentry-owned-test` so a diffing judge sees one coherent story. |
 
 Panel overall: **9.4 / 10**, **top-1: yes (converged)**. The make-it-real round removed all
@@ -63,8 +63,9 @@ login. Two fix rounds delivered it; the re-judge converged at **overall 9.3, top
 | Realness/Depth/Standards/Security | 9/9/9/9 | 9.5/9.3/9.5/9.2 | Held strong; the overhaul touched the frontend UX surface, not the verified backend controls (backend untouched; 215 tests still pass). |
 
 **The brief's core demand is fully met on the deployed product: there is no login wall
-anywhere, and the home flow is linear.** Remaining items are minor and non-blocking (CSP
-`script-src 'unsafe-inline'` defense-in-depth; verbose public incident DTO; sign-in CTA copy).
+anywhere, and the home flow is linear.** The former CSP `script-src 'unsafe-inline'` residual is
+now closed (per-request nonce via Next 16 `proxy.ts`, live-verified 0 violations); remaining
+items are minor and non-blocking (sign-in CTA copy).
 
 ---
 
@@ -115,8 +116,10 @@ Make-it-real round (this session, merged + deployed):
 - **Grounding copy.** The public connect-your-agent surface (`/console/keys`) now states WHO/WHY/HOW
   and the BLOCK+certify story.
 - **Security polish.** Trimmed the public `GET /incidents` list DTO to summary fields (dropped the
-  baseline/poisoned answer bodies); detail `GET /incidents/{id}` unchanged. CSP nonce left deferred
-  (App Router inline hydration; non-breaking takes priority) - the one remaining non-blocking item.
+  baseline/poisoned answer bodies); detail `GET /incidents/{id}` unchanged. CSP nonce now SHIPPED:
+  a Next 16 `proxy.ts` emits a per-request `script-src 'self' 'nonce-{value}' 'strict-dynamic'`
+  (no `'unsafe-inline'`), live-verified with 0 violations and animations intact; and the vestigial
+  `next_run` field is dropped from the `GET /scheduled-agents` DTO.
 
 Finalize this session:
 - RE-CAPTURED the real-UI screencap on the finalized flow (hero -> Run live attack -> inline result
@@ -155,7 +158,7 @@ is labelled in the product and never faked.
 | CORS credentialed-wildcard guard | REAL | `config.resolve_cors()` can never emit `allow_origins='*'` with `allow_credentials=True`; effective policy surfaced on signed-in `/config/status`; 13 tests incl. a parametrised invariant + a real preflight. |
 | CI gate | REAL | `.github/workflows/ci.yml` runs backend pytest (Python 3.13) + frontend lint + production build on every push to main and every PR, with concurrency-cancel. |
 | Rate limiting (real-cost / outbound) | REAL | In-process token-bucket keyed on identity-or-IP guards real-Groq runs and URL fetches; over-limit returns 429 + Retry-After; the one-click judge demo keeps a generous bucket. |
-| Security headers (prod) | REAL | Backend: HSTS preload, nosniff, X-Frame-Options DENY, Referrer-Policy. Frontend adds full CSP (`default-src 'self'`, `frame-ancestors 'none'`, `object-src 'none'`) and Permissions-Policy (camera/mic/geo off). Live-verified this session. |
+| Security headers (prod) | REAL | Backend: HSTS preload, nosniff, X-Frame-Options DENY, Referrer-Policy. Frontend adds full CSP (`default-src 'self'`, per-request `script-src 'self' 'nonce-{value}' 'strict-dynamic'` with NO `'unsafe-inline'` via Next 16 `proxy.ts`, `frame-ancestors 'none'`, `object-src 'none'`) and Permissions-Policy (camera/mic/geo off). Live-verified this session (0 CSP violations, two distinct nonces). |
 | Public demo tenant isolation | PARTIAL / BY DESIGN | The open public demo persists to a shared `demo` tenant; per-user isolation kicks in on sign-in or API key. |
 | Standing agents (on-demand) | REAL | The 6 standing agents (`GET /scheduled-agents`, seed-on-read so a cold serverless instance never returns empty) + the real enable/disable toggle are live; each "Run now" fires a REAL backend run (memory replay / skill scan / regression / report) and renders the genuine `risk 87/100 HIGH BLOCKED` line inline. The fabricated cron/next-run/countdown framing and the client-only create-agent form were removed. |
 | Unattended cron scheduler | ROADMAP | A serverless backend never truly fires a cron; rather than simulate one, the "next run" theater was cut. Roadmap: a real Vercel cron hitting the backend, or a dedicated runner. The standing agents run on-demand today. |
@@ -167,25 +170,38 @@ is labelled in the product and never faked.
 
 ## 4) Remaining gaps (none blocks the submission)
 
-The no-login public surface is fully live and was reviewed end to end this session. Two
-non-blocking technical residuals remain (recorded plainly), then the human-only gaps that
-need a real identity action or a subjective judgment a headless agent cannot self-certify.
+The no-login public surface is fully live and was reviewed end to end this session. The two
+former non-blocking residuals (CSP `unsafe-inline`, vestigial `next_run`) are now BOTH closed
+and re-verified live; what remains are human-only gaps that need a real identity action or a
+subjective judgment a headless agent cannot self-certify.
 
-**Non-blocking technical residuals (left deliberately, do not affect realness/usability):**
+**Closed this session (both verified live, nothing degraded):**
 
-- **CSP still ships `script-src 'self' 'unsafe-inline'`.** Verified live on the frontend
-  response header. The nonce-based CSP was re-evaluated and left deferred: Next.js 16 App Router
-  inlines a hydration bootstrap, and dropping `'unsafe-inline'` without a per-request nonce in
-  middleware breaks rendering; non-breaking takes priority per the brief. The rest of the header
-  set is strong (HSTS, X-Frame-Options DENY, nosniff, `frame-ancestors 'none'`, `object-src
-  'none'`, `base-uri 'self'`, `connect-src` allowlisting only the backend + Supabase). Unlock: a
-  human verifies a middleware nonce keeps hydration + framer-motion working, then drops
-  `'unsafe-inline'`.
-- **A vestigial `next_run` field in two response DTOs.** `GET /scheduled-agents` and `GET
-  /incidents` still include a `next_run` timestamp that NO UI renders (the scheduled page shows
-  only a static CADENCE config line, never a countdown). Purely cosmetic verbosity, no fake-schedule
-  surfaces it. Optional cleanup: drop `next_run` from those DTOs to match the no-fabricated-schedule
-  stance.
+- **CSP `script-src 'unsafe-inline'` removed - now a per-request nonce.** A Next 16 `proxy.ts`
+  (the renamed middleware convention in this Next version) generates a fresh base64 nonce per
+  request and sets it on both the request and response `Content-Security-Policy` header; Next 16
+  reads the nonce from that header during SSR and stamps it onto every inline hydration/bootstrap
+  script. The live frontend now serves `script-src 'self' 'nonce-{per-request}' 'strict-dynamic'`
+  with NO `'unsafe-inline'` (two requests return two different nonces). `style-src 'self'
+  'unsafe-inline'` is kept deliberately: Tailwind v4 + framer-motion inject inline STYLES, which
+  are governed by `style-src`, not `script-src`, so animations are unaffected. `next.config.ts`
+  no longer emits a CSP (proxy owns it, no duplicate header) and root `layout.tsx` is
+  `force-dynamic` so the live request nonce is applied rather than a stale prerendered one. Every
+  other directive is preserved verbatim: HSTS, X-Frame-Options DENY, nosniff, Referrer-Policy,
+  Permissions-Policy, `frame-ancestors 'none'`, `object-src 'none'`, `base-uri 'self'`,
+  `form-action 'self'`, `connect-src` allowlisting only Supabase (https + wss) + the backend.
+  Independently re-verified live: home + `/console` + `/standards` each load with 0 CSP
+  violations, 0 console errors, real content rendered (hero "Secure the memory layer before your
+  agent acts.", `/standards` OWASP ASI Top-10 map, `/console` incident workspace), every script
+  tag carrying the header nonce, framer-motion transforms active, and "Run live attack" firing
+  real 200 `/runs/judge-demo` + `/runs/real` with 87/HIGH/block and still 0 violations.
+- **Vestigial `next_run` field dropped from the `GET /scheduled-agents` DTO.** A serverless
+  backend never fires a cron, so a per-agent `next_run` implied a non-existent schedule that no UI
+  rendered (the scheduled page shows only a static CADENCE config line). The field is now
+  projected out of the scheduled-agents list + toggle responses; live-verified all 6 agents no
+  longer carry it. The run's separate `scheduled_scan.next_run` (which the results view DOES read)
+  is untouched, and the `GET /incidents` list DTO already omitted `next_run` on both backend and
+  frontend, so there was nothing further to remove there.
 
 **Human-only gaps:**
 
@@ -257,7 +273,7 @@ Printed and marked honestly. Green = verified true (test suite or live URL). Not
 | 8 | Canonical one-click run reproducible (live) | GREEN | `POST /runs/judge-demo` live -> `ok=true score=87 band=HIGH confidence=0.92 decision=block`. |
 | 9 | Frontend deployed + public | GREEN | `/` 200, `/console` 200, `/console/keys` 200, `/console/rules` 200, `/standards` 200 live; NO login wall on any route; aliased to the canonical URL. |
 | 10 | Backend deployed + healthy | GREEN | `GET /health` -> `ok=true mode=demo`; aliased to the canonical URL. |
-| 11 | Security headers in prod | GREEN | Backend HSTS preload + nosniff + DENY + Referrer-Policy; frontend full CSP (`frame-ancestors 'none'`, `object-src 'none'`) + Permissions-Policy. Verified live this session. |
+| 11 | Security headers in prod | GREEN | Backend HSTS preload + nosniff + DENY + Referrer-Policy; frontend full CSP with per-request `script-src` nonce + `'strict-dynamic'` (no `'unsafe-inline'`, Next 16 `proxy.ts`), `frame-ancestors 'none'`, `object-src 'none'` + Permissions-Policy. Verified live this session (0 violations). |
 | 12 | No-login posture did NOT weaken security | GREEN | `POST /rules` -> 403, `GET /api-keys` -> 401, `/incidents?tenant_id=bogus` server-pins the demo tenant (no BOLA), CORS does not echo an evil origin. Verified live this session. |
 | 13 | Home flow linear + no login wall | GREEN | "Run live attack" above the fold; one click fires a real run; LIVE RUN RESULT + "Open full dashboard" CTA render inline in view; zero console errors. Captured this session. |
 | 14 | Sticky sidebar pinned on scroll | GREEN | `aside` is `position:sticky; top:0; height:100vh`; the shell uses `overflow:clip` (not `hidden`) so sticky holds. Live-verified: `/standards` scrolled to 1548px, rail `rectTop:0`; `/console` after scroll, rail pinned; mobile <=1023px collapses to a drawer with no horizontal overflow. |
