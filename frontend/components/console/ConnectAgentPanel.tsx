@@ -83,10 +83,18 @@ export function ConnectAgentPanel() {
           Connect your agent
         </h2>
       </div>
+      <p style={{ fontSize: 12.5, lineHeight: 1.6, color: C.muted, marginBottom: 12 }}>
+        For teams shipping agents with persistent memory or RAG. A single planted
+        memory can silently override your policy, and prompt scanners never see it
+        because it lives in the retrieval layer, not the prompt. HydraSentry
+        replays the same task on clean vs poisoned context, traces the taint
+        through the graph, and BLOCKS the unsafe action through MCP before your
+        agent fires, then certifies the block.
+      </p>
       <p style={{ fontSize: 12.5, lineHeight: 1.6, color: C.muted, marginBottom: 18 }}>
-        Install the HydraSentry stdio MCP server and point it at your API key. Any
-        MCP-compatible client works. Once wired, every risky memory your agent
-        retrieves is scored, certified, and lands in your incident dashboard.
+        Install the stdio MCP server, point it at your API key, and connect any
+        MCP-compatible client. Once wired, every risky memory your agent retrieves
+        is scored, certified, and lands in your incident dashboard.
       </p>
 
       <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>

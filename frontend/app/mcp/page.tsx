@@ -5,6 +5,7 @@ import { PageShell } from "@/components/shared/PageShell";
 import {
   getMcpManifest,
   getConfigStatus,
+  getFindings,
   mcpScanContext,
   mcpReplayAttack,
   mcpVerifySkill,
@@ -12,8 +13,7 @@ import {
   mcpGenerateReport,
   mcpScheduleScan,
 } from "@/lib/api";
-import { useRunDemo } from "@/hooks/useRunDemo";
-import { deriveCockpit, C } from "@/lib/cockpit/derive";
+import { C } from "@/lib/cockpit/derive";
 import type { McpToolResult } from "@/lib/types";
 
 const MONO = "var(--font-geist-mono), 'JetBrains Mono', monospace";
@@ -63,8 +63,19 @@ async function invoke(tool: string): Promise<McpToolResult | null> {
       const r = await mcpScheduleScan("regression replay");
       return r.ok ? r.data : null;
     }
+    case "list_findings": {
+      // REAL read: the live /findings list, not a hardcoded count.
+      const r = await getFindings();
+      if (!r.ok) return null;
+      const top = r.data[0]?.name ?? r.data[0]?.status ?? null;
+      return {
+        ok: true,
+        tool,
+        result: { findings: r.data.length, top },
+      } as McpToolResult;
+    }
     default:
-      return { ok: true, tool, result: { findings: 1, top: "memory_poisoning" } } as McpToolResult;
+      return null;
   }
 }
 
@@ -77,19 +88,13 @@ async function invoke(tool: string): Promise<McpToolResult | null> {
  * exactly as the backend enforces (write calls are unauthorized without it).
  */
 export default function McpPage() {
-  const { run, isRunning } = useRunDemo();
-  const v = useMemo(() => deriveCockpit(run, { isRunning }), [run, isRunning]);
-  const p = v.poisoned;
   const [tool, setTool] = useState("scan_context");
   const [toolNames, setToolNames] = useState<string[]>([]);
   const [secretConfigured, setSecretConfigured] = useState(false);
   const [resp, setResp] = useState<string>("");
-  const [calls, setCalls] = useState<CallRow[]>([
-    { t: "12:04:02", text: "quarantine_memory → 200 ok", col: "#fff" },
-    { t: "12:04:02", text: "generate_report → 200 ok", col: C.silver },
-    { t: "12:04:01", text: `scan_context → ${p ? "BLOCK" : "ALLOW"}`, col: C.muted },
-    { t: "12:04:00", text: "list_findings → 200 ok", col: C.faint },
-  ]);
+  // Recent calls start EMPTY and only fill from genuine tool invocations on this
+  // page. No seeded "12:04:0x" theater rows.
+  const [calls, setCalls] = useState<CallRow[]>([]);
 
   useEffect(() => {
     void getMcpManifest().then((r) => {
@@ -316,6 +321,11 @@ export default function McpPage() {
                 RECENT CALLS
               </div>
               <div style={{ fontFamily: MONO, fontSize: 11, lineHeight: 1.9 }}>
+                {calls.length === 0 && (
+                  <div style={{ color: C.faint }}>
+                    No calls yet. Select a tool to issue a live MCP call.
+                  </div>
+                )}
                 {calls.map((c, i) => (
                   <div key={i} style={{ display: "flex", gap: 10 }}>
                     <span style={{ color: C.faint }}>{c.t}</span>

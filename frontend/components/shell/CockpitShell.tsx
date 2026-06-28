@@ -47,7 +47,13 @@ export function CockpitShell({ title, actions, children }: CockpitShellProps) {
         background: "transparent",
         width: "100%",
         maxWidth: "100vw",
-        overflowX: "hidden",
+        // `clip` (not `hidden`) contains the full-bleed ambient backdrop WITHOUT
+        // establishing a scroll container on an ancestor of the sticky <aside>.
+        // `overflow: hidden` makes the nearest scrollable ancestor the sticky
+        // containing block, which silently breaks `position: sticky` on the rail
+        // (the sidebar scrolls away). `clip` clips overflow with no scrollport,
+        // so the rail stays pinned to the viewport on scroll across all routes.
+        overflowX: "clip",
       }}
       className="cockpit-grid"
     >
@@ -102,7 +108,7 @@ export function CockpitShell({ title, actions, children }: CockpitShellProps) {
           display: "flex",
           flexDirection: "column",
           minWidth: 0,
-          overflowX: "hidden",
+          overflowX: "clip",
         }}
       >
         <CockpitTopBar
@@ -111,7 +117,7 @@ export function CockpitShell({ title, actions, children }: CockpitShellProps) {
           actions={actions}
           onMenu={() => setDrawerOpen(true)}
         />
-        <div style={{ flex: 1, minWidth: 0, padding: 28, overflowX: "hidden" }}>
+        <div style={{ flex: 1, minWidth: 0, padding: 28, overflowX: "clip" }}>
           {children}
         </div>
       </div>

@@ -1,30 +1,33 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { PageShell } from "@/components/shared/PageShell";
 import { useRunDemo } from "@/hooks/useRunDemo";
 import { deriveCockpit, C } from "@/lib/cockpit/derive";
 
 const MONO = "var(--font-geist-mono), 'JetBrains Mono', monospace";
-const AUTONOMY = ["Manual", "Copilot", "Autopilot"];
 
 /**
- * Command (Observatory), the flagship cockpit surface, ported 1:1 from the
- * Castellan source. An ACTIVE MISSION banner with a Manual/Copilot/Autopilot
- * segmented toggle, a row of four big-number metric cards, the eight-agent crew,
- * and a live activity log. All values are wired to the REAL run via
- * deriveCockpit: an engaged judge-demo run flips the posture to poisoned and
- * drives risk / scans / agent statuses / the log; idle shows the nominal
- * baseline. The top-bar Run Demo button triggers the run and this page reacts.
+ * Command (Observatory), the flagship cockpit surface. An ACTIVE MISSION banner,
+ * a row of four big-number metric cards, the eight-agent crew, and a live
+ * activity log. All values are wired to the REAL run via deriveCockpit: an
+ * engaged judge-demo run flips the posture to poisoned and drives risk / scans /
+ * agent statuses / the log; idle shows the nominal baseline. The top-bar Run Demo
+ * button triggers the run and this page reacts.
+ *
+ * The mission posture is a READ-ONLY reflection of the real run state (no
+ * fabricated Manual/Copilot/Autopilot mode switch, which had no backend
+ * effect, so it was removed rather than left as theater): when the firewall
+ * blocks a poisoned action the posture reads "Firewall engaged", otherwise
+ * "Monitoring".
  */
 export default function MissionPage() {
   const { run, isRunning } = useRunDemo();
   const v = useMemo(() => deriveCockpit(run, { isRunning }), [run, isRunning]);
-  const [autonomy, setAutonomy] = useState("Copilot");
   const p = v.poisoned;
 
-  // When poisoned, Autopilot is forced on (mirrors the source).
-  const activeAutonomy = p ? "Autopilot" : autonomy;
+  // Read-only posture derived from the real run (not a user-set, no-op mode).
+  const posture = p ? "Firewall engaged" : "Monitoring";
 
   return (
     <PageShell>
@@ -54,41 +57,35 @@ export default function MissionPage() {
               Protect refund agent from poisoned memory and unsafe skills
             </div>
           </div>
+          {/* Read-only posture (reflects the real run; not a no-op mode switch) */}
           <div
             style={{
               marginLeft: "auto",
               display: "flex",
-              gap: 6,
-              padding: 5,
-              border: "1px solid rgba(255,255,255,0.1)",
+              alignItems: "center",
+              gap: 9,
+              padding: "9px 14px",
+              border: `1px solid ${p ? "rgba(234,240,250,0.34)" : "rgba(255,255,255,0.12)"}`,
               borderRadius: 12,
-              background: "rgba(0,0,0,0.3)",
+              background: p ? "rgba(234,240,250,0.06)" : "rgba(0,0,0,0.3)",
             }}
           >
-            {AUTONOMY.map((a) => {
-              const on = activeAutonomy === a;
-              return (
-                <button
-                  key={a}
-                  type="button"
-                  onClick={() => setAutonomy(a)}
-                  style={{
-                    cursor: "pointer",
-                    fontFamily: "inherit",
-                    fontSize: 12,
-                    fontWeight: 600,
-                    padding: "8px 14px",
-                    border: "none",
-                    borderRadius: 8,
-                    background: on ? "linear-gradient(180deg,#fff,#CDD3DC)" : "transparent",
-                    color: on ? "#0A0A0A" : C.muted,
-                    transition: "all .2s",
-                  }}
-                >
-                  {a}
-                </button>
-              );
-            })}
+            <span
+              style={{
+                width: 7,
+                height: 7,
+                borderRadius: "50%",
+                background: C.accent,
+                boxShadow: `0 0 8px ${C.accent}`,
+                animation: "hsPulseDot 2.4s ease-in-out infinite",
+              }}
+            />
+            <span style={{ fontFamily: MONO, fontSize: 9.5, letterSpacing: "0.14em", color: C.faint }}>
+              POSTURE
+            </span>
+            <span style={{ fontSize: 13, fontWeight: 600, color: p ? "#fff" : C.silver }}>
+              {posture}
+            </span>
           </div>
         </div>
 

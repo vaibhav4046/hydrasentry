@@ -162,7 +162,7 @@ const NODES: TreeNode[] = [
     id: "chunk",
     kind: "chunk",
     eyebrow: "CHUNK",
-    title: "chunk_7f3a1c",
+    title: "mem_poison_047_chunk_0000",
     x: 786,
     y: 348,
     at: ATG_STAGES.RETRIEVE,

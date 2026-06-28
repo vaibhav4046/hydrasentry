@@ -28,8 +28,8 @@ interface PathHop {
 }
 
 const HOPS: PathHop[] = [
-  { node: "poisoned_memory", detail: "memory_91ab23", hot: true },
-  { node: "chunk", detail: "chunk_7f3a1c", hot: true },
+  { node: "poisoned_memory", detail: "mem_poison_047", hot: true },
+  { node: "chunk", detail: "mem_poison_047_chunk_0000", hot: true },
   { node: "query_path", detail: "3 hops · score 0.87", hot: true },
   { node: "policy_conflict", detail: "contradicts refund policy v2.1", hot: true },
   { node: "unsafe_tool_action", detail: "approve_refund()", hot: true },
