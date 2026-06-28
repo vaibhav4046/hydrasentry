@@ -1054,13 +1054,21 @@
     padding-right: 16px !important;
     gap: 12px !important;
   }
-  .observatory-landing .obs-docs-btn {
+  .observatory-landing .obs-docs-btn,
+  .observatory-landing .obs-docs-link {
     display: none !important;
   }
   /* The Console route is the primary product entry point, so it stays visible
      on mobile (tightened) rather than collapsing like the secondary buttons. */
   .observatory-landing .obs-console-btn {
     padding: 8px 10px !important;
+  }
+}
+
+/* Install/connect band: two cards side by side on desktop, stacked on narrow. */
+@media (max-width: 760px) {
+  .observatory-landing .obs-install-grid {
+    grid-template-columns: 1fr !important;
   }
 }
 

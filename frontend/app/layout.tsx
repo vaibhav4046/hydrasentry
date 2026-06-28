@@ -3,7 +3,7 @@ import { Space_Grotesk, Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { NoirBackground } from "@/components/noir/NoirBackground";
 import { MotionProvider } from "@/components/noir/MotionProvider";
-import { DemoDataPill } from "@/components/shared/DemoDataPill";
+import { BackendWarmup } from "@/components/shared/BackendWarmup";
 import { RunStoreHydrator } from "@/components/shared/RunStoreHydrator";
 
 // HydraSentry type system — a deliberate, harmonious three-part mix (no serif):
@@ -81,9 +81,9 @@ export default function RootLayout({
     >
       <body className="min-h-full">
         <RunStoreHydrator />
+        <BackendWarmup />
         <NoirBackground />
         <MotionProvider>{children}</MotionProvider>
-        <DemoDataPill variant="fixed" />
       </body>
     </html>
   );

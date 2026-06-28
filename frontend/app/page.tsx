@@ -3,6 +3,7 @@ import { ObservatoryNav } from "@/components/landing/observatory/ObservatoryNav"
 import { ArtifactTreeHero } from "@/components/noir/ArtifactTreeHero";
 import { HeroCertificateSection } from "@/components/noir/HeroCertificateSection";
 import { ObservatorySections } from "@/components/landing/observatory/ObservatorySections";
+import { ObservatoryInstall } from "@/components/landing/observatory/ObservatoryInstall";
 import { ObservatoryFinalCta } from "@/components/landing/observatory/ObservatoryFinalCta";
 import { ObservatoryFooter } from "@/components/landing/observatory/ObservatoryFooter";
 
@@ -64,6 +65,7 @@ export default function LandingPage() {
         <HeroCertificateSection anchorId="memory-certificate" />
 
         <ObservatorySections />
+        <ObservatoryInstall />
         <ObservatoryFinalCta />
       </main>
 

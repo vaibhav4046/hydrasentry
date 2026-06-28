@@ -7,7 +7,6 @@ import { GraphSourceBadge } from "@/components/graph/GraphSourceBadge";
 import { MemoryCertificatePanel } from "@/components/noir/MemoryCertificatePanel";
 import { CertificateReportModal } from "@/components/noir/CertificateReportModal";
 import { useRunDemo } from "@/hooks/useRunDemo";
-import { useDemoMode } from "@/hooks/useDemoMode";
 import { getReportMarkdown } from "@/lib/api";
 import { downloadText } from "@/lib/format";
 import { buildCertificate } from "@/lib/memoryCertificate";
@@ -46,7 +45,6 @@ interface ResultMetric {
  */
 export default function ResultsPage() {
   const { run, isRunning } = useRunDemo();
-  const isDemo = useDemoMode();
   const v = useMemo(() => deriveCockpit(run, { isRunning }), [run, isRunning]);
   const p = v.poisoned;
   const nextScan = nextScanClock(run);
@@ -86,24 +84,22 @@ export default function ResultsPage() {
           {run ? (
             <GraphSourceBadge source={run.graph_source} />
           ) : (
-            isDemo && (
-              <span
-                className="mono"
-                title="No run has been executed yet; tiles show the clean baseline."
-                style={{
-                  fontFamily: MONO,
-                  fontSize: "9.5px",
-                  letterSpacing: "0.14em",
-                  textTransform: "uppercase",
-                  color: C.muted,
-                  border: "1px solid rgba(255,255,255,0.12)",
-                  borderRadius: 999,
-                  padding: "4px 10px",
-                }}
-              >
-                Fallback data · run to generate a finding
-              </span>
-            )
+            <span
+              className="mono"
+              title="No run has been executed yet; tiles show the clean baseline."
+              style={{
+                fontFamily: MONO,
+                fontSize: "9.5px",
+                letterSpacing: "0.14em",
+                textTransform: "uppercase",
+                color: C.muted,
+                border: "1px solid rgba(255,255,255,0.12)",
+                borderRadius: 999,
+                padding: "4px 10px",
+              }}
+            >
+              Baseline · run to generate a finding
+            </span>
           )}
         </div>
 
