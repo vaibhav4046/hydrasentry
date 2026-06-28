@@ -462,3 +462,7 @@ auth session to record; the no-login surface is the whole product.
   are in `submission/video/README.md`.
 
 Ship.
+
+## ship10 (always-real + docs + no-login nav)
+
+Final pass: removed the fixture-fallback session latch (lib/api.ts always retries the real backend, 12s cold-start budget, warmup ping; DemoDataPill deleted) so the value path is always real, never a sticky FALLBACK badge. Removed API Keys from the console sidebar. Added a homepage install/connect band (pip install hydrasentry-mcp + MCP config) and a public /docs page (install, connect, 7 MCP tools, BYO key with provider links, usage, public API) with a Docs link in the header/footer; /console/keys now 307-redirects to /docs. Zero-defect sweep across all 14 routes desktop + mobile: 0 console errors, 0 mock leaks. Core intact (judge-demo 87/HIGH, runs/real real Groq 90/CRITICAL, graph real_query_paths, nonce-CSP, sticky sidebar). main 3be3425, checkpoint-ship10. Note: the independent re-audit + this doc pass were finished from the main thread after the Anthropic session limit interrupted the workflow finalize.
