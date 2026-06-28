@@ -349,7 +349,6 @@ export interface ScheduledAgent {
   id: string;
   name: string;
   schedule: string;
-  next_run: string;
   enabled: boolean;
   [key: string]: unknown;
 }

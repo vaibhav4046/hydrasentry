@@ -509,6 +509,19 @@ async def get_findings() -> JSONResponse:
     return ok(storage.list_findings())
 
 
+# Fields the standing-agents list DTO intentionally drops. `next_run` is
+# vestigial here: a serverless backend never fires a cron, so a per-agent
+# "next run" timestamp implies a schedule that does not exist. The UI renders
+# only cadence/result/status (never next_run) so omitting it changes nothing the
+# client reads. The DB column and the run's own `scheduled_scan.next_run` (a
+# different, UI-rendered path) are left untouched.
+_SCHEDULED_AGENT_DROP_FIELDS = ("next_run",)
+
+
+def _scheduled_agent_dto(agent: dict[str, Any]) -> dict[str, Any]:
+    return {k: v for k, v in agent.items() if k not in _SCHEDULED_AGENT_DROP_FIELDS}
+
+
 @app.get("/scheduled-agents")
 async def get_scheduled_agents() -> JSONResponse:
     # Seed-on-read self-heal: on serverless the SQLite seed from the lifespan can
@@ -520,7 +533,7 @@ async def get_scheduled_agents() -> JSONResponse:
     if not agents:
         scheduler.seed_agents()
         agents = scheduler.list_agents()
-    return ok(agents)
+    return ok([_scheduled_agent_dto(a) for a in agents])
 
 
 @app.post("/scheduled-agents/{agent_id}/toggle")
@@ -543,11 +556,11 @@ async def toggle_scheduled_agent(
         preview = dict(current)
         preview["enabled"] = not current.get("enabled", False)
         preview["simulated"] = True
-        return ok(preview)
+        return ok(_scheduled_agent_dto(preview) | {"simulated": True})
     result = scheduler.toggle(agent_id)
     if result is None:
         return err(f"agent '{agent_id}' not found", status=404)
-    return ok(result)
+    return ok(_scheduled_agent_dto(result))
 
 
 # Outer bound on a single SKILL.md the static scanner will accept. The scanner

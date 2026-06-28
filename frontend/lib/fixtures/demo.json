@@ -557,7 +557,6 @@
       "enabled": true,
       "schedule": "*/30 * * * *",
       "last_run": "2026-06-24T02:00:00+00:00",
-      "next_run": "2026-06-25T02:00:00+00:00",
       "latest_result": "providers reachable; deterministic fallback ready",
       "action_taken": "none",
       "status": "idle"
@@ -568,7 +567,6 @@
       "enabled": true,
       "schedule": "0 2 * * *",
       "last_run": "2026-06-24T02:00:00+00:00",
-      "next_run": "2026-06-25T02:00:00+00:00",
       "latest_result": "12 memories scanned, 1 poisoned quarantined",
       "action_taken": "quarantine",
       "status": "idle"
@@ -579,7 +577,6 @@
       "enabled": true,
       "schedule": "0 3 * * *",
       "last_run": "2026-06-24T02:00:00+00:00",
-      "next_run": "2026-06-25T02:00:00+00:00",
       "latest_result": "policy v2 active, 1 stale override flagged",
       "action_taken": "warn",
       "status": "idle"
@@ -590,7 +587,6 @@
       "enabled": true,
       "schedule": "0 4 * * *",
       "last_run": "2026-06-24T02:00:00+00:00",
-      "next_run": "2026-06-25T02:00:00+00:00",
       "latest_result": "5 regression scenarios replayed, all passed",
       "action_taken": "none",
       "status": "idle"
@@ -601,7 +597,6 @@
       "enabled": true,
       "schedule": "0 */6 * * *",
       "last_run": "2026-06-24T02:00:00+00:00",
-      "next_run": "2026-06-25T02:00:00+00:00",
       "latest_result": "3 skills scanned, 1 CRITICAL blocked",
       "action_taken": "block",
       "status": "idle"
@@ -612,7 +607,6 @@
       "enabled": true,
       "schedule": "0 6 * * 1",
       "last_run": "2026-06-24T02:00:00+00:00",
-      "next_run": "2026-06-25T02:00:00+00:00",
       "latest_result": "weekly finding report generated",
       "action_taken": "report",
       "status": "idle"
