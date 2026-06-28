@@ -511,7 +511,16 @@ async def get_findings() -> JSONResponse:
 
 @app.get("/scheduled-agents")
 async def get_scheduled_agents() -> JSONResponse:
-    return ok(scheduler.list_agents())
+    # Seed-on-read self-heal: on serverless the SQLite seed from the lifespan can
+    # be missing on a cold instance (ephemeral filesystem), which would return an
+    # empty list and make the client fall back to a bundled fixture. Re-seed the
+    # six deterministic standing agents if the store is empty so the REAL endpoint
+    # always returns real, seeded backend data (idempotent).
+    agents = scheduler.list_agents()
+    if not agents:
+        scheduler.seed_agents()
+        agents = scheduler.list_agents()
+    return ok(agents)
 
 
 @app.post("/scheduled-agents/{agent_id}/toggle")
