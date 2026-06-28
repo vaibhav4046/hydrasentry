@@ -19,6 +19,7 @@ import type {
   ApiEnvelope,
   ApiResult,
   Asi06Mapping,
+  AsiMapping,
   ConfigStatus,
   Firewall,
   HealthStatus,
@@ -39,6 +40,7 @@ import type {
 } from "./types";
 import {
   demoAsi06Mapping,
+  demoAsiMapping,
   demoConfigStatus,
   demoFindings,
   demoMarketplaceScan,
@@ -364,6 +366,20 @@ export async function getStandardsAsi06(): Promise<ApiResult<Asi06Mapping>> {
   return withFallback(
     await request<Asi06Mapping>("/standards/asi06"),
     demoAsi06Mapping,
+  );
+}
+
+/**
+ * Self-verified OWASP ASI Top-10 coverage map. A reachable backend returns the
+ * truly verified artifact (verified_all recomputed against the running
+ * codebase, including the honesty check that out-of-scope risks carry no
+ * borrowed evidence). Offline, the fallback returns the same coverage claims
+ * with covered/partial rows unproven and verified_all = null.
+ */
+export async function getStandardsAsi(): Promise<ApiResult<AsiMapping>> {
+  return withFallback(
+    await request<AsiMapping>("/standards/asi"),
+    demoAsiMapping,
   );
 }
 

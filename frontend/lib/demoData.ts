@@ -18,6 +18,8 @@
  */
 import type {
   Asi06Mapping,
+  AsiMapping,
+  AsiRisk,
   ConfigStatus,
   MarketplaceSkillScan,
   McpManifest,
@@ -168,6 +170,139 @@ export const demoAsi06Mapping = (): Asi06Mapping => ({
     verified: false,
   })),
 });
+
+/**
+ * Offline claims for the full OWASP ASI Top-10 coverage map. Mirrors
+ * backend/standards/asi.py. covered/partial rows name real evidence;
+ * out_of_scope rows carry null evidence. Offline the page cannot recompute
+ * verification, so verified is false for covered/partial rows and verified_all
+ * is null -- the page renders an explicit "verification offline" state rather
+ * than a fake green tick.
+ */
+const DEMO_ASI_CLAIMS: ReadonlyArray<
+  Pick<AsiRisk, "id" | "name" | "coverage" | "summary" | "evidence_file" | "evidence_symbol">
+> = [
+  {
+    id: "ASI01",
+    name: "Tool Misuse",
+    coverage: "covered",
+    summary:
+      "Agent tool calls flow through a gateway whose write tools are fail-closed and constant-time secret-gated, so an unauthenticated caller cannot drive a state-changing tool. Every call is logged for audit.",
+    evidence_file: "backend/mcp_gateway.py",
+    evidence_symbol: "_secret_guard",
+  },
+  {
+    id: "ASI02",
+    name: "Identity Spoofing & Privilege Compromise",
+    coverage: "covered",
+    summary:
+      "Every protected surface resolves a real identity: a Supabase user-JWT verified against the project JWKS (ES256, issuer + aud + exp pinned) or a salted-hash, constant-time API key. There is no trust-by-header.",
+    evidence_file: "backend/auth/jwt_verifier.py",
+    evidence_symbol: "JWTVerificationError",
+  },
+  {
+    id: "ASI03",
+    name: "Privilege / Tenant Isolation (BOLA)",
+    coverage: "covered",
+    summary:
+      "Stored memory, incidents, certificates, and detection rules are per tenant. Every repository read/write requires a tenant_id and filters by it; a cross-tenant lookup returns nothing, and a missing scope raises.",
+    evidence_file: "backend/db/repo.py",
+    evidence_symbol: "TenantScopingError",
+  },
+  {
+    id: "ASI04",
+    name: "Resource Overload",
+    coverage: "covered",
+    summary:
+      "The real-cost and outbound paths are guarded by an in-process token-bucket rate limiter keyed on identity-or-IP; over-limit returns 429 + Retry-After. The one-click judge demo keeps a generous bucket.",
+    evidence_file: "backend/rate_limit.py",
+    evidence_symbol: "_TokenBuckets",
+  },
+  {
+    id: "ASI05",
+    name: "Cascading Hallucination / Behaviour Drift",
+    coverage: "covered",
+    summary:
+      "Risk is a ground-truth behaviour diff, not a hand-written verdict: the agent is replayed on a clean baseline vs the poisoned memory and the resulting behaviour is diffed into a deterministic score and band.",
+    evidence_file: "backend/risk_engine.py",
+    evidence_symbol: "score_scenario",
+  },
+  {
+    id: "ASI06",
+    name: "Memory Poisoning",
+    coverage: "covered",
+    summary:
+      "The headline risk this product is built for. Covered by the full self-verified ASI06 control mapping: provenance, quarantine, taint tracking, semantic paraphrase detection, and a portable Memory Integrity Certificate.",
+    evidence_file: "backend/standards/asi06.py",
+    evidence_symbol: "def verify_controls",
+  },
+  {
+    id: "ASI07",
+    name: "Insecure Output / Provenance Confusion",
+    coverage: "covered",
+    summary:
+      "Every graph the engine reasons over is labelled REAL HydraDB vs DERIVED scenario fallback vs LOCAL heuristic graph, and the report renders that exact label, so a derived/demo result is never passed off as real.",
+    evidence_file: "backend/report.py",
+    evidence_symbol: "_graph_label",
+  },
+  {
+    id: "ASI08",
+    name: "Repudiation & Untraceability",
+    coverage: "covered",
+    summary:
+      "Each severed run is sealed into a portable, signed Memory Integrity Certificate recording the behaviour diff, the tainted source chunk, the tool that would have fired, and the regression rule that now prevents it.",
+    evidence_file: "backend/report.py",
+    evidence_symbol: "generate_report",
+  },
+  {
+    id: "ASI09",
+    name: "Goal Manipulation via Reworded Injection",
+    coverage: "partial",
+    summary:
+      "Partial: a semantic similarity signal flags reworded poison that paraphrases a policy override, raising the bar for a goal-manipulation injection. It is a detection signal, not a full intent-alignment guarantee.",
+    evidence_file: "backend/semantic_detector.py",
+    evidence_symbol: "def detect",
+  },
+  {
+    id: "ASI10",
+    name: "Overwhelming Human-in-the-Loop",
+    coverage: "out_of_scope",
+    summary:
+      "Not addressed. HydraSentry is an automated memory-integrity firewall and certifier; it does not manage operator alert volume, approval fatigue, or human-in-the-loop pacing. Claiming coverage here would be dishonest.",
+    evidence_file: null,
+    evidence_symbol: null,
+  },
+];
+
+export const demoAsiMapping = (): AsiMapping => {
+  const risks: AsiRisk[] = DEMO_ASI_CLAIMS.map((c) => ({
+    ...c,
+    file_exists: false,
+    symbol_present: false,
+    // Offline: covered/partial cannot be re-verified from the browser, so they
+    // are not asserted true. An out_of_scope row is "verified" by correctly
+    // carrying no evidence -- that holds offline too, so it stays true.
+    verified: c.coverage === "out_of_scope",
+  }));
+  const coverage_counts = risks.reduce(
+    (acc, r) => {
+      acc[r.coverage] = (acc[r.coverage] ?? 0) + 1;
+      return acc;
+    },
+    { covered: 0, partial: 0, out_of_scope: 0 } as Record<AsiRisk["coverage"], number>,
+  );
+  return {
+    taxonomy: "OWASP Agentic Security Initiative (ASI)",
+    reference: "https://genai.owasp.org/initiatives/#agenticsecurity",
+    headline_risk_id: "ASI06",
+    risk_count: risks.length,
+    coverage_counts,
+    // Offline: covered/partial rows are unproven, so the map as a whole is not
+    // asserted verified.
+    verified_all: null,
+    risks,
+  };
+};
 
 /** Find a scenario fixture by id, falling back to the canonical refund run. */
 export function demoScenarioById(id: string): ScenarioSummary | undefined {

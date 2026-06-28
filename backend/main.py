@@ -34,6 +34,7 @@ import skillmake_marketplace
 import skillmake_scanner
 import storage
 from standards import asi06
+from standards import asi as asi_top10
 from auth import api_keys as api_key_svc
 from auth.identity import Identity, current_identity, require_user
 from config import key_status, resolve_cors, settings
@@ -319,6 +320,21 @@ async def standards_asi06() -> JSONResponse:
     the running codebase so the served mapping is honest, never just asserted.
     """
     return ok(asi06.mapping(verify=True))
+
+
+@app.get("/standards/asi")
+async def standards_asi() -> JSONResponse:
+    """Full OWASP Agentic Security Initiative (ASI) Top-10 coverage map.
+
+    Read-only and unauthenticated: this broadens the single-risk ASI06 artifact
+    into an honest map across the whole ASI Top-10. Each covered/partial risk
+    names a real implementing module and symbol; out-of-scope risks carry no
+    evidence and say so plainly. ``verified_all`` is recomputed against the
+    running codebase, so a True value certifies both that every covered
+    control's code exists AND that no out-of-scope risk is dressed up with
+    borrowed proof -- the map cannot inflate coverage without going red.
+    """
+    return ok(asi_top10.mapping(verify=True))
 
 
 @app.get("/scenarios")
