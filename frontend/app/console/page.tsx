@@ -16,6 +16,7 @@ import { listIncidents } from "@/lib/consoleApi";
 import { computeAnalytics } from "@/lib/incidentAnalytics";
 import { AnalyticsBar } from "@/components/console/AnalyticsBar";
 import { IncidentFeed } from "@/components/console/IncidentFeed";
+import { TenantProvenanceBanner } from "@/components/console/TenantProvenanceBanner";
 import type { Incident } from "@/lib/consoleTypes";
 import { C } from "@/lib/cockpit/derive";
 
@@ -64,46 +65,22 @@ function DashboardBody() {
   return (
     <div data-page>
       {/* Provenance banner: honest about whose data this is. */}
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          gap: 12,
-          flexWrap: "wrap",
-          marginBottom: 16,
-          padding: "11px 14px",
-          borderRadius: 12,
-          border: `1px solid ${isSignedIn ? "rgba(234,240,250,0.18)" : "rgba(255,255,255,0.1)"}`,
-          background: "rgba(255,255,255,0.018)",
-        }}
-      >
-        <div style={{ fontFamily: MONO, fontSize: 11, color: C.muted, lineHeight: 1.6 }}>
-          {isSignedIn ? (
-            <>
-              Showing <span style={{ color: C.ink }}>your tenant&apos;s</span> real persisted incidents.
-            </>
-          ) : (
-            <>
-              Showing the <span style={{ color: C.ink }}>demo tenant&apos;s</span> real incidents.{" "}
-              <Link href="/console/keys" style={{ color: C.accent, textDecoration: "underline" }}>
-                Sign in
-              </Link>{" "}
-              to see your own.
-            </>
-          )}
-        </div>
-        <button
-          type="button"
-          onClick={refresh}
-          disabled={loading}
-          className="hydra-button-ghost"
-          style={{ display: "inline-flex", alignItems: "center", gap: 7, fontSize: 11.5, padding: "6px 11px", borderRadius: 8, cursor: loading ? "wait" : "pointer" }}
-        >
-          <RefreshCw size={13} strokeWidth={1.9} style={loading ? { animation: "spin 1s linear infinite" } : undefined} />
-          Refresh
-        </button>
-      </div>
+      <TenantProvenanceBanner
+        isSignedIn={isSignedIn}
+        subject="persisted incidents"
+        action={
+          <button
+            type="button"
+            onClick={refresh}
+            disabled={loading}
+            className="hydra-button-ghost"
+            style={{ display: "inline-flex", alignItems: "center", gap: 7, fontSize: 11.5, padding: "6px 11px", borderRadius: 8, cursor: loading ? "wait" : "pointer" }}
+          >
+            <RefreshCw size={13} strokeWidth={1.9} style={loading ? { animation: "spin 1s linear infinite" } : undefined} />
+            Refresh
+          </button>
+        }
+      />
 
       {error && (
         <div

@@ -32,8 +32,16 @@
  * of tweening. Nothing critical is ever hidden behind opacity:0.
  */
 import { useCallback, useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { m } from "framer-motion";
-import { ArrowRight, Play, Loader2, RotateCcw, Check } from "lucide-react";
+import {
+  ArrowRight,
+  Play,
+  Loader2,
+  RotateCcw,
+  Check,
+  LayoutDashboard,
+} from "lucide-react";
 import { cn } from "@/lib/cn";
 import { EASE_OUT_EXPO, mastheadContainer, mastheadLine } from "@/lib/motion";
 import { runJudgeDemo, runReal } from "@/lib/api";
@@ -238,7 +246,7 @@ export function JudgeDemoController({
           indicator, not the headline. ===== */}
       {(realPending || realRun) && (
         <div className="mb-12">
-          <div className="mb-4 flex items-center gap-3">
+          <div className="mb-4 flex flex-wrap items-center gap-x-3 gap-y-2">
             <span
               aria-hidden
               className="h-px w-7"
@@ -250,8 +258,43 @@ export function JudgeDemoController({
             <span className="mono text-[10px] uppercase tracking-[0.18em] text-faint">
               {realPending && !realRun ? "computing…" : "just ran"}
             </span>
+            {/* HOME LINEARITY: the obvious next step lands right here, in view,
+                the instant a result exists — no scroll-hunt for the dashboard. */}
+            {realRun && (
+              <Link
+                href="/console"
+                className={cn(
+                  "hydra-button-primary ml-auto inline-flex items-center gap-2 rounded-lg px-4 py-2 text-[13px] font-semibold tracking-tight no-underline",
+                  "outline-none focus-visible:ring-2 focus-visible:ring-white/70 focus-visible:ring-offset-2 focus-visible:ring-offset-base",
+                )}
+              >
+                <LayoutDashboard className="h-4 w-4" strokeWidth={1.9} />
+                Open full dashboard
+                <ArrowRight className="h-4 w-4" strokeWidth={1.8} />
+              </Link>
+            )}
           </div>
           <RealRunResult pending={realPending} result={realRun} reduced={reduced} />
+          {/* Linear footer CTA row: certificate (on-page) + dashboard (route) so
+              the hero -> attack -> result -> dashboard path is one obvious flow. */}
+          {realRun && (
+            <div className="mt-5 flex flex-wrap items-center gap-3">
+              <a
+                href={`#${certificateAnchorId}`}
+                onClick={(e) => scrollToAnchor(e, certificateAnchorId)}
+                className={cn(
+                  "hydra-button-secondary inline-flex items-center gap-2 rounded-lg px-4 py-2 text-[13px] font-semibold tracking-tight no-underline",
+                  "outline-none focus-visible:ring-2 focus-visible:ring-white/70 focus-visible:ring-offset-2 focus-visible:ring-offset-base",
+                )}
+              >
+                View Memory Certificate
+                <ArrowRight className="h-4 w-4" strokeWidth={1.8} />
+              </a>
+              <span className="mono text-[10px] uppercase tracking-[0.16em] text-faint">
+                Next: open the dashboard to see this run as a certified incident
+              </span>
+            </div>
+          )}
         </div>
       )}
 

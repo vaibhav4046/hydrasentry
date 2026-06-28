@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { CastellanEmblem } from "../castellan/CastellanEmblem";
 import { useDemoStore } from "@/store/useDemoStore";
 
@@ -175,9 +176,11 @@ export function ObservatoryNav() {
           </nav>
 
           <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-            <a
-              href="#architecture"
-              className="obs-docs-btn mono"
+            {/* IA: a clear, always-visible route into the live product console.
+                No login wall — the dashboard renders the real demo tenant. */}
+            <Link
+              href="/console"
+              className="obs-console-btn mono"
               style={{
                 fontSize: "11px",
                 letterSpacing: "0.08em",
@@ -188,12 +191,13 @@ export function ObservatoryNav() {
                 border: "1px solid rgba(234,240,250,0.14)",
                 borderRadius: "2px",
                 transition: "border-color .25s,color .25s",
+                whiteSpace: "nowrap",
               }}
               onMouseEnter={ghov}
               onMouseLeave={gunhov}
             >
-              Method
-            </a>
+              Console
+            </Link>
             <button
               type="button"
               onClick={run}

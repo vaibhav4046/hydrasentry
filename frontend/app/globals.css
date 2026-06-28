@@ -1057,6 +1057,11 @@
   .observatory-landing .obs-docs-btn {
     display: none !important;
   }
+  /* The Console route is the primary product entry point, so it stays visible
+     on mobile (tightened) rather than collapsing like the secondary buttons. */
+  .observatory-landing .obs-console-btn {
+    padding: 8px 10px !important;
+  }
 }
 
 /* Hero: stack the masthead above the plate on tablet/mobile, and cap the plate
