@@ -53,15 +53,18 @@ function RulesBody() {
     [],
   );
 
+  // Load unconditionally: with a token -> the user's own tenant; without ->
+  // the demo tenant's REAL rules (read-only). The previous `if (!token) return`
+  // left the signed-out page stuck on the loading skeleton forever even though
+  // the banner promised the demo tenant's rules. `token ?? undefined` keeps the
+  // demo read anonymous so the backend resolves the shared demo tenant.
   const load = useCallback(() => {
-    if (!token) return;
-    void listRules(token).then(apply);
+    void listRules(token ?? undefined).then(apply);
   }, [token, apply]);
 
   useEffect(() => {
-    if (!token) return;
     let active = true;
-    void listRules(token).then((r) => {
+    void listRules(token ?? undefined).then((r) => {
       if (active) apply(r);
     });
     return () => {
