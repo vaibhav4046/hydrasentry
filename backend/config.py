@@ -226,6 +226,55 @@ def _cors_list(raw: str) -> list[str]:
     return [o.strip() for o in raw.split(",") if o.strip()]
 
 
+@dataclass(frozen=True)
+class CorsPolicy:
+    """A resolved, browser-safe CORS decision.
+
+    The hard invariant: a credentialed CORS response is NEVER granted to a
+    wildcard origin. The CORS spec already forbids the browser from honouring
+    ``Access-Control-Allow-Origin: *`` together with
+    ``Access-Control-Allow-Credentials: true``; the previous
+    ``allow_origins or ["*"]`` fallback meant an unset ``CORS_ORIGINS`` asked
+    the framework for exactly that contradiction, leaving the deployed surface
+    relying on a quiet framework downgrade rather than an explicit, audited
+    policy. ``allow_credentials`` here is forced to ``False`` whenever the
+    effective origin set is the wildcard, so the policy is correct by
+    construction regardless of environment.
+    """
+
+    allow_origins: tuple[str, ...]
+    allow_credentials: bool
+
+    @property
+    def is_wildcard(self) -> bool:
+        return self.allow_origins == ("*",)
+
+
+def resolve_cors(cors_origins: list[str], frontend_url: str) -> CorsPolicy:
+    """Resolve the CORS allowlist + credentials flag without ever emitting a
+    credentialed wildcard.
+
+    Resolution order, most-specific first:
+
+    1. An explicit ``CORS_ORIGINS`` allowlist -> use it verbatim, with
+       credentials enabled (cookies/Authorization may cross origin).
+    2. No allowlist, but a concrete ``FRONTEND_URL`` -> trust exactly that one
+       origin, with credentials enabled. This is the real deployment shape
+       (one SPA origin) and removes the wildcard fallback entirely.
+    3. Nothing configured at all -> fall back to ``*`` but force
+       ``allow_credentials=False`` so the browser still refuses to attach
+       cookies/credentials. A public read of a JSON API stays possible; a
+       credentialed cross-origin call does not.
+    """
+    explicit = [o for o in cors_origins if o and o != "*"]
+    if explicit:
+        return CorsPolicy(allow_origins=tuple(explicit), allow_credentials=True)
+    fe = (frontend_url or "").strip()
+    if fe and fe != "*":
+        return CorsPolicy(allow_origins=(fe,), allow_credentials=True)
+    return CorsPolicy(allow_origins=("*",), allow_credentials=False)
+
+
 def load_settings() -> Settings:
     """Build a Settings object from the current environment."""
     hydra = HydraConfig(

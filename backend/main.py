@@ -36,7 +36,7 @@ import storage
 from standards import asi06
 from auth import api_keys as api_key_svc
 from auth.identity import Identity, current_identity, require_user
-from config import key_status, settings
+from config import key_status, resolve_cors, settings
 from db import persistence
 
 logging.basicConfig(level=logging.INFO)
@@ -77,10 +77,17 @@ async def lifespan(_app: FastAPI):
 
 app = FastAPI(title="HydraSentry", version="1.0.0", lifespan=lifespan)
 
+# CORS is resolved through an explicit policy (config.resolve_cors) that can
+# never emit a credentialed wildcard: an unset CORS_ORIGINS no longer means
+# "allow_origins=['*'] + allow_credentials=True" (a spec contradiction the
+# framework would silently downgrade). With an allowlist or a concrete
+# FRONTEND_URL we trust those origins with credentials; with nothing configured
+# we fall back to '*' but force credentials OFF. See red-team finding #11.
+_cors = resolve_cors(settings.cors_origins, settings.frontend_url)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.cors_origins or ["*"],
-    allow_credentials=True,
+    allow_origins=list(_cors.allow_origins),
+    allow_credentials=_cors.allow_credentials,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -290,6 +297,14 @@ async def config_status(
         "providers": model_router.provider_status(),
         "cors_origins": settings.cors_origins,
         "frontend_url": settings.frontend_url,
+        # The EFFECTIVE, resolved CORS policy actually in force -- so a signed-in
+        # auditor can confirm the deployment is not running a credentialed
+        # wildcard, rather than inferring it from the raw config.
+        "cors_effective": {
+            "allow_origins": list(_cors.allow_origins),
+            "allow_credentials": _cors.allow_credentials,
+            "is_wildcard": _cors.is_wildcard,
+        },
     })
     return ok(base)
 
