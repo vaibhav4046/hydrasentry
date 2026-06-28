@@ -17,47 +17,17 @@ function buildShort(): string {
 }
 
 /**
- * Origins the app legitimately talks to at runtime. The console fetches the
- * deployed backend and Supabase auth/REST; Supabase realtime uses wss. Keeping
- * this list explicit means the CSP's connect-src stays tight (no blanket https:).
- */
-const SUPABASE_ORIGIN = "https://gwytslpqvqfewsjcqmuj.supabase.co";
-const SUPABASE_WSS = "wss://gwytslpqvqfewsjcqmuj.supabase.co";
-const BACKEND_ORIGIN = "https://backend-three-puce-75.vercel.app";
-
-/**
- * Content Security Policy for the whole app.
+ * Security response headers applied to every route.
  *
- * - script-src: 'self' + 'unsafe-inline'. Next.js App Router injects inline
- *   bootstrap/hydration scripts and we do not run a per-request nonce middleware
- *   (which would risk breaking SSR + the demo). 'unsafe-eval' is deliberately
- *   omitted — nothing in the production bundle needs it (framer-motion, xyflow,
- *   and supabase-js all run without eval; eval is a dev-only HMR concern).
- * - style-src: 'unsafe-inline' is required — Tailwind v4 + Next inject inline
- *   styles and the graph flow renders an inline <style> for its edge animation.
- * - connect-src: self + Supabase (https + wss) + the backend origin only.
- * - img-src: self + data: (inline SVG/data-URI marks) + blob: (canvas exports).
- * - frame-ancestors 'none' mirrors X-Frame-Options: DENY for modern browsers.
+ * The Content-Security-Policy is NOT set here. It is owned by proxy.ts, which
+ * emits a per-request `script-src 'self' 'nonce-{value}' 'strict-dynamic'`
+ * policy (Next 16 stamps that nonce onto its inline hydration scripts during
+ * SSR). Setting a second static CSP here would produce a conflicting duplicate
+ * header, so this file emits only the static, non-nonce security headers below.
+ * The connect-src allowlist (Supabase + backend) lives in proxy.ts alongside
+ * the rest of the CSP directives.
  */
-const CSP = [
-  "default-src 'self'",
-  "script-src 'self' 'unsafe-inline'",
-  "style-src 'self' 'unsafe-inline'",
-  "img-src 'self' data: blob:",
-  "font-src 'self' data:",
-  `connect-src 'self' ${SUPABASE_ORIGIN} ${SUPABASE_WSS} ${BACKEND_ORIGIN}`,
-  "worker-src 'self' blob:",
-  "frame-src 'none'",
-  "object-src 'none'",
-  "base-uri 'self'",
-  "form-action 'self'",
-  "frame-ancestors 'none'",
-  "upgrade-insecure-requests",
-].join("; ");
-
-/** Security response headers applied to every route. */
 const SECURITY_HEADERS = [
-  { key: "Content-Security-Policy", value: CSP },
   { key: "X-Content-Type-Options", value: "nosniff" },
   { key: "X-Frame-Options", value: "DENY" },
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },

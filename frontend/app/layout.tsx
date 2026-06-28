@@ -55,6 +55,21 @@ export const viewport: Viewport = {
   colorScheme: "dark",
 };
 
+/**
+ * Force dynamic rendering app-wide.
+ *
+ * The CSP nonce (proxy.ts) is generated per request and Next.js applies it
+ * during SERVER rendering. A statically prerendered page would bake in a
+ * build-time nonce that can never match the fresh per-request nonce in the
+ * response header, so its inline hydration script would be CSP-blocked and the
+ * page would not hydrate (frozen animations, dead "Run" button). Opting every
+ * route into dynamic rendering makes Next stamp the live request nonce onto its
+ * inline scripts so script-src can drop 'unsafe-inline' safely. The app is a
+ * client-driven cockpit with no ISR/static-marketing requirement, so the
+ * per-request render cost is acceptable.
+ */
+export const dynamic = "force-dynamic";
+
 export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
