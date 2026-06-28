@@ -25,7 +25,11 @@ import type {
   DetectionRule,
   Incident,
   NewRule,
+  ProvidersPayload,
+  ProviderTestOutcome,
   RuleImportResult,
+  SaveProviderBody,
+  TenantProviderCredential,
 } from "./consoleTypes";
 
 /**
@@ -213,6 +217,62 @@ export function importRules(
     body: ruleset,
     token,
   });
+}
+
+// --- BYO provider credentials (writable config) -----------------------------
+
+/**
+ * Provider status for the Settings page. With a token -> the platform matrix
+ * PLUS the signed-in tenant's saved BYO credentials (masked) and
+ * can_configure:true; without -> the read-only platform matrix only. The raw
+ * key is never in this payload (only masked fingerprints).
+ */
+export function getProvidersConfig(
+  token?: string,
+): Promise<ApiResult<ProvidersPayload>> {
+  return consoleRequest<ProvidersPayload>("/settings/providers", { token });
+}
+
+/** Save (encrypt at rest) a BYO provider credential. JWT required. Returns the
+ *  masked credential DTO -- never the raw key. */
+export function saveProvider(
+  body: SaveProviderBody,
+  token: string,
+): Promise<ApiResult<TenantProviderCredential>> {
+  return consoleRequest<TenantProviderCredential>("/settings/providers", {
+    method: "POST",
+    body,
+    token,
+  });
+}
+
+/**
+ * Validate a provider key with a REAL upstream call. With `apiKey` set, the
+ * just-entered key is tested before saving; without, the saved credential for
+ * `provider` is tested. JWT required for either. The key is never echoed back.
+ */
+export function testProviderKey(
+  provider: string,
+  token: string,
+  apiKey?: string,
+  model?: string,
+): Promise<ApiResult<ProviderTestOutcome>> {
+  return consoleRequest<ProviderTestOutcome>("/settings/providers/test", {
+    method: "POST",
+    body: { provider, api_key: apiKey, model },
+    token,
+  });
+}
+
+/** Revoke (delete) the tenant's saved credential for a provider. JWT required. */
+export function deleteProvider(
+  provider: string,
+  token: string,
+): Promise<ApiResult<{ provider: string; deleted: boolean }>> {
+  return consoleRequest<{ provider: string; deleted: boolean }>(
+    `/settings/providers/${encodeURIComponent(provider)}`,
+    { method: "DELETE", token },
+  );
 }
 
 /**

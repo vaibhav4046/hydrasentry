@@ -27,6 +27,7 @@ from db.models import (
     Incident,
     RegressionRule,
     Tenant,
+    TenantProviderCredential,
     User,
 )
 
@@ -184,6 +185,117 @@ class RegressionRuleRepo(_ScopedRepo):
 
 class AuditLogRepo(_ScopedRepo):
     model = AuditLog
+
+
+class TenantProviderCredentialRepo(_ScopedRepo):
+    """Per-tenant BYO provider credentials. Tenant-scoped (BOLA-safe): every
+    lookup filters on ``tenant_id`` so one tenant can never read, upsert, or
+    delete another tenant's credential. One row per (tenant, provider) is
+    enforced by the unique index; ``upsert`` keeps that invariant."""
+
+    model = TenantProviderCredential
+
+    @classmethod
+    def get_by_provider(
+        cls, tenant_id: str, provider: str, *, session: Optional[Session] = None
+    ) -> Optional[TenantProviderCredential]:
+        """The tenant's credential for ``provider``, or ``None``. Always filters
+        on tenant_id, so another tenant's credential is invisible (BOLA gate)."""
+        tid = _require_tenant(tenant_id)
+        with _session(session) as s:
+            stmt = select(TenantProviderCredential).where(
+                TenantProviderCredential.tenant_id == tid,
+                TenantProviderCredential.provider == provider,
+            )
+            return s.exec(stmt).first()
+
+    @classmethod
+    def upsert(
+        cls,
+        tenant_id: str,
+        provider: str,
+        *,
+        model: str,
+        api_key_ciphertext: str,
+        key_fingerprint: str,
+        last_status: str = "untested",
+        enabled: bool = True,
+        session: Optional[Session] = None,
+    ) -> TenantProviderCredential:
+        """Create or replace the tenant's credential for ``provider`` in ONE
+        tenant-scoped transaction. A re-save updates the existing row in place
+        (so the unique (tenant, provider) index never trips), never creating a
+        duplicate. The ciphertext fully replaces the prior one -- there is no
+        partial-update path that could leave a stale key behind."""
+        tid = _require_tenant(tenant_id)
+        with _session(session) as s:
+            row = s.exec(
+                select(TenantProviderCredential).where(
+                    TenantProviderCredential.tenant_id == tid,
+                    TenantProviderCredential.provider == provider,
+                )
+            ).first()
+            if row is None:
+                row = TenantProviderCredential(tenant_id=tid, provider=provider)
+            row.model = model
+            row.api_key_ciphertext = api_key_ciphertext
+            row.key_fingerprint = key_fingerprint
+            row.last_status = last_status
+            row.enabled = enabled
+            row.updated_at = _now()
+            s.add(row)
+            s.flush()
+            s.refresh(row)
+            return row
+
+    @classmethod
+    def set_status(
+        cls,
+        tenant_id: str,
+        provider: str,
+        status: str,
+        *,
+        session: Optional[Session] = None,
+    ) -> Optional[TenantProviderCredential]:
+        """Record the latest validation status on the tenant's credential.
+        Tenant-scoped: a cross-tenant provider name resolves to ``None``."""
+        tid = _require_tenant(tenant_id)
+        with _session(session) as s:
+            row = s.exec(
+                select(TenantProviderCredential).where(
+                    TenantProviderCredential.tenant_id == tid,
+                    TenantProviderCredential.provider == provider,
+                )
+            ).first()
+            if row is None:
+                return None
+            row.last_status = status
+            row.updated_at = _now()
+            s.add(row)
+            s.flush()
+            s.refresh(row)
+            return row
+
+    @classmethod
+    def delete_by_provider(
+        cls, tenant_id: str, provider: str, *, session: Optional[Session] = None
+    ) -> bool:
+        """Revoke (delete) the tenant's credential for ``provider``. Returns
+        True if a row was deleted, False if the tenant has no such credential
+        (a cross-tenant provider name is simply not found -> False -> 404)."""
+        tid = _require_tenant(tenant_id)
+        with _session(session) as s:
+            row = s.exec(
+                select(TenantProviderCredential).where(
+                    TenantProviderCredential.tenant_id == tid,
+                    TenantProviderCredential.provider == provider,
+                )
+            ).first()
+            if row is None:
+                return False
+            s.delete(row)
+            s.flush()
+            return True
 
 
 class UserRepo:

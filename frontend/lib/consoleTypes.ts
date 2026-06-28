@@ -80,3 +80,61 @@ export interface RuleImportResult {
   imported: number;
   skipped: number;
 }
+
+/**
+ * One saved bring-your-own-key (BYO) provider credential, MASKED. Mirrors the
+ * backend credential_dto: there is NO raw or encrypted key here, only the
+ * masked sha256 fingerprint and metadata. The raw key never reaches the browser.
+ */
+export interface TenantProviderCredential {
+  provider: string;
+  label: string;
+  model: string;
+  key_fingerprint: string;
+  configured: boolean;
+  enabled: boolean;
+  last_status: string;
+  base_url: string;
+  get_key_url: string;
+  updated_at: string | null;
+}
+
+/** GET /settings/providers envelope: platform matrix + this tenant's BYO list. */
+export interface ProvidersPayload {
+  platform: ProviderStatusRow[];
+  tenant_credentials: TenantProviderCredential[];
+  encryption_available: boolean;
+  /** True only for a signed-in user (the writable config UI is enabled). */
+  can_configure: boolean;
+}
+
+/** A read-only platform provider row (masked fingerprint, never a raw key). */
+export interface ProviderStatusRow {
+  name: string;
+  label?: string;
+  model?: string;
+  role?: string;
+  base_url?: string;
+  get_key_url?: string;
+  configured: boolean;
+  key?: { configured: boolean; fingerprint: string | null };
+  [key: string]: unknown;
+}
+
+/** Body for POST /settings/providers (save a BYO credential). */
+export interface SaveProviderBody {
+  provider: string;
+  api_key: string;
+  model?: string;
+}
+
+/** Result of a real provider validation (POST /settings/providers/test). */
+export interface ProviderTestOutcome {
+  ok: boolean;
+  provider?: string;
+  status?: string;
+  model?: string;
+  http_status?: number;
+  detail?: string;
+  [key: string]: unknown;
+}

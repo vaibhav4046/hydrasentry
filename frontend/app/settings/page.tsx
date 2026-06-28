@@ -1,183 +1,275 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { Lock, ShieldCheck } from "lucide-react";
 import { PageShell } from "@/components/shared/PageShell";
-import { getProviders, testProvider } from "@/lib/api";
+import { useAuth } from "@/components/auth/AuthProvider";
+import { SignInCard } from "@/components/auth/SignInCard";
+import {
+  getProvidersConfig,
+  saveProvider,
+  testProviderKey,
+  deleteProvider,
+} from "@/lib/consoleApi";
 import { C } from "@/lib/cockpit/derive";
 import { ProviderLogo } from "@/components/brand/ProviderLogos";
-import type { ProviderStatus } from "@/lib/types";
+import {
+  ProviderConfigCard,
+  type ProviderOption,
+} from "@/components/settings/ProviderConfigCard";
+import type {
+  ProvidersPayload,
+  ProviderStatusRow,
+  ProviderTestOutcome,
+  TenantProviderCredential,
+} from "@/lib/consoleTypes";
 
 const MONO = "var(--font-geist-mono), 'JetBrains Mono', monospace";
 
-function str(p: ProviderStatus, key: string, fallback = "·"): string {
-  const v = p[key];
+/** The providers a user may bring their own key for (mirrors backend
+ *  provider_credentials.ALLOWED_PROVIDERS). Defaults come from the platform
+ *  matrix the backend returns, so the model/get-key hints stay in one place. */
+const BYO_PROVIDERS = ["groq", "openai", "anthropic", "gemini", "openrouter"];
+
+function str(row: ProviderStatusRow | undefined, key: string, fallback = "·"): string {
+  const v = row?.[key];
   return typeof v === "string" && v.length > 0 ? v : fallback;
 }
 
 /**
- * Configuration, ported 1:1 from the Castellan source. A two-column grid of
- * provider cards: a status dot + name + status pill, then BASE URL / MODEL /
- * API KEY (masked) / ROLE rows, a Test connection button and a get-key link.
- * Providers and their masked-key fingerprints come from the REAL
- * /settings/providers; Test connection hits the live /settings/providers/test.
- * Raw keys never reach the browser, only the sha256 fingerprint + length.
+ * Settings: bring-your-own-LLM-provider configuration.
+ *
+ * Signed in -> a WRITABLE config: add a provider + model + paste a key, Test
+ * (real backend validation), Save (encrypted at rest), Remove. A configured
+ * provider shows only its masked fingerprint -- the raw key is never rendered
+ * back. Signed out -> the read-only platform status + a sign-in CTA, plus an
+ * honest "using platform default" note. The platform matrix is always shown so
+ * a judge sees what powers the public demo.
  */
-/** Per-provider Test connection outcome. */
-type TestState = "reachable" | "nokey" | "error";
-
 export default function SettingsPage() {
-  const [providers, setProviders] = useState<ProviderStatus[]>([]);
-  const [tested, setTested] = useState<Record<string, TestState>>({});
+  const { ready, configured: authConfigured, token, user } = useAuth();
+  const [payload, setPayload] = useState<ProvidersPayload | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  const refresh = useCallback(() => {
+    return getProvidersConfig(token ?? undefined).then((r) => {
+      if (r.ok) setPayload(r.data);
+      setLoading(false);
+    });
+  }, [token]);
 
   useEffect(() => {
-    void getProviders().then((r) => {
-      if (r.ok) setProviders(r.data);
+    if (!ready) return;
+    let active = true;
+    void getProvidersConfig(token ?? undefined).then((r) => {
+      if (!active) return;
+      if (r.ok) setPayload(r.data);
+      setLoading(false);
     });
-  }, []);
+    return () => {
+      active = false;
+    };
+  }, [ready, token]);
 
-  async function handleTest(pv: ProviderStatus) {
-    // A provider with no configured key can never be reachable: surface an
-    // explicit "API key not set" state instead of silently doing nothing.
-    if (!pv.configured) {
-      setTested((prev) => ({ ...prev, [pv.name]: "nokey" }));
-      return;
-    }
-    const r = await testProvider(pv.name);
-    const ok = r.ok && Boolean(r.data.ok ?? r.data.reachable);
-    setTested((prev) => ({ ...prev, [pv.name]: ok ? "reachable" : "error" }));
+  const platform = payload?.platform ?? [];
+  const credByProvider = new Map<string, TenantProviderCredential>(
+    (payload?.tenant_credentials ?? []).map((c) => [c.provider, c]),
+  );
+  const signedIn = Boolean(user && token);
+  const canConfigure = Boolean(payload?.can_configure && token);
+
+  // Build the BYO options from the platform matrix (model + get-key defaults).
+  const options: ProviderOption[] = BYO_PROVIDERS.map((name) => {
+    const row = platform.find((p) => p.name === name);
+    return {
+      name,
+      label: str(row, "label", name),
+      defaultModel: str(row, "model", ""),
+      getKeyUrl: str(row, "get_key_url", ""),
+    };
+  });
+
+  async function handleSave(provider: string, model: string, apiKey: string) {
+    if (!token) return { ok: false, error: "sign in first" };
+    const r = await saveProvider({ provider, model, api_key: apiKey }, token);
+    if (r.ok) await refresh();
+    return r.ok ? { ok: true } : { ok: false, error: r.error };
+  }
+
+  async function handleTest(
+    provider: string,
+    apiKey: string | undefined,
+    model: string,
+  ): Promise<ProviderTestOutcome | null> {
+    if (!token) return null;
+    const r = await testProviderKey(provider, token, apiKey, model);
+    return r.ok ? r.data : { ok: false, status: "error", detail: r.error };
+  }
+
+  async function handleRemove(provider: string) {
+    if (!token) return { ok: false, error: "sign in first" };
+    const r = await deleteProvider(provider, token);
+    if (r.ok) await refresh();
+    return r.ok ? { ok: true } : { ok: false, error: r.error };
   }
 
   return (
     <PageShell>
-      <div data-page data-stagger className="cockpit-2col" style={{ display: "grid", gridTemplateColumns: "repeat(2,1fr)", gap: 14 }}>
-        {providers.map((pv) => {
-          const testState = tested[pv.name];
-          const isReachable = testState === "reachable";
-          const rawStatus = isReachable
-            ? "reachable"
-            : str(pv, "status", pv.configured ? "online" : "idle");
-          const status = rawStatus.toLowerCase();
-          const on = status === "online" || status === "reachable";
-          const statusCol = on ? C.accent : status === "offline" ? C.faint : C.muted;
-          const statusBd = on ? "rgba(234,240,250,0.3)" : "rgba(255,255,255,0.12)";
-          const dot = on ? C.accent : C.faint;
-          const key = pv.masked_key ?? str(pv, "key", pv.configured ? "configured" : "not set");
-          const keyCol = pv.configured ? C.silver : C.faint;
-          const baseUrl = str(pv, "base_url", str(pv, "baseUrl"));
-          const model = str(pv, "model");
-          const role = str(pv, "role");
-          const getKey = str(pv, "get_key", str(pv, "getKey", ""));
+      <div data-page data-stagger style={{ display: "flex", flexDirection: "column", gap: 22 }}>
+        <header style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+          <h1 className="cockpit-display" style={{ fontSize: 22, fontWeight: 650, color: C.ink }}>
+            LLM provider
+          </h1>
+          <p style={{ fontSize: 13, color: C.muted, maxWidth: 620, lineHeight: 1.55 }}>
+            Bring your own provider, model, and key. When you save a valid
+            provider, your runs (the agent and the judge) route through it
+            instead of the platform default. The key is encrypted at rest and
+            never shown back to you.
+          </p>
+        </header>
 
-          return (
+        {/* Writable config: signed in only. */}
+        {signedIn && canConfigure && (
+          <section style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            <SectionLabel icon={<ShieldCheck size={14} color={C.accent} />} text="Your providers" />
+            {payload && !payload.encryption_available && (
+              <Notice text="Encryption is not configured on this deployment; saving a key is disabled until ENCRYPTION_KEY (or APP_SECRET) is set." />
+            )}
+            <div className="cockpit-2col" style={{ display: "grid", gridTemplateColumns: "repeat(2,1fr)", gap: 14 }}>
+              {options.map((opt) => (
+                <ProviderConfigCard
+                  key={opt.name}
+                  option={opt}
+                  saved={credByProvider.get(opt.name)}
+                  onSave={(model, apiKey) => handleSave(opt.name, model, apiKey)}
+                  onTest={(apiKey, model) => handleTest(opt.name, apiKey, model)}
+                  onRemove={() => handleRemove(opt.name)}
+                />
+              ))}
+            </div>
+            {credByProvider.size === 0 && (
+              <Notice text="No provider configured. Your runs currently use the platform default (Groq)." />
+            )}
+          </section>
+        )}
+
+        {/* Signed-out gate: read-only + sign-in CTA. */}
+        {ready && !signedIn && (
+          <section style={{ display: "flex", flexDirection: "column", gap: 12 }}>
             <div
-              key={pv.name}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.transform = "translateY(-3px)";
-                e.currentTarget.style.borderColor = "rgba(234,240,250,0.28)";
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.transform = "translateY(0)";
-                e.currentTarget.style.borderColor = "rgba(255,255,255,0.08)";
-              }}
               style={{
-                padding: 18,
-                border: "1px solid rgba(255,255,255,0.08)",
-                borderRadius: 16,
-                background: "rgba(255,255,255,0.012)",
-                transition: "transform .25s cubic-bezier(.22,.61,.36,1),border-color .25s",
+                padding: 16,
+                border: "1px solid rgba(255,255,255,0.1)",
+                borderRadius: 14,
+                background: "rgba(255,255,255,0.02)",
+                display: "flex",
+                alignItems: "center",
+                gap: 10,
               }}
             >
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                  <span style={{ width: 9, height: 9, borderRadius: "50%", background: dot, boxShadow: `0 0 8px ${dot}` }} />
-                  <ProviderLogo name={pv.name} />
-                </div>
-                <span
-                  style={{
-                    fontFamily: MONO,
-                    fontSize: "9.5px",
-                    letterSpacing: "0.1em",
-                    color: statusCol,
-                    border: `1px solid ${statusBd}`,
-                    borderRadius: 999,
-                    padding: "3px 9px",
-                  }}
-                >
-                  {rawStatus.toUpperCase()}
-                </span>
-              </div>
-              <div style={{ marginTop: 14, display: "flex", flexDirection: "column", gap: 8 }}>
-                <KV k="BASE URL" v={baseUrl} vColor={C.muted} truncate />
-                <KV k="MODEL" v={model} vColor={C.silver} />
-                <KV k="API KEY" v={key} vColor={keyCol} />
-                <KV k="ROLE" v={role} vColor={C.muted} />
-              </div>
-              <div style={{ marginTop: 14, display: "flex", flexDirection: "column", gap: 8 }}>
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
-                  <button
-                    type="button"
-                    onClick={() => void handleTest(pv)}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.borderColor = "rgba(255,255,255,0.32)";
-                      e.currentTarget.style.background = "rgba(255,255,255,0.06)";
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.borderColor = "rgba(255,255,255,0.16)";
-                      e.currentTarget.style.background = "rgba(255,255,255,0.03)";
-                    }}
-                    style={{
-                      cursor: "pointer",
-                      fontFamily: "inherit",
-                      fontSize: 12,
-                      padding: "8px 13px",
-                      border: "1px solid rgba(255,255,255,0.16)",
-                      borderRadius: 9,
-                      background: "rgba(255,255,255,0.03)",
-                      color: C.silver,
-                      transition: "all .2s",
-                    }}
-                  >
-                    {isReachable ? "Reachable ✓" : "Test connection"}
-                  </button>
-                  <span style={{ fontSize: 11, color: C.faint }}>{getKey}</span>
-                </div>
-                {testState === "nokey" && (
-                  <div style={{ fontFamily: MONO, fontSize: 10.5, color: C.accent, lineHeight: 1.5 }}>
-                    API key not set. Configure {pv.name} first.
-                  </div>
-                )}
-                {testState === "error" && (
-                  <div style={{ fontFamily: MONO, fontSize: 10.5, color: C.muted, lineHeight: 1.5 }}>
-                    Not reachable. Check the key and base URL.
-                  </div>
-                )}
-              </div>
+              <Lock size={16} color={C.faint} />
+              <span style={{ fontSize: 12.5, color: C.muted }}>
+                Sign in to configure your own provider. Until then, runs use the
+                platform default (Groq).
+              </span>
             </div>
-          );
-        })}
-        {providers.length === 0 && (
-          <div style={{ fontFamily: MONO, fontSize: 12, color: C.faint, padding: 12 }}>
-            No providers reported by the backend.
-          </div>
+            {authConfigured ? (
+              <div style={{ maxWidth: 420 }}>
+                <SignInCard />
+              </div>
+            ) : (
+              <Notice text="Auth is not configured on this deployment, so the writable config is unavailable here. The platform default still powers the public demo." />
+            )}
+          </section>
         )}
+
+        {/* Always: the read-only platform status matrix. */}
+        <section style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          <SectionLabel text="Platform providers (powers the public demo)" />
+          <div className="cockpit-2col" style={{ display: "grid", gridTemplateColumns: "repeat(2,1fr)", gap: 14 }}>
+            {platform.map((pv) => (
+              <PlatformTile key={pv.name} row={pv} />
+            ))}
+            {platform.length === 0 && !loading && (
+              <div style={{ fontFamily: MONO, fontSize: 12, color: C.faint, padding: 12 }}>
+                No providers reported by the backend.
+              </div>
+            )}
+          </div>
+        </section>
       </div>
     </PageShell>
   );
 }
 
-function KV({ k, v, vColor, truncate }: { k: string; v: string; vColor: string; truncate?: boolean }) {
+function PlatformTile({ row }: { row: ProviderStatusRow }) {
+  const keyState = row.key;
+  const configured = Boolean(keyState?.configured ?? row.configured);
+  const fingerprint = keyState?.fingerprint ?? (configured ? "configured" : "not set");
+  return (
+    <div
+      style={{
+        padding: 16,
+        border: "1px solid rgba(255,255,255,0.07)",
+        borderRadius: 14,
+        background: "rgba(255,255,255,0.01)",
+        display: "flex",
+        flexDirection: "column",
+        gap: 8,
+      }}
+    >
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <ProviderLogo name={row.name} />
+        <span
+          style={{
+            fontFamily: MONO,
+            fontSize: 9,
+            letterSpacing: "0.1em",
+            color: configured ? C.accentDim : C.faint,
+          }}
+        >
+          {configured ? "READY" : "IDLE"}
+        </span>
+      </div>
+      <KV k="MODEL" v={str(row, "model")} vColor={C.silver} />
+      <KV k="KEY" v={fingerprint} vColor={configured ? C.silver : C.faint} />
+    </div>
+  );
+}
+
+function SectionLabel({ text, icon }: { text: string; icon?: React.ReactNode }) {
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+      {icon}
+      <span style={{ fontFamily: MONO, fontSize: 10.5, letterSpacing: "0.12em", color: C.faint, textTransform: "uppercase" }}>
+        {text}
+      </span>
+    </div>
+  );
+}
+
+function Notice({ text }: { text: string }) {
+  return (
+    <div style={{ fontFamily: MONO, fontSize: 10.5, color: C.muted, lineHeight: 1.5, padding: "8px 10px", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 8 }}>
+      {text}
+    </div>
+  );
+}
+
+function KV({ k, v, vColor }: { k: string; v: string; vColor: string }) {
   return (
     <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
       <span style={{ fontFamily: MONO, fontSize: 10, color: C.faint }}>{k}</span>
       <span
         style={{
           fontFamily: MONO,
-          fontSize: "10.5px",
+          fontSize: 10.5,
           color: vColor,
           textAlign: "right",
-          ...(truncate
-            ? { whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: 200 }
-            : {}),
+          whiteSpace: "nowrap",
+          overflow: "hidden",
+          textOverflow: "ellipsis",
+          maxWidth: 200,
         }}
       >
         {v}
