@@ -21,18 +21,20 @@ import type { NextRequest } from "next/server";
  * animation while the script tightening (the actual weakness) still lands.
  *
  * Every non-script directive from the previous static next.config.ts CSP is
- * preserved verbatim: connect-src allowlist (self + Supabase https/wss +
- * backend origin), img-src, font-src, worker-src, frame-src 'none',
- * object-src 'none', base-uri 'self', form-action 'self',
- * frame-ancestors 'none', upgrade-insecure-requests.
+ * preserved: connect-src allowlist (self + backend origin), img-src, font-src,
+ * worker-src, frame-src 'none', object-src 'none', base-uri 'self',
+ * form-action 'self', frame-ancestors 'none', upgrade-insecure-requests.
+ *
+ * Sign-in / magic-link was removed from the product, so the Supabase https/wss
+ * origins are no longer in connect-src -- the app makes no Supabase calls. The
+ * backend origin remains allowlisted for the live attack, the real graph query,
+ * the no-login provider-key test, and per-request BYO runs.
  *
  * The middleware owns the CSP now; next.config.ts emits the rest of the
  * security headers (HSTS, X-Frame-Options, nosniff, Referrer-Policy,
  * Permissions-Policy) so there is no conflicting duplicate CSP.
  */
 
-const SUPABASE_ORIGIN = "https://gwytslpqvqfewsjcqmuj.supabase.co";
-const SUPABASE_WSS = "wss://gwytslpqvqfewsjcqmuj.supabase.co";
 const BACKEND_ORIGIN = "https://backend-three-puce-75.vercel.app";
 
 function buildCsp(nonce: string): string {
@@ -54,7 +56,7 @@ function buildCsp(nonce: string): string {
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' data: blob:",
     "font-src 'self' data:",
-    `connect-src 'self' ${SUPABASE_ORIGIN} ${SUPABASE_WSS} ${BACKEND_ORIGIN}`,
+    `connect-src 'self' ${BACKEND_ORIGIN}`,
     "worker-src 'self' blob:",
     "frame-src 'none'",
     "object-src 'none'",

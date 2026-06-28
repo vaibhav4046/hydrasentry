@@ -1,17 +1,15 @@
 "use client";
 
 /**
- * Console incident dashboard (Phase 3). When signed in, GET /incidents (Bearer)
- * shows the USER's own real persisted incidents. When signed out, it shows the
- * DEMO tenant's real rows with an honest "sign in to see your own" prompt — never
- * fabricated data. A brand-new user with zero incidents gets a real empty state
- * ("run an attack or connect your agent"), not fake rows.
+ * Console incident dashboard (Phase 3). NO LOGIN: GET /incidents (token-less)
+ * shows the shared public DEMO tenant's REAL persisted incidents -- never
+ * fabricated data. When the demo tenant has no incidents, a real empty state
+ * ("run an attack or connect your agent") is shown, not fake rows.
  */
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { KeyRound, Activity, RefreshCw } from "lucide-react";
 import { ConsoleShell } from "@/components/auth/ConsoleShell";
-import { useAuth } from "@/components/auth/AuthProvider";
 import { listIncidents } from "@/lib/consoleApi";
 import { computeAnalytics } from "@/lib/incidentAnalytics";
 import { AnalyticsBar } from "@/components/console/AnalyticsBar";
@@ -23,14 +21,13 @@ import { C } from "@/lib/cockpit/derive";
 const MONO = "var(--font-geist-mono), 'JetBrains Mono', monospace";
 
 function DashboardBody() {
-  const { ready, token, user } = useAuth();
   const [incidents, setIncidents] = useState<Incident[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  // token present -> the user's own tenant; absent -> the demo tenant (real rows).
-  // Apply a settled result: setState only inside the .then callback, never
-  // synchronously in the effect body (satisfies react-hooks/set-state-in-effect).
+  // Token-less read -> the shared public demo tenant's REAL rows. Apply a settled
+  // result: setState only inside the .then callback, never synchronously in the
+  // effect body (satisfies react-hooks/set-state-in-effect).
   const apply = useCallback((result: { ok: true; data: Incident[] } | { ok: false; error: string }) => {
     if (result.ok) {
       setIncidents(result.data);
@@ -43,30 +40,27 @@ function DashboardBody() {
   }, []);
 
   useEffect(() => {
-    if (!ready) return;
     let active = true;
-    void listIncidents(token ?? undefined).then((r) => {
+    void listIncidents().then((r) => {
       if (active) apply(r);
     });
     return () => {
       active = false;
     };
-  }, [ready, token, apply]);
+  }, [apply]);
 
   // Manual refresh from the button (an event handler may set state synchronously).
   function refresh() {
     setLoading(true);
-    void listIncidents(token ?? undefined).then(apply);
+    void listIncidents().then(apply);
   }
 
   const analytics = computeAnalytics(incidents ?? []);
-  const isSignedIn = Boolean(user);
 
   return (
     <div data-page>
       {/* Provenance banner: honest about whose data this is. */}
       <TenantProvenanceBanner
-        isSignedIn={isSignedIn}
         subject="persisted incidents"
         action={
           <button
@@ -97,7 +91,7 @@ function DashboardBody() {
           <span style={{ fontFamily: MONO, fontSize: 11, color: C.faint }}>loading incidents…</span>
         </div>
       ) : incidents.length === 0 && !error ? (
-        <EmptyDashboard isSignedIn={isSignedIn} />
+        <EmptyDashboard />
       ) : (
         <>
           <AnalyticsBar analytics={analytics} />
@@ -108,19 +102,18 @@ function DashboardBody() {
   );
 }
 
-function EmptyDashboard({ isSignedIn }: { isSignedIn: boolean }) {
+function EmptyDashboard() {
   return (
     <div className="cockpit-card" style={{ padding: 36, textAlign: "center", maxWidth: 540, margin: "12px auto" }}>
       <div style={{ display: "grid", placeItems: "center", width: 48, height: 48, margin: "0 auto 14px", borderRadius: 14, border: "1px solid rgba(234,240,250,0.18)", background: "rgba(234,240,250,0.04)" }}>
         <Activity size={22} color={C.accent} strokeWidth={1.7} />
       </div>
       <h2 className="cockpit-display" style={{ fontSize: 19, fontWeight: 600, color: C.ink, marginBottom: 8 }}>
-        {isSignedIn ? "No incidents yet" : "This tenant has no incidents"}
+        This tenant has no incidents
       </h2>
       <p style={{ fontSize: 13, lineHeight: 1.65, color: C.muted, maxWidth: 380, margin: "0 auto 18px" }}>
-        {isSignedIn
-          ? "Connect your agent or run a live attack. Every risky memory your agent retrieves shows up here as a real, certified incident."
-          : "Run the live attack demo to seed a real incident, or sign in to start your own tenant."}
+        Run the live attack demo to seed a real incident, or connect your agent
+        so its risky retrievals show up here as real, certified incidents.
       </p>
       <div style={{ display: "flex", gap: 10, justifyContent: "center", flexWrap: "wrap" }}>
         <Link href="/console/keys" className="hydra-button-primary" style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "10px 16px", borderRadius: 10, fontSize: 13, fontWeight: 600, textDecoration: "none" }}>

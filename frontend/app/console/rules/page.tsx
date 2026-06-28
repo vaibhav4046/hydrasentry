@@ -1,23 +1,17 @@
 "use client";
 
 /**
- * Detection-rule store (Phase 5-FE). NO LOGIN WALL: the page is fully viewable
- * signed-out — it shows the DEMO tenant's REAL rules (GET /rules without a token
- * resolves the demo tenant on the backend) READ-ONLY, honestly labelled. A
- * signed-in operator manages their OWN tenant's rules: each rule is an EXAMPLE of
+ * Detection-rule store (Phase 5-FE). NO LOGIN: the page shows the shared public
+ * DEMO tenant's REAL rules (GET /rules without a token resolves the demo tenant
+ * on the backend) READ-ONLY, honestly labelled. Each rule is an EXAMPLE of
  * poisoned text whose embedding the detector stores, so paraphrases of the same
- * attack get caught for that tenant. The add/edit/delete/import controls only
- * appear (and the backend only accepts writes) for a signed-in user; the demo
- * ruleset is read-only on both sides. Never fabricates rows (operating rule #1).
+ * attack get caught. Never fabricates rows (operating rule #1).
  */
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ShieldCheck } from "lucide-react";
 import { ConsoleShell } from "@/components/auth/ConsoleShell";
-import { useAuth } from "@/components/auth/AuthProvider";
 import { listRules } from "@/lib/consoleApi";
-import { AddRuleForm } from "@/components/console/AddRuleForm";
 import { RuleTable } from "@/components/console/RuleTable";
-import { RuleImportExport } from "@/components/console/RuleImportExport";
 import { TenantProvenanceBanner } from "@/components/console/TenantProvenanceBanner";
 import type { DetectionRule } from "@/lib/consoleTypes";
 import { C } from "@/lib/cockpit/derive";
@@ -25,8 +19,6 @@ import { C } from "@/lib/cockpit/derive";
 const MONO = "var(--font-geist-mono), 'JetBrains Mono', monospace";
 
 function RulesBody() {
-  const { token, user } = useAuth();
-  const isSignedIn = Boolean(user);
   const [rules, setRules] = useState<DetectionRule[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   // Drop any list response that settles after unmount so a slow reload can't
@@ -53,85 +45,55 @@ function RulesBody() {
     [],
   );
 
-  // Load unconditionally: with a token -> the user's own tenant; without ->
-  // the demo tenant's REAL rules (read-only). The previous `if (!token) return`
-  // left the signed-out page stuck on the loading skeleton forever even though
-  // the banner promised the demo tenant's rules. `token ?? undefined` keeps the
-  // demo read anonymous so the backend resolves the shared demo tenant.
+  // Token-less read -> the shared public demo tenant's REAL rules (read-only).
   const load = useCallback(() => {
-    void listRules(token ?? undefined).then(apply);
-  }, [token, apply]);
+    void listRules().then(apply);
+  }, [apply]);
 
   useEffect(() => {
     let active = true;
-    void listRules(token ?? undefined).then((r) => {
+    void listRules().then((r) => {
       if (active) apply(r);
     });
     return () => {
       active = false;
     };
-  }, [token, apply]);
+  }, [apply]);
 
   return (
     <div data-page>
-      <TenantProvenanceBanner
-        isSignedIn={isSignedIn}
-        subject="detection rules"
-        signedOutHref="/console/keys"
-      />
+      <TenantProvenanceBanner subject="detection rules" />
 
-      <div
-        className="console-rules-grid"
-        style={{
-          display: "grid",
-          gridTemplateColumns: isSignedIn
-            ? "minmax(0,1.4fr) minmax(0,1fr)"
-            : "minmax(0,1fr)",
-          gap: 18,
-          alignItems: "start",
-        }}
-      >
-        {/* Rules column */}
-        <div>
-          <div style={{ display: "flex", alignItems: "center", gap: 9, marginBottom: 6 }}>
-            <ShieldCheck size={16} color={C.accent} />
-            <h2 className="cockpit-display" style={{ fontSize: 16, fontWeight: 600, color: C.ink }}>
-              Detection rules
-            </h2>
-          </div>
-          <p style={{ fontSize: 12.5, lineHeight: 1.6, color: C.muted, marginBottom: 16 }}>
-            A rule is an example of poisoned text. The detector embeds the
-            signature so paraphrases of the same attack get caught for the
-            tenant — tune detection without retraining anything.
-          </p>
-
-          {error && (
-            <div
-              role="alert"
-              className="cockpit-card"
-              style={{ padding: 12, marginBottom: 14, fontFamily: MONO, fontSize: 11, color: C.silver }}
-            >
-              {error}
-            </div>
-          )}
-
-          <RuleTable
-            rules={rules}
-            token={token}
-            readOnly={!isSignedIn}
-            onChanged={load}
-            onError={setError}
-          />
+      <div style={{ maxWidth: 820 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 9, marginBottom: 6 }}>
+          <ShieldCheck size={16} color={C.accent} />
+          <h2 className="cockpit-display" style={{ fontSize: 16, fontWeight: 600, color: C.ink }}>
+            Detection rules
+          </h2>
         </div>
+        <p style={{ fontSize: 12.5, lineHeight: 1.6, color: C.muted, marginBottom: 16 }}>
+          A rule is an example of poisoned text. The detector embeds the
+          signature so paraphrases of the same attack get caught for the
+          tenant — tune detection without retraining anything.
+        </p>
 
-        {/* Add + import/export column — management is a signed-in action. The
-            demo ruleset is read-only on both the backend and here. */}
-        {isSignedIn && (
-          <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
-            <AddRuleForm token={token} onCreated={load} onError={setError} />
-            <RuleImportExport token={token} onImported={load} onError={setError} />
+        {error && (
+          <div
+            role="alert"
+            className="cockpit-card"
+            style={{ padding: 12, marginBottom: 14, fontFamily: MONO, fontSize: 11, color: C.silver }}
+          >
+            {error}
           </div>
         )}
+
+        <RuleTable
+          rules={rules}
+          token={null}
+          readOnly
+          onChanged={load}
+          onError={setError}
+        />
       </div>
     </div>
   );

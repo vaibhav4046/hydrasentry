@@ -165,7 +165,7 @@ export function RuleTable({ rules, token, readOnly = false, onChanged, onError }
           NO RULES YET
         </div>
         {readOnly
-          ? "The demo tenant has no detection rules to show. Sign in to create signatures that tune detection for your own tenant."
+          ? "The demo tenant has no detection rules to show. Connect your agent to surface signatures for your own incidents."
           : "Add a signature to tune detection for your tenant. Paste an example of the poisoned text you want caught — its paraphrases will be flagged too."}
       </div>
     );

@@ -1,12 +1,10 @@
 import type { ReactNode } from "react";
-import { AuthProvider } from "@/components/auth/AuthProvider";
 
 /**
- * Settings route layout. Wraps the page in the AuthProvider so the writable
- * bring-your-own-key (BYO) provider config can read the signed-in session +
- * access token. Signed out, the page still renders (read-only platform status +
- * a sign-in CTA) -- the provider just reports no session.
+ * Settings route layout. The no-login bring-your-own-key config needs no auth
+ * context: the key lives in this browser's localStorage and is read directly by
+ * the page, so this layout is a passthrough.
  */
 export default function SettingsLayout({ children }: { children: ReactNode }) {
-  return <AuthProvider>{children}</AuthProvider>;
+  return <>{children}</>;
 }
