@@ -1,12 +1,10 @@
 import type { ReactNode } from "react";
-import { AuthProvider } from "@/components/auth/AuthProvider";
 
 /**
- * Console route group layout. Wraps every /console/* surface in the AuthProvider
- * so the session, token, and tenant are available to the dashboard, API-keys
- * page, and incident detail. The public marketing/demo pages live outside this
- * group and never mount the provider.
+ * Console route group layout. The product has no sign-in, so the console needs
+ * no auth context: every /console/* surface is public and reads the shared demo
+ * tenant's real rows token-less. This layout is a passthrough.
  */
 export default function ConsoleLayout({ children }: { children: ReactNode }) {
-  return <AuthProvider>{children}</AuthProvider>;
+  return <>{children}</>;
 }

@@ -68,17 +68,28 @@ def _query(adapter: Any, sub: str, task: str) -> dict[str, Any]:
     return adapter.query(STABLE_TENANT, sub, task)
 
 
-def _resolve_binding(tenant_id: Optional[str]) -> Optional[Any]:
+def _resolve_binding(
+    tenant_id: Optional[str], request_runtime: Optional[Any] = None
+) -> Optional[Any]:
     """Resolve which provider/model/key this run's agent+judge calls use.
 
-    If the authenticated tenant has saved a valid BYO credential for the run's
-    LLM provider, route THEIR runs through their provider/model/key; otherwise
-    return the platform default binding. The PUBLIC unauthenticated demo passes
-    no tenant_id, so it always gets the platform default and NEVER a user key.
+    Precedence:
+    1. ``request_runtime`` -- a PER-REQUEST BYO binding the caller passed on this
+       single run (the simple no-login path: ``X-Provider`` / ``X-Provider-Key``
+       / ``X-Provider-Model`` headers, resolved by the endpoint). The key lives
+       only for this run and is never stored or logged.
+    2. Otherwise, if the authenticated tenant has saved a valid BYO credential
+       for the run's LLM provider, route THEIR runs through their
+       provider/model/key (the server-side encrypted path).
+    3. Otherwise the platform default binding.
 
-    Returns a ``ChatBinding`` (tenant or platform), or ``None`` only when even
-    the platform Groq key is unconfigured (the caller then fails closed)."""
-    if tenant_id:
+    The PUBLIC unauthenticated demo passes no request_runtime and no tenant_id,
+    so it always gets the platform default and NEVER a user key.
+
+    Returns a ``ChatBinding`` (request/tenant/platform), or ``None`` only when
+    even the platform Groq key is unconfigured (the caller then fails closed)."""
+    runtime = request_runtime
+    if runtime is None and tenant_id:
         try:
             import provider_credentials
 
@@ -87,30 +98,33 @@ def _resolve_binding(tenant_id: Optional[str]) -> Optional[Any]:
             logger.warning("byo binding resolve failed (%s); platform default",
                            type(exc).__name__)
             runtime = None
-        if runtime is not None:
-            return real_agent.ChatBinding(
-                provider=runtime.provider,
-                model=runtime.model,
-                base_url=runtime.base_url,
-                api_key=runtime.api_key,
-                source="tenant",
-            )
+    if runtime is not None:
+        return real_agent.ChatBinding(
+            provider=runtime.provider,
+            model=runtime.model,
+            base_url=runtime.base_url,
+            api_key=runtime.api_key,
+            source=runtime.source,
+        )
     return real_agent.platform_binding()
 
 
-def _build_real_run(tenant_id: Optional[str] = None) -> dict[str, Any]:
+def _build_real_run(
+    tenant_id: Optional[str] = None, request_runtime: Optional[Any] = None
+) -> dict[str, Any]:
     """Do the real run. Runs inside a worker thread so the caller can enforce a
     hard wall-clock timeout. Returns a result dict; on any internal failure
     returns ``{ok: False, reason: ...}`` so the caller falls back cleanly.
 
-    ``tenant_id`` (the authenticated caller's tenant) selects a BYO provider
-    binding when one is saved; the public demo passes ``None`` and uses the
+    ``request_runtime`` (a per-request BYO binding passed on this single run)
+    wins; else ``tenant_id`` (the authenticated caller's tenant) selects a saved
+    BYO provider binding; else the public demo passes neither and uses the
     platform default."""
     from hydra_client import RealHydraAdapter
 
     if not settings.hydra.api_key:
         return {"ok": False, "reason": "no HydraDB key configured"}
-    binding = _resolve_binding(tenant_id)
+    binding = _resolve_binding(tenant_id, request_runtime)
     if binding is None or not binding.api_key:
         return {"ok": False, "reason": "no LLM provider key configured"}
 
@@ -281,19 +295,23 @@ def _deterministic_fallback(reason: str, elapsed_ms: int) -> dict[str, Any]:
     }
 
 
-def run_real(tenant_id: Optional[str] = None) -> dict[str, Any]:
+def run_real(
+    tenant_id: Optional[str] = None, request_runtime: Optional[Any] = None
+) -> dict[str, Any]:
     """Public entrypoint. Never raises. On success returns the real result; on
     any failure or wall-clock overrun returns the deterministic fallback. Both
     are HTTP-200-safe envelopes.
 
-    ``tenant_id`` (the authenticated caller's tenant) routes the run through that
-    tenant's BYO provider when one is saved+valid; the public unauthenticated
-    demo passes ``None`` and always uses the platform default.
+    ``request_runtime`` (a per-request BYO binding the caller passed on this
+    single run, the simple no-login path) wins; else ``tenant_id`` (the
+    authenticated caller's tenant) routes the run through that tenant's saved BYO
+    provider; else the public unauthenticated demo passes neither and always uses
+    the platform default. The per-request key is never persisted or logged.
     """
     started = time.monotonic()
     try:
         with ThreadPoolExecutor(max_workers=1) as pool:
-            future = pool.submit(_build_real_run, tenant_id)
+            future = pool.submit(_build_real_run, tenant_id, request_runtime)
             result = future.result(timeout=_HARD_TIMEOUT_SECONDS)
     except FutureTimeout:
         elapsed = int((time.monotonic() - started) * 1000)

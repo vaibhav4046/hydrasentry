@@ -1,196 +1,140 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import { Lock, ShieldCheck } from "lucide-react";
+/**
+ * Settings: SIMPLE no-login bring-your-own-LLM-key config.
+ *
+ * NO SIGN-IN, NO MINTING, NO SERVER PERSISTENCE. The user picks a provider,
+ * opens that provider's own "Get your key" page in a new tab, pastes the key
+ * (password field), picks/edits a model, Tests the connection (a REAL upstream
+ * validation call -- no auth, the key is never echoed), and Saves. The key is
+ * stored ONLY in this browser's localStorage (lib/byoKey.ts) and is sent
+ * per-request on a run so THAT run uses their model + key. When no key is saved,
+ * runs use the platform default (Groq) -- the public demo path -- shown honestly.
+ *
+ * The read-only platform provider matrix is still shown so a visitor sees what
+ * powers the public demo.
+ */
+import { useEffect, useState, useSyncExternalStore } from "react";
+import { Cpu, ShieldCheck } from "lucide-react";
 import { PageShell } from "@/components/shared/PageShell";
-import { useAuth } from "@/components/auth/AuthProvider";
-import { SignInCard } from "@/components/auth/SignInCard";
-import {
-  getProvidersConfig,
-  saveProvider,
-  testProviderKey,
-  deleteProvider,
-} from "@/lib/consoleApi";
+import { getProviders, testProviderKeyPublic } from "@/lib/api";
 import { C } from "@/lib/cockpit/derive";
 import { ProviderLogo } from "@/components/brand/ProviderLogos";
+import { ByoKeyCard } from "@/components/settings/ByoKeyCard";
 import {
-  ProviderConfigCard,
-  type ProviderOption,
-} from "@/components/settings/ProviderConfigCard";
-import type {
-  ProvidersPayload,
-  ProviderStatusRow,
-  ProviderTestOutcome,
-  TenantProviderCredential,
-} from "@/lib/consoleTypes";
+  BYO_PROVIDERS,
+  byoKeyServerSnapshot,
+  byoKeySnapshot,
+  maskKey,
+  providerById,
+  subscribeByoKey,
+} from "@/lib/byoKey";
+import type { ProviderStatus } from "@/lib/types";
 
 const MONO = "var(--font-geist-mono), 'JetBrains Mono', monospace";
 
-/** The providers a user may bring their own key for (mirrors backend
- *  provider_credentials.ALLOWED_PROVIDERS). Defaults come from the platform
- *  matrix the backend returns, so the model/get-key hints stay in one place. */
-const BYO_PROVIDERS = ["groq", "openai", "anthropic", "gemini", "openrouter"];
-
-function str(row: ProviderStatusRow | undefined, key: string, fallback = "·"): string {
+function str(row: ProviderStatus | undefined, key: string, fallback = "·"): string {
   const v = row?.[key];
   return typeof v === "string" && v.length > 0 ? v : fallback;
 }
 
-/**
- * Settings: bring-your-own-LLM-provider configuration.
- *
- * Signed in -> a WRITABLE config: add a provider + model + paste a key, Test
- * (real backend validation), Save (encrypted at rest), Remove. A configured
- * provider shows only its masked fingerprint -- the raw key is never rendered
- * back. Signed out -> the read-only platform status + a sign-in CTA, plus an
- * honest "using platform default" note. The platform matrix is always shown so
- * a judge sees what powers the public demo.
- */
 export default function SettingsPage() {
-  const { ready, configured: authConfigured, token, user } = useAuth();
-  const [payload, setPayload] = useState<ProvidersPayload | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  const refresh = useCallback(() => {
-    return getProvidersConfig(token ?? undefined).then((r) => {
-      if (r.ok) setPayload(r.data);
-      setLoading(false);
-    });
-  }, [token]);
+  const [platform, setPlatform] = useState<ProviderStatus[] | null>(null);
+  // The saved BYO key is external browser state (localStorage). useSyncExternalStore
+  // is the concurrent-safe way to read it and re-render the masked banner the
+  // instant a card saves or removes a key (this tab or another tab).
+  const saved = useSyncExternalStore(
+    subscribeByoKey,
+    byoKeySnapshot,
+    byoKeyServerSnapshot,
+  );
 
   useEffect(() => {
-    if (!ready) return;
     let active = true;
-    void getProvidersConfig(token ?? undefined).then((r) => {
-      if (!active) return;
-      if (r.ok) setPayload(r.data);
-      setLoading(false);
+    void getProviders().then((r) => {
+      if (active && r.ok) setPlatform(r.data);
     });
     return () => {
       active = false;
     };
-  }, [ready, token]);
+  }, []);
 
-  const platform = payload?.platform ?? [];
-  const credByProvider = new Map<string, TenantProviderCredential>(
-    (payload?.tenant_credentials ?? []).map((c) => [c.provider, c]),
-  );
-  const signedIn = Boolean(user && token);
-  const canConfigure = Boolean(payload?.can_configure && token);
-
-  // Build the BYO options from the platform matrix (model + get-key defaults).
-  const options: ProviderOption[] = BYO_PROVIDERS.map((name) => {
-    const row = platform.find((p) => p.name === name);
-    return {
-      name,
-      label: str(row, "label", name),
-      defaultModel: str(row, "model", ""),
-      getKeyUrl: str(row, "get_key_url", ""),
-    };
-  });
-
-  async function handleSave(provider: string, model: string, apiKey: string) {
-    if (!token) return { ok: false, error: "sign in first" };
-    const r = await saveProvider({ provider, model, api_key: apiKey }, token);
-    if (r.ok) await refresh();
-    return r.ok ? { ok: true } : { ok: false, error: r.error };
-  }
-
-  async function handleTest(
-    provider: string,
-    apiKey: string | undefined,
-    model: string,
-  ): Promise<ProviderTestOutcome | null> {
-    if (!token) return null;
-    const r = await testProviderKey(provider, token, apiKey, model);
-    return r.ok ? r.data : { ok: false, status: "error", detail: r.error };
-  }
-
-  async function handleRemove(provider: string) {
-    if (!token) return { ok: false, error: "sign in first" };
-    const r = await deleteProvider(provider, token);
-    if (r.ok) await refresh();
-    return r.ok ? { ok: true } : { ok: false, error: r.error };
-  }
+  const savedProvider = saved ? providerById(saved.provider) : undefined;
 
   return (
     <PageShell>
       <div data-page data-stagger style={{ display: "flex", flexDirection: "column", gap: 22 }}>
         <header style={{ display: "flex", flexDirection: "column", gap: 6 }}>
           <h1 className="cockpit-display" style={{ fontSize: 22, fontWeight: 650, color: C.ink }}>
-            LLM provider
+            LLM provider key
           </h1>
-          <p style={{ fontSize: 13, color: C.muted, maxWidth: 620, lineHeight: 1.55 }}>
-            Bring your own provider, model, and key. When you save a valid
-            provider, your runs (the agent and the judge) route through it
-            instead of the platform default. The key is encrypted at rest and
-            never shown back to you.
+          <p style={{ fontSize: 13, color: C.muted, maxWidth: 640, lineHeight: 1.55 }}>
+            Bring your own provider, model, and key. No sign-in. Pick a provider,
+            grab a key from their page, paste it, test it, and save. Your key
+            stays in this browser only (never sent to us to store) and drives your
+            runs. With nothing saved, runs use the platform default.
           </p>
         </header>
 
-        {/* Writable config: signed in only. */}
-        {signedIn && canConfigure && (
-          <section style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-            <SectionLabel icon={<ShieldCheck size={14} color={C.accent} />} text="Your providers" />
-            {payload && !payload.encryption_available && (
-              <Notice text="Encryption is not configured on this deployment; saving a key is disabled until ENCRYPTION_KEY (or APP_SECRET) is set." />
-            )}
-            <div className="cockpit-2col" style={{ display: "grid", gridTemplateColumns: "repeat(2,1fr)", gap: 14 }}>
-              {options.map((opt) => (
-                <ProviderConfigCard
-                  key={opt.name}
-                  option={opt}
-                  saved={credByProvider.get(opt.name)}
-                  onSave={(model, apiKey) => handleSave(opt.name, model, apiKey)}
-                  onTest={(apiKey, model) => handleTest(opt.name, apiKey, model)}
-                  onRemove={() => handleRemove(opt.name)}
-                />
-              ))}
-            </div>
-            {credByProvider.size === 0 && (
-              <Notice text="No provider configured. Your runs currently use the platform default (Groq)." />
-            )}
-          </section>
-        )}
-
-        {/* Signed-out gate: read-only + sign-in CTA. */}
-        {ready && !signedIn && (
-          <section style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-            <div
-              style={{
-                padding: 16,
-                border: "1px solid rgba(255,255,255,0.1)",
-                borderRadius: 14,
-                background: "rgba(255,255,255,0.02)",
-                display: "flex",
-                alignItems: "center",
-                gap: 10,
-              }}
-            >
-              <Lock size={16} color={C.faint} />
-              <span style={{ fontSize: 12.5, color: C.muted }}>
-                Sign in to configure your own provider. Until then, runs use the
-                platform default (Groq).
+        {/* Current state banner: masked saved key, or "using platform default". */}
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 10,
+            flexWrap: "wrap",
+            padding: "12px 14px",
+            borderRadius: 12,
+            border: "1px solid rgba(255,255,255,0.1)",
+            background: saved ? "rgba(234,240,250,0.04)" : "rgba(255,255,255,0.018)",
+          }}
+        >
+          <ShieldCheck size={16} color={saved ? C.accent : C.faint} />
+          {saved && savedProvider ? (
+            <span style={{ fontSize: 12.5, color: C.muted }}>
+              Using{" "}
+              <span style={{ color: C.ink, fontWeight: 600 }}>{savedProvider.label}</span>
+              {" · "}
+              <span style={{ fontFamily: MONO, fontSize: 11.5, color: C.silver }}>
+                {saved.model}
               </span>
-            </div>
-            {authConfigured ? (
-              <div style={{ maxWidth: 420 }}>
-                <SignInCard />
-              </div>
-            ) : (
-              <Notice text="Auth is not configured on this deployment, so the writable config is unavailable here. The platform default still powers the public demo." />
-            )}
-          </section>
-        )}
+              {" · key "}
+              <span style={{ fontFamily: MONO, fontSize: 11.5, color: C.silver }}>
+                {maskKey(saved.apiKey)}
+              </span>{" "}
+              (stored in this browser).
+            </span>
+          ) : (
+            <span style={{ fontSize: 12.5, color: C.muted }}>
+              No key saved. Your runs use the{" "}
+              <span style={{ color: C.ink }}>platform default (Groq)</span>.
+            </span>
+          )}
+        </div>
 
-        {/* Always: the read-only platform status matrix. */}
+        {/* The no-login BYO config cards: one per provider. */}
+        <section style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          <SectionLabel icon={<Cpu size={14} color={C.accent} />} text="Your provider key" />
+          <div className="cockpit-2col" style={{ display: "grid", gridTemplateColumns: "repeat(2,1fr)", gap: 14 }}>
+            {BYO_PROVIDERS.map((opt) => (
+              <ByoKeyCard
+                key={opt.id}
+                provider={opt}
+                saved={saved?.provider === opt.id ? saved : undefined}
+                onTest={(apiKey, model) => testProviderKeyPublic(opt.id, apiKey, model)}
+              />
+            ))}
+          </div>
+        </section>
+
+        {/* Read-only platform matrix (powers the public demo). */}
         <section style={{ display: "flex", flexDirection: "column", gap: 12 }}>
           <SectionLabel text="Platform providers (powers the public demo)" />
           <div className="cockpit-2col" style={{ display: "grid", gridTemplateColumns: "repeat(2,1fr)", gap: 14 }}>
-            {platform.map((pv) => (
+            {(platform ?? []).map((pv) => (
               <PlatformTile key={pv.name} row={pv} />
             ))}
-            {platform.length === 0 && !loading && (
+            {platform !== null && platform.length === 0 && (
               <div style={{ fontFamily: MONO, fontSize: 12, color: C.faint, padding: 12 }}>
                 No providers reported by the backend.
               </div>
@@ -202,8 +146,8 @@ export default function SettingsPage() {
   );
 }
 
-function PlatformTile({ row }: { row: ProviderStatusRow }) {
-  const keyState = row.key;
+function PlatformTile({ row }: { row: ProviderStatus }) {
+  const keyState = row.key as { configured?: boolean; fingerprint?: string | null } | undefined;
   const configured = Boolean(keyState?.configured ?? row.configured);
   const fingerprint = keyState?.fingerprint ?? (configured ? "configured" : "not set");
   return (
@@ -244,14 +188,6 @@ function SectionLabel({ text, icon }: { text: string; icon?: React.ReactNode }) 
       <span style={{ fontFamily: MONO, fontSize: 10.5, letterSpacing: "0.12em", color: C.faint, textTransform: "uppercase" }}>
         {text}
       </span>
-    </div>
-  );
-}
-
-function Notice({ text }: { text: string }) {
-  return (
-    <div style={{ fontFamily: MONO, fontSize: 10.5, color: C.muted, lineHeight: 1.5, padding: "8px 10px", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 8 }}>
-      {text}
     </div>
   );
 }

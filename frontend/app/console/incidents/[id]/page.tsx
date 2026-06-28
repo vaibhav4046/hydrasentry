@@ -10,7 +10,6 @@ import { use, useEffect, useState } from "react";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { ConsoleShell } from "@/components/auth/ConsoleShell";
-import { useAuth } from "@/components/auth/AuthProvider";
 import { getIncident } from "@/lib/consoleApi";
 import { CertificateViewer } from "@/components/console/CertificateViewer";
 import { bandColor, bandBorder, decisionIsBlocking, formatCreatedAt } from "@/components/console/bandStyle";
@@ -20,15 +19,13 @@ import { C } from "@/lib/cockpit/derive";
 const MONO = "var(--font-geist-mono), 'JetBrains Mono', monospace";
 
 function DetailBody({ id }: { id: string }) {
-  const { ready, token } = useAuth();
   const [incident, setIncident] = useState<Incident | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
-    if (!ready) return;
     let active = true;
-    void getIncident(id, token ?? undefined).then((result) => {
+    void getIncident(id).then((result) => {
       if (!active) return;
       if (result.ok) setIncident(result.data);
       else setError(result.error);
@@ -37,7 +34,7 @@ function DetailBody({ id }: { id: string }) {
     return () => {
       active = false;
     };
-  }, [ready, id, token]);
+  }, [id]);
 
   return (
     <div data-page>

@@ -324,3 +324,40 @@ def runtime_for_tenant(tenant_id: Optional[str], provider: str) -> Optional[Prov
         api_key=plaintext,
         source="tenant",
     )
+
+
+def runtime_from_request(
+    provider: Optional[str], api_key: Optional[str], model: Optional[str] = None
+) -> Optional[ProviderRuntime]:
+    """Resolve a PER-REQUEST BYO provider binding from headers the caller passed
+    on a single run (the simple no-login path).
+
+    Unlike :func:`runtime_for_tenant`, this NEVER touches the store: the key is
+    supplied with the request, lives only inside the returned dataclass for the
+    duration of that one run, and is never persisted or logged. Returns ``None``
+    (so the run falls back to the platform default) when the provider is unknown,
+    the provider is not a supported BYO upstream, or no key was supplied -- so a
+    malformed header can never break the public demo.
+
+    ``source`` is "request" to distinguish this ephemeral binding from a saved
+    "tenant" credential and the "platform" default when the run labels which
+    model answered (the key itself is never surfaced)."""
+    name = str(provider or "").strip().lower()
+    if not name or name not in ALLOWED_PROVIDERS:
+        return None
+    cfg = PROVIDERS.get(name)
+    if cfg is None:
+        return None
+    key = str(api_key or "").strip()
+    if not key or len(key) > _MAX_KEY_LEN:
+        return None
+    chosen_model = str(model or "").strip() or cfg.model
+    if len(chosen_model) > _MAX_MODEL_LEN:
+        chosen_model = cfg.model
+    return ProviderRuntime(
+        provider=name,
+        model=chosen_model,
+        base_url=cfg.base_url,
+        api_key=key,
+        source="request",
+    )

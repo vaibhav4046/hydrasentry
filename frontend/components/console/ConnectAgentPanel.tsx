@@ -19,10 +19,7 @@ function mcpConfig(): string {
     "{",
     '  "mcpServers": {',
     '    "hydrasentry": {',
-    '      "command": "hydrasentry-mcp",',
-    '      "env": {',
-    '        "HYDRASENTRY_API_KEY": "hs_live_…your_key…"',
-    "      }",
+    '      "command": "hydrasentry-mcp"',
     "    }",
     "  }",
     "}",
@@ -92,17 +89,18 @@ export function ConnectAgentPanel() {
         agent fires, then certifies the block.
       </p>
       <p style={{ fontSize: 12.5, lineHeight: 1.6, color: C.muted, marginBottom: 18 }}>
-        Install the stdio MCP server, point it at your API key, and connect any
-        MCP-compatible client. Once wired, every risky memory your agent retrieves
-        is scored, certified, and lands in your incident dashboard.
+        No account, no sign-in, no key to mint. Install the stdio MCP server and
+        point any MCP-compatible client at it. Once wired, every risky memory your
+        agent retrieves is scored, certified, and lands in the incident console
+        below.
       </p>
 
       <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
         <CodeBlock label="1 · INSTALL THE MCP SERVER" code={INSTALL_CMD} />
         <CodeBlock label="2 · ADD TO YOUR MCP CLIENT CONFIG" code={mcpConfig()} />
         <div style={{ fontFamily: MONO, fontSize: 10.5, lineHeight: 1.7, color: C.faint }}>
-          3 · Replace <span style={{ color: C.silver }}>hs_live_…your_key…</span> with a key from
-          above. Restart your MCP client. Your agent&apos;s next risky retrieval appears here.
+          3 · Restart your MCP client. Your agent&apos;s next risky retrieval is
+          scanned and appears in the console.
         </div>
       </div>
     </div>

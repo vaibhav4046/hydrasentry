@@ -239,6 +239,30 @@ def test_runtime_for_tenant_none_when_unset(clean_app_db):
     assert provider_credentials.runtime_for_tenant(None, "groq") is None
 
 
+def test_runtime_from_request_builds_ephemeral_binding():
+    """The simple no-login per-request path builds a binding straight from the
+    passed provider/key/model, never touching the store. ``source`` is "request"
+    so the run can label it without exposing the key."""
+    rt = provider_credentials.runtime_from_request("groq", "REQ-KEY-1", "pick-model")
+    assert rt is not None
+    assert rt.source == "request"
+    assert rt.provider == "groq"
+    assert rt.model == "pick-model"
+    assert rt.api_key == "REQ-KEY-1"
+
+
+def test_runtime_from_request_defaults_model_and_rejects_bad_input():
+    # Blank model -> falls back to the provider's default model (never empty).
+    rt = provider_credentials.runtime_from_request("openai", "K", "")
+    assert rt is not None and rt.model
+    # Unknown / unsupported provider -> None (falls back to platform default).
+    assert provider_credentials.runtime_from_request("notaprovider", "K") is None
+    assert provider_credentials.runtime_from_request("local", "K") is None
+    # No key -> None (never a keyless binding).
+    assert provider_credentials.runtime_from_request("groq", "") is None
+    assert provider_credentials.runtime_from_request("groq", None) is None
+
+
 def test_real_run_binding_resolves_tenant_model(clean_app_db):
     """The real-run binding resolver picks the tenant's BYO model when saved."""
     import real_run
@@ -251,7 +275,36 @@ def test_real_run_binding_resolves_tenant_model(clean_app_db):
     assert binding is not None
     assert binding.source == "tenant"
     assert binding.model == "tenant-model-x"
-    assert binding.api_key == "KK"
+
+
+def test_real_run_binding_prefers_request_runtime_over_tenant(clean_app_db):
+    """A per-request BYO runtime WINS over a saved tenant credential, so the
+    no-login client-side key drives the run even for a signed-in tenant."""
+    import real_run
+
+    _user, tenant = UserRepo.get_or_create_with_tenant("byo-req", "req@x.com")
+    provider_credentials.save_credential(
+        tenant.id, {"provider": "groq", "model": "saved-model", "api_key": "SAVED"}
+    )
+    req_rt = provider_credentials.runtime_from_request("groq", "REQKEY", "req-model")
+    binding = real_run._resolve_binding(tenant.id, req_rt)
+    assert binding is not None
+    assert binding.source == "request"
+    assert binding.model == "req-model"
+    assert binding.api_key == "REQKEY"
+
+
+def test_http_test_just_entered_key_no_login(client, monkeypatch):
+    """A just-entered key validates with NO sign-in (the simple no-login path),
+    and the key never appears in the response body."""
+    _patch_httpx(monkeypatch, 200)
+    r = client.post(
+        "/settings/providers/test",
+        json={"provider": "groq", "api_key": "no-login-probe"},
+    )
+    assert r.status_code == 200
+    assert r.json()["data"]["ok"] is True
+    assert "no-login-probe" not in r.text
 
 
 # --- BOLA: cross-tenant isolation -------------------------------------------

@@ -54,6 +54,7 @@ import {
   demoSkillScan,
 } from "./demoData";
 import { isDemoFallbackActive, markDemoFallback } from "./demoMode";
+import { byoRunHeaders } from "./byoKey";
 
 /** Explicitly-configured backend URL, if any. */
 const CONFIGURED_BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL;
@@ -540,6 +541,50 @@ export async function testProvider(
   );
 }
 
+/**
+ * Validate a JUST-ENTERED provider key with a REAL upstream call, NO LOGIN.
+ *
+ * Posts the key to POST /settings/providers/test (no auth required for a
+ * just-entered key). The backend exercises it once against the provider and
+ * returns a verdict WITHOUT ever echoing or storing the key. This targets the
+ * deployed backend directly (the public site ships with NEXT_PUBLIC_BACKEND_URL
+ * unset) and bypasses the demo-fallback latch, since it is an explicit
+ * user-initiated validation. The key is sent only in this one request body.
+ */
+export async function testProviderKeyPublic(
+  provider: string,
+  apiKey: string,
+  model?: string,
+): Promise<ApiResult<ProviderTestResult>> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+  try {
+    const res = await fetch(`${LIVE_QUERY_BACKEND_URL}/settings/providers/test`, {
+      method: "POST",
+      headers: { Accept: "application/json", "Content-Type": "application/json" },
+      body: JSON.stringify({ provider, api_key: apiKey, model }),
+      cache: "no-store",
+      signal: controller.signal,
+    });
+    let payload: ApiEnvelope<ProviderTestResult> | null = null;
+    try {
+      payload = (await res.json()) as ApiEnvelope<ProviderTestResult>;
+    } catch {
+      payload = null;
+    }
+    if (payload && typeof payload.ok === "boolean") {
+      if (payload.ok) return { ok: true, data: payload.data };
+      return { ok: false, error: payload.error || `Request failed (${res.status})` };
+    }
+    if (!res.ok) return { ok: false, error: `Request failed (${res.status})` };
+    return { ok: false, error: "Malformed response from backend" };
+  } catch (error: unknown) {
+    return { ok: false, error: errorMessage(error) };
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 // --- MCP tools --------------------------------------------------------------
 
 function mcpHeaders(secret?: string): Record<string, string> {
@@ -791,9 +836,13 @@ export async function runReal(): Promise<ApiResult<RealRun>> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), REAL_RUN_TIMEOUT_MS);
   try {
+    // BYO (no-login): if the user saved their own provider key in this browser,
+    // send it per-request so THIS run uses their model + key. No saved key -> no
+    // headers -> the platform Groq default (the public demo path). The key is
+    // sent only on this single run request and is never persisted server-side.
     const res = await fetch(`${LIVE_QUERY_BACKEND_URL}/runs/real`, {
       method: "POST",
-      headers: { Accept: "application/json" },
+      headers: { Accept: "application/json", ...byoRunHeaders() },
       cache: "no-store",
       signal: controller.signal,
     });

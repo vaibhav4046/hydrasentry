@@ -373,6 +373,9 @@ async def judge_demo(request: Request) -> JSONResponse:
 async def runs_real(
     request: Request,
     identity: Identity = Depends(current_identity),
+    x_provider: Optional[str] = Header(default=None),
+    x_provider_key: Optional[str] = Header(default=None),
+    x_provider_model: Optional[str] = Header(default=None),
 ) -> JSONResponse:
     """Genuinely-real run: live HydraDB context (clean + poisoned sub-tenants) +
     real Groq agent answers + a computed risk score (rules + real Groq judge).
@@ -399,13 +402,28 @@ async def runs_real(
     limited = _rate_limited("runs_real", identity, request)
     if limited is not None:
         return limited
-    # BYO provider routing: only an AUTHENTICATED caller (JWT user or API-key
-    # agent) on their own tenant routes through a saved BYO provider/model/key.
-    # The public unauthenticated demo passes no tenant so it ALWAYS uses the
-    # platform default and never a user key.
+    # BYO provider routing, two paths (the per-request one wins):
+    #   1) Simple no-login path: the caller passes their OWN provider/model/key
+    #      on THIS request via X-Provider / X-Provider-Key / X-Provider-Model.
+    #      The key lives only for this one run -- never persisted, never logged.
+    #   2) Authenticated server-side path: a JWT user / API-key agent on their
+    #      own tenant routes through a saved+encrypted BYO credential.
+    # The public unauthenticated demo passes neither, so it ALWAYS uses the
+    # platform default and never anyone's key.
+    request_runtime = None
+    if x_provider_key:
+        try:
+            import provider_credentials
+
+            request_runtime = provider_credentials.runtime_from_request(
+                x_provider, x_provider_key, x_provider_model
+            )
+        except Exception as exc:  # noqa: BLE001 -- a bad header never breaks the run
+            logger.warning("per-request provider resolve failed: %s", type(exc).__name__)
+            request_runtime = None
     byo_tenant = identity.tenant_id if identity.is_authenticated else None
     try:
-        result = await asyncio.to_thread(real_run.run_real, byo_tenant)
+        result = await asyncio.to_thread(real_run.run_real, byo_tenant, request_runtime)
     except Exception as exc:  # noqa: BLE001 -- belt-and-braces, never-500 contract
         logger.warning("runs/real endpoint error: %s", type(exc).__name__)
         return JSONResponse(
@@ -1223,22 +1241,24 @@ async def settings_providers_test(
 ) -> JSONResponse:
     """Validate a provider key with a REAL minimal upstream call (not a fake 200).
 
-    Two modes, both genuinely real:
-    * ``api_key`` supplied -> validate that JUST-ENTERED key (so a user can Test
-      before Save). Requires a signed-in user (the key is the caller's secret).
-    * ``api_key`` omitted -> validate the signed-in tenant's ALREADY-SAVED
-      credential (decrypt in-process -> real call). Requires a signed-in user.
+    Modes, all genuinely real:
+    * ``api_key`` supplied -> validate that JUST-ENTERED key (so anyone can Test
+      before saving it client-side). NO SIGN-IN REQUIRED: this is the simple
+      no-login bring-your-own-key path. The key is used only for this one
+      upstream probe and is never stored, returned, or logged.
+    * ``api_key`` omitted + a signed-in user -> validate that tenant's
+      ALREADY-SAVED credential (decrypt in-process -> real call).
+    * ``api_key`` omitted + no user -> legacy platform-key reachability ping so
+      the public demo's Test button still works against the platform providers.
 
-    With neither a key nor a signed-in user, this falls back to the legacy
-    platform-key reachability ping (the original behaviour) so the public demo's
-    Test button still works against the platform providers. No response or log
-    ever contains the key."""
+    No response or log ever contains the key."""
     import provider_credentials
 
     is_user = identity.auth_method == "jwt" and identity.user_id and identity.tenant_id
     if body.api_key:
-        if not is_user:
-            return err("sign in to test your own provider key", status=401)
+        # No-login allowed: a just-entered key is the caller's own secret, sent to
+        # validate it before they save it in their browser. It is exercised once
+        # against the upstream and dropped -- never persisted server-side.
         result = await asyncio.to_thread(
             provider_credentials.test_key, body.provider.strip().lower(),
             body.api_key, body.model,
