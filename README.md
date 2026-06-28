@@ -415,8 +415,8 @@ npm run dev                          # http://localhost:3000
 
 ```bash
 cd backend
-pytest                # 183 passed, 6 skipped offline (189 collected); the 6
-                      # skips are live Gemini-embeddings cases needing a key
+pytest                # 215 passed, 7 skipped offline; the skips are live
+                      # Gemini-embeddings / live-mode cases needing a real key
 ```
 
 ---
