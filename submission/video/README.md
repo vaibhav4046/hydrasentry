@@ -16,25 +16,28 @@ the value path is mocked, and every real-vs-derived state is labelled on screen.
 
 **`constellan_master.mp4` is the primary video.** It is the assembled master cut:
 a short Remotion title intro, then the RE-CAPTURED real-UI screen capture of the
-NEW linear no-login flow as the core, then the Remotion closing wordmark, with the
-narration burned in as captions over the screen-capture section. 51.1s, 1920x1080,
+finalized linear no-login flow as the core, then the Remotion closing wordmark, with
+the narration burned in as captions over the screen-capture section. 62.6s, 1920x1080,
 h264, 30fps, faststart. Every frame of the core is the actual deployed product; the
 intro and outro are clearly the rendered title/wordmark, so the honesty rule holds.
 This is the cut to submit.
 
 Segment breakdown: Remotion intro (film 2.0s to 13.0s, the HydraSentry title card
 "Agents do not fail at the prompt. They fail at memory.") -> RE-CAPTURED real screen
-capture (34.5s, six burned-in caption cues) -> Remotion outro (film 64.5s to 70.0s,
+capture (46.1s, seven burned-in caption cues) -> Remotion outro (film 64.5s to 70.0s,
 the signed certificate resolving to REPLAY / TRACE / BLOCK / CERTIFY).
 
 **`constellan_screencap.mp4` is the raw real-UI capture (core source).** Headless
 Chrome (CDP screencast) driving the live Vercel frontend and backend (backend
-verified healthy, mode=demo) through the NEW linear flow: the hero with "Run live
-attack" above the fold, the button really clicked, the live Groq result (90/CRITICAL)
-plus the "Open full dashboard" CTA rendering inline IN VIEW (no scroll-hunt), then
-`/console` (no login wall, real demo-tenant incidents), `/console/keys`
-(connect-your-agent steps public), and `/standards` (OWASP ASI Top-10 self-verifying
-map). Every frame is the actual deployed product, not an animation; zero console
+verified healthy, mode=demo) through the finalized linear flow: the hero with "Run
+live attack" above the fold, the button really clicked, the live Groq result
+(90/CRITICAL) plus the "Open full dashboard" CTA rendering inline IN VIEW (no
+scroll-hunt), then `/console` (no login wall, real demo-tenant incidents),
+`/console/keys` (connect-your-agent steps public), then `/scheduled` where "Run now"
+on a standing agent fires a REAL scan and renders `risk 87/100 HIGH BLOCKED` inline
+(no fake schedule), and finally `/standards` (OWASP ASI Top-10 self-verifying map)
+scrolled deep to prove the console rail stays pinned (position:sticky) as the page
+moves. Every frame is the actual deployed product, not an animation; zero console
 errors during capture. Used as the middle of the master cut.
 
 **`constellan_film.mp4` is the polished Remotion companion (intro/outro source).**
@@ -57,8 +60,8 @@ cut.
 
 | File | Kind | Duration | Resolution | Codec / fps | Size | Notes |
 |------|------|----------|------------|-------------|------|-------|
-| `constellan_master.mp4` | Assembled master cut (PRIMARY) | 51.07s | 1920x1080 | h264 / 30fps | ~4.3 MB | Remotion intro + RE-CAPTURED real screen capture of the NEW linear no-login flow (burned-in captions) + Remotion outro wordmark. yuv420p, faststart, AAC stereo. The cut to submit. |
-| `constellan_screencap.mp4` | Real-UI screen capture (core source) | 34.53s | 1920x1080 | h264 / 30fps | ~2.7 MB | RE-CAPTURED NEW linear flow: hero -> "Run live attack" clicked -> inline LIVE RUN RESULT (90/CRITICAL) + "Open full dashboard" CTA in view -> /console no-wall demo-tenant incidents -> /console/keys connect-your-agent -> /standards OWASP ASI map. Zero console errors. |
+| `constellan_master.mp4` | Assembled master cut (PRIMARY) | 62.60s | 1920x1080 | h264 / 30fps | ~5.4 MB | Remotion intro + RE-CAPTURED real screen capture of the finalized linear no-login flow (burned-in captions) + Remotion outro wordmark. yuv420p, faststart, AAC stereo. The cut to submit. |
+| `constellan_screencap.mp4` | Real-UI screen capture (core source) | 46.07s | 1920x1080 | h264 / 30fps | ~4.1 MB | RE-CAPTURED finalized linear flow: hero -> "Run live attack" clicked -> inline LIVE RUN RESULT (90/CRITICAL) + "Open full dashboard" CTA in view -> /console no-wall demo-tenant incidents -> /console/keys connect-your-agent -> /scheduled "Run now" fires a REAL scan (risk 87/100 HIGH BLOCKED inline) -> /standards OWASP ASI map scrolled deep with the sticky console rail pinned. Zero console errors. |
 | `constellan_film.mp4` | Remotion render (intro/outro source) | 70.06s | 1920x1080 | h264 / 30fps | ~10.8 MB | 8-scene noir motion film of the same story; ends on signed certificate + moat strip + REPLAY · TRACE · BLOCK · CERTIFY wordmark. |
 
 All three MP4s verified with ffprobe: duration > 0, one h264 video stream,
@@ -67,8 +70,8 @@ stereo audio track (silent over the screen-capture section). All play.
 
 ### Captions
 
-- `captions.srt` - the master burned-caption track, 6 cues timed over the new
-  screencap (master-relative ~0:11 to ~0:45). No em dashes, no Claude/Anthropic
+- `captions.srt` - the master burned-caption track, 7 cues timed over the new
+  screencap (master-relative ~0:11 to ~0:57). No em dashes, no Claude/Anthropic
   references.
 
 ### Poster / thumbnail
@@ -79,7 +82,7 @@ stereo audio track (silent over the screen-capture section). All play.
 - `thumbnail.png` - 1280x720 letterboxed version of the same certificate frame,
   for YouTube/Discord thumbnails.
 
-### Stills (9 PNGs, 3840x2160 = 1920x1080 logical @ 2x device scale)
+### Stills (11 PNGs, 3840x2160 = 1920x1080 logical @ 2x device scale)
 
 All captured from the live product via headless Chrome + Chrome DevTools Protocol.
 
@@ -94,6 +97,8 @@ All captured from the live product via headless Chrome + Chrome DevTools Protoco
 | `stills/06_console_incidents.png` | /console with NO login wall: the demo tenant's real incident dashboard (signed out), honest banner "Showing the demo tenant's real persisted incidents (read-only). Sign in to see and manage your own", criticals-over-time chart, real UTC timestamps, grouped sidebar IA. |
 | `stills/07_console_keys_connect_agent.png` | /console/keys with NO login wall: the connect-your-agent steps (`pip install hydrasentry-mcp` + MCP client config) are fully public, a labelled key PREVIEW row, and ONLY the mint action gated ("Sign in to mint"). |
 | `stills/08_console_rules.png` | /console/rules with NO login wall: the demo tenant's 3 real read-only detection rules (static ENABLED pills, no toggle/delete when signed out), honest read-only provenance banner. |
+| `stills/09_scheduled_run_now_real.png` | /scheduled standing agents: six REAL agents, each with a "Run now" that fires a live backend scan. Captured just after Run now on the Model Health Checker, rendering the real result line `risk 87/100 HIGH BLOCKED` inline. No fake cron/next-run theater; the sticky console rail is pinned on the left. |
+| `stills/10_standards_sticky_rail.png` | /standards (OWASP ASI Top-10 mapping) scrolled deep to the ASI05 Memory Poisoning control detail. Proves the console rail stays pinned (position:sticky, top 0) while the page content scrolls, with "OWASP ASI Top-10" highlighted active. |
 
 ### Script + copy
 

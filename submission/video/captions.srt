@@ -7,17 +7,21 @@ This is the live product. One click runs a real poisoned-memory attack against t
 The real run fires: a live Groq agent on clean and poisoned HydraDB context. It takes a few seconds; it is the genuine outcome.
 
 3
-00:00:21,200 --> 00:00:27,000
-Ninety out of one hundred, CRITICAL. The poisoned memory auto-approved a nine-hundred-pound refund with no manager sign-off. A real judge confirms it.
+00:00:21,200 --> 00:00:24,600
+Ninety out of one hundred, CRITICAL. The poisoned memory auto-approved a nine-hundred-pound refund with no manager sign-off.
 
 4
-00:00:27,200 --> 00:00:34,000
+00:00:25,000 --> 00:00:31,000
 The result is already in the dashboard. No login wall anywhere: every blocked run is a real, certified incident on the demo tenant.
 
 5
-00:00:34,200 --> 00:00:41,000
+00:00:31,400 --> 00:00:37,500
 Connect your own agent. The MCP install steps are fully public; only minting a real key needs a quick sign-in. Tenants stay isolated.
 
 6
-00:00:41,200 --> 00:00:45,300
-Mapped to the OWASP Agentic Security Top-10, self-verified against the running codebase. Replay. Trace. Block. Certify.
+00:00:38,000 --> 00:00:44,500
+Run any standing agent on demand. Run now fires a real scan on the live backend: risk 87, HIGH, BLOCKED. No fake schedules, no mock data.
+
+7
+00:00:45,000 --> 00:00:56,500
+Mapped to the OWASP Agentic Security Top-10, self-verified against the running codebase. The console rail stays pinned as you scroll. Replay. Trace. Block. Certify.
