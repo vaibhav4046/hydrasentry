@@ -31,7 +31,7 @@ final scores, reported verbatim. One line of evidence each.
 |------|:-----:|---------------------|
 | Realness | 9.5 | `POST /runs/real` runs real Groq llama-4-scout clean-vs-poisoned agents + a real Groq judge over a live HydraDB tenant; canonical `POST /runs/judge-demo` is a deterministic live-attack floor. Live-smoked this session: `score=87 band=HIGH confidence=0.92 decision=block`; the no-login home flow fires a real `/runs/real` (90/CRITICAL, groq) inline and persists it as a real incident on the demo tenant. Every formerly-mock control now fires a real backend action (e.g. `/scheduled` "Run now" -> `risk 87/100 HIGH BLOCKED` inline) or was removed; the bundle now bakes `NEXT_PUBLIC_BACKEND_URL` so there is NO fallback/demo pill on the value path. |
 | Depth | 9.0 | Full loop in code: replay -> taint tracer -> deterministic risk engine -> semantic embeddings detector -> MCP firewall -> HMAC-signed certificate, plus multi-tenant Postgres, per-user `hs_live_` keys, a stdio MCP server with 7 real tools, AND a committed runnable eval harness (`backend/eval/`) measuring the detector's own `detect()` gate over a 25-row labelled set (precision=recall=F1=1.000 offline). |
-| Hardening | 9.0 | Fail-closed everywhere AND neither the no-login overhaul nor the make-it-real round weakened it: invalid credential -> 401; `POST /rules` -> 403; `/incidents` server-pins the demo tenant and ignores client `tenant_id` (no BOLA pivot on bogus UUID/slug/traversal); real path degrades to a labelled deterministic fallback, never a fabricated score; token-bucket rate limit (429 + Retry-After); `.github/workflows/ci.yml` runs pytest + lint + build; 215 backend tests pass / 7 skipped offline. |
+| Hardening | 9.0 | Fail-closed everywhere AND neither the no-login overhaul nor the make-it-real round weakened it: invalid credential -> 401; `POST /rules` -> 403; `/incidents` server-pins the demo tenant and ignores client `tenant_id` (no BOLA pivot on bogus UUID/slug/traversal); real path degrades to a labelled deterministic fallback, never a fabricated score; token-bucket rate limit (429 + Retry-After); `.github/workflows/ci.yml` runs pytest + lint + build; 233 backend tests pass / 7 skipped offline (incl. BYO key encryption-at-rest + BOLA + no-plaintext-leak). |
 | Standards | 8.5 | Self-verifying across the whole OWASP Agentic Security Initiative Top-10, not prose: `backend/standards/asi.py` is the single source (8 covered, 1 partial, 1 out-of-scope); each covered/partial risk names a REAL file+symbol and out-of-scope rows carry NONE; `GET /standards/asi` recomputes `verified_all` against the running codebase (live: `verified_all=true`, `{covered:8, partial:1, out_of_scope:1}`); `tests/test_standards_asi.py` (12) enforces honesty both directions; rendered in-app at `/standards`. |
 | Usability | 9.0 | NO login wall anywhere and NO mockup-theater controls. Home -> "Run live attack" above the fold, one click fires a real run, LIVE RUN RESULT + "Open full dashboard" CTA render inline in view; the console rail is now `position:sticky` and stays pinned on scroll across all routes (the shell uses `overflow:clip` not `hidden` so sticky holds); `/scheduled` "Run now" fires a real scan; `/replay` chips genuinely replay; `/mcp` reads live findings; mobile 390 collapses to a drawer, no horizontal overflow. |
 | Polish | 9.0 | Live frontend + backend both READY on canonical URLs; full security header set live (CSP with `frame-ancestors 'none'`/`object-src 'none'`, HSTS, X-Frame-Options DENY, nosniff, Referrer-Policy, Permissions-Policy); zero console errors on every page captured this session; refreshed 62.6s 1080p master cut over the finalized flow (adds the real `/scheduled` Run-now beat + a deep-scroll proving the sticky rail) with burned captions, plus an aligned-cert poster/thumbnail and two new stills. |
@@ -60,7 +60,7 @@ login. Two fix rounds delivered it; the re-judge converged at **overall 9.3, top
 | Narrative | 8 | 9.4 | The story now plays out on the real product with zero friction: open -> run -> result -> dashboard -> connect-your-agent, all without a wall. |
 | Polish | 8 | 9.2 | Zero console errors across every page; refreshed master cut and stills over the new linear flow; consistent honest provenance banners. |
 | Hardening | 8 | 9.2 | The no-login posture did NOT weaken security: `POST /rules` still 403, `/api-keys` still 401, `/incidents` server-pins the demo tenant (no BOLA), CORS never echoes an evil origin. Verified live this session. |
-| Realness/Depth/Standards/Security | 9/9/9/9 | 9.5/9.3/9.5/9.2 | Held strong; the overhaul touched the frontend UX surface, not the verified backend controls (backend untouched; 215 tests still pass). |
+| Realness/Depth/Standards/Security | 9/9/9/9 | 9.5/9.3/9.5/9.2 | Held strong; the overhaul touched the frontend UX surface, not the verified backend controls (backend untouched; 233 tests pass after the BYO key feature). |
 
 **The brief's core demand is fully met on the deployed product: there is no login wall
 anywhere, and the home flow is linear.** The former CSP `script-src 'unsafe-inline'` residual is
@@ -135,6 +135,83 @@ Finalize this session:
 - Re-ran backend pytest (215 pass / 7 skip) and frontend build (green, 15 routes) and restored
   `ota_packs` after pytest. Live-smoked the sticky sidebar, no-fallback value path, the real
   `/scheduled` Run-now action, judge-demo 87/HIGH, and the grounding copy.
+
+---
+
+## 2a) Bring-your-own LLM provider key (BYO) - shipped, genuinely real
+
+The Settings page used to be read-only provider status. It is now a real, writable
+bring-your-own-key config that re-routes a signed-in tenant's run path through their
+own provider/model/key. This is genuinely real end-to-end - real encryption, real
+provider validation, really used in the run path - not a stub or mockup.
+
+- **Real encryption at rest.** `backend/crypto_box.py` encrypts the raw key with
+  Fernet (AES-128-CBC + HMAC-SHA256, authenticated) before it touches the DB. The
+  key is HKDF-SHA256-derived from `ENCRYPTION_KEY` (or `APP_SECRET`, or
+  `HYDRASENTRY_CERT_SECRET`); a canonical `Fernet.generate_key()` value is accepted
+  verbatim. Fail-closed: with NO secret configured the service REFUSES to save (never
+  persists a plaintext or weakly-keyed value); a tampered/wrong-key ciphertext
+  decrypts to `None` so the run falls back to the platform default rather than 500s.
+  Only the ciphertext + a masked `sha256:<first10hex>` fingerprint are stored; the
+  raw key is never persisted, returned, or logged.
+- **Real per-provider validation.** `provider_credentials.test_key` makes a genuine
+  minimal upstream call with the user's key (groq/openai/openrouter `GET /models`,
+  anthropic `x-api-key /models`, gemini `/models?key=`) and classifies 2xx -> valid,
+  401/403 -> invalid, transport error -> unreachable. Not a fake 200. The key is sent
+  only to the provider, never echoed in the response or logs.
+- **Really used in the run path.** `real_run._resolve_binding` calls
+  `provider_credentials.runtime_for_tenant`, which decrypts an authenticated tenant's
+  saved+enabled credential in-process (immediately before the call, never persisted)
+  and drives BOTH the agent answers and the judge via `real_agent.ChatBinding`. The
+  run result carries `llm_source: "tenant"|"platform"` so it labels which model
+  answered without exposing the key. The PUBLIC unauthenticated demo passes no tenant
+  and ALWAYS uses the platform Groq default - live-verified `llm_source: platform`.
+- **BOLA-safe.** `TenantProviderCredential` + `TenantProviderCredentialRepo` filter
+  every read/upsert/delete on `tenant_id` (unique `(tenant_id, provider)` index), so
+  one tenant can never read, use, or delete another's credential (cross-tenant -> not
+  found / 404). Reversible additive migration `0004_provider_credentials`.
+- **Endpoints (`main.py`).** `GET /settings/providers` (platform matrix + the tenant's
+  masked creds + `can_configure`/`encryption_available`), `POST /settings/providers`
+  (save, `require_user`), `POST /settings/providers/test` (real validate just-entered
+  or saved key), `DELETE /settings/providers/{provider}` (revoke, `require_user`).
+- **Frontend.** `/settings` is a writable config under the auth layout: add provider +
+  model + paste key (write-only `type=password`, cleared after save), Test (real
+  result), Save, Remove, with a masked fingerprint + status. Signed-out shows
+  read-only platform status + a sign-in CTA and an honest "using platform default"
+  note. The raw key is never rendered back.
+- **Tests.** `tests/test_provider_credentials.py` (+18): encryption round-trip +
+  ciphertext-at-rest, save-refused-without-secret, real validation path (mockable),
+  tenant runs resolve their model, BOLA isolation (A cannot read/use/delete B -> 404),
+  and no plaintext in any response or audit log. Total suite **233 pass / 7 skip**.
+- **Live-verified this session.** `GET /settings/providers` (public) returns
+  `can_configure:false`, empty `tenant_credentials`, `encryption_available:true`, and
+  a masked platform matrix; save/delete/test-with-key without auth -> 401; an invalid
+  bearer -> 401 (never a silent demo downgrade); `/runs/real` public -> `llm_source:
+  platform`; judge-demo intact at 87/HIGH. No plaintext provider-key pattern appears
+  in any live `/settings` JS chunk.
+- **Documented.** `ENCRYPTION_KEY` is recorded in `backend/.env.example`. Merged
+  `--no-ff` to main (`960be8e`), tagged `checkpoint-byo`.
+
+## 2b) Demo script and real-data posture
+
+- **`submission/DEMO_5MIN.md`** is the founder-voice 5-minute cut (plus a 60-90s
+  ultra-short). Every referenced click/flow is real on the live product: Run Judge
+  Demo (`/runs/judge-demo` -> 87/HIGH/block deterministic floor), `/graph` live
+  HydraDB query (`real:true`, `graph_source:real_query_paths`, 12 triplets, ~2.6s
+  live), the MCP firewall BLOCK + signed Memory Integrity Certificate, `/console/keys`
+  connect-your-agent + real `hs_live_` key mint, the tenant-scoped `/console`, and
+  `/settings`. No step depends on a mock; the deterministic floor is the only
+  fallback and is labelled honestly on screen. The script was updated this session so
+  its Settings beat reflects the now-shipped BYO key feature (a signed-in user's saved
+  key re-routes their runs) while keeping the public on-camera run on the platform
+  default.
+- **Real-data posture.** The frontend serves bundled fixtures ONLY when the live
+  backend is unreachable, and flips an honest "demo data" / "DERIVED ... FALLBACK"
+  badge whenever it does. The live frontend bakes `NEXT_PUBLIC_BACKEND_URL` to the
+  canonical backend (confirmed in the live bundle), so every data surface fetches REAL
+  data first. The one labelled `PREVIEW` row on `/console/keys` (`hs_live_••••••••`,
+  "sign in to create your own") is an explicit, clearly-marked placeholder, not a
+  fabricated secret. No surface paints derived data as real.
 
 ---
 
@@ -263,7 +340,7 @@ Printed and marked honestly. Green = verified true (test suite or live URL). Not
 
 | # | Item | Status | Evidence |
 |---|------|:------:|----------|
-| 1 | Backend test suite green | GREEN | `215 passed, 7 skipped` offline (`HYDRASENTRY_SEMANTIC_DETECTION=0`, system Python 3.13), re-run this session. The 7 skips are live Gemini-embeddings / live-mode cases needing a real key. |
+| 1 | Backend test suite green | GREEN | `233 passed, 7 skipped` offline (`HYDRASENTRY_SEMANTIC_DETECTION=0`, system Python 3.13), re-run this session (includes +18 BYO provider-credential tests). The 7 skips are live Gemini-embeddings / live-mode cases needing a real key. |
 | 2 | Frontend production build green | GREEN | `npm run build` succeeds; 15 routes generated incl. `/standards` prerendered; TypeScript + lint pass. Re-run this session. |
 | 3 | CI gate present | GREEN | `.github/workflows/ci.yml` runs backend pytest + frontend lint + build on every push to main and every PR. |
 | 4 | OWASP ASI Top-10 self-verifying (live) | GREEN | `GET /standards/asi` live -> `verified_all=true`, counts `{covered:8, partial:1, out_of_scope:1}`; `test_standards_asi.py` (12) enforces honesty both directions; in-app Top-10 grid live at `/standards`. |
@@ -282,7 +359,7 @@ Printed and marked honestly. Green = verified true (test suite or live URL). Not
 | 17 | MCP installs clean + fails closed | GREEN | `pip install -e .` -> `hydrasentry-mcp`; key-gated tools return an honest "key required", never fabricate; `test_mcp_server.py`. The connect-your-agent steps + WHO/WHY/HOW grounding are public on `/console/keys`. |
 | 18 | Video master cut RE-CAPTURED + committed | GREEN | `submission/video/constellan_master.mp4` (62.6s, 1080p, 30fps, 1 video + 1 audio stream) rebuilt over the finalized flow (adds the real `/scheduled` Run-now beat + the sticky-rail deep scroll, 7 burned captions); ffprobe-verified; stills 09/10 added, 05 + poster/thumbnail re-aligned. |
 | 19 | No secrets committed | GREEN | `backend/.env` gitignored; only masked SHA256 fingerprints surfaced; scoped commits only. |
-| 20 | main not broken + clean | GREEN | HEAD == origin/main; backend 215 pass, frontend build green this session; working tree clean (ota_packs restored after pytest). |
+| 20 | main not broken + clean | GREEN | HEAD == origin/main; backend 233 pass, frontend build green this session; working tree clean (ota_packs restored after pytest). |
 | 21 | Authenticated dashboard end-to-end recording | NOT DONE (human-only) | Requires a human magic-link inbox click + screen capture; see section 4 human-only gaps. The public no-login path is fully covered and is the whole product. |
 
 Ship checklist all-green for shippable scope: items 1-20 are GREEN. Item 21 is honestly NOT DONE
