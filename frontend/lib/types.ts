@@ -410,6 +410,46 @@ export interface Asi06Mapping {
   controls: Asi06Control[];
 }
 
+// --- OWASP ASI Top-10 coverage map ------------------------------------------
+
+/** Honest coverage level for a single ASI risk. */
+export type AsiCoverage = "covered" | "partial" | "out_of_scope";
+
+/**
+ * One risk row from the self-verified OWASP ASI Top-10 coverage map served at
+ * GET /standards/asi. Mirrors backend/standards/asi.py. covered/partial rows
+ * name the REAL implementing module + symbol; out_of_scope rows carry null
+ * evidence (and are "verified" by correctly carrying none). The headline ASI06
+ * row also carries the verified ASI06 sub-controls.
+ */
+export interface AsiRisk {
+  id: string;
+  name: string;
+  coverage: AsiCoverage;
+  summary: string;
+  evidence_file: string | null;
+  evidence_symbol: string | null;
+  file_exists: boolean;
+  symbol_present: boolean;
+  verified: boolean;
+  subcontrols?: Asi06Control[];
+}
+
+/** Full ASI Top-10 coverage map returned by GET /standards/asi. */
+export interface AsiMapping {
+  taxonomy: string;
+  reference: string;
+  headline_risk_id: string;
+  risk_count: number;
+  coverage_counts: Record<AsiCoverage, number>;
+  /**
+   * True only when every row verifies: each covered/partial control's code
+   * exists AND every out-of-scope row correctly carries no borrowed evidence.
+   */
+  verified_all: boolean | null;
+  risks: AsiRisk[];
+}
+
 // --- API envelope -----------------------------------------------------------
 
 /** Every JSON endpoint wraps payloads as { ok, data } | { ok:false, error }. */

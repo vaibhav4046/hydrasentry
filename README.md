@@ -285,6 +285,13 @@ curl https://backend-three-puce-75.vercel.app/standards/asi06
 # -> { ok, data: { risk_id: "ASI06", verified_all: true, controls: [ { id, evidence_file, evidence_symbol, verified }, ... ] } }
 ```
 
+ASI06 is the headline risk, but it is not the only one HydraSentry touches. The full **OWASP ASI Top-10 coverage map** is served the same self-verifying way at `GET /standards/asi` (and rendered in-app at `/standards`). It states, honestly, which of the ten risks the product covers, partially addresses, or leaves out of scope — eight covered (tool misuse, identity/JWKS, BOLA tenant isolation, resource/rate-limit, behaviour-drift replay, memory poisoning, provenance, repudiation/MIC), one partial (reworded-injection goal manipulation, via the semantic signal), and one explicitly out of scope (overwhelming human-in-the-loop, which this product does not address). `backend/tests/test_standards_asi.py` enforces honesty in both directions: covered/partial rows must cite a file+symbol that still exist, and out-of-scope rows must carry **no** evidence, so the map can never inflate coverage. `verified_all` is recomputed live, so a true value certifies both that every covered control's code is present and that no out-of-scope risk is dressed up with borrowed proof.
+
+```bash
+curl https://backend-three-puce-75.vercel.app/standards/asi
+# -> { ok, data: { headline_risk_id: "ASI06", risk_count: 10, coverage_counts: { covered, partial, out_of_scope }, verified_all: true, risks: [ ... ] } }
+```
+
 ---
 
 ## The Memory Integrity Certificate (MIC)
