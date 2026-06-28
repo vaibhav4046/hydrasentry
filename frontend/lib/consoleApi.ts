@@ -156,8 +156,14 @@ export function revokeApiKey(
 
 // --- Detection rules (JWT required, tenant-scoped) ---------------------------
 
-/** List the tenant's detection rules, newest first. */
-export function listRules(token: string): Promise<ApiResult<DetectionRule[]>> {
+/**
+ * List the tenant's detection rules, newest first. With a token -> the user's
+ * own tenant; without -> the shared demo tenant's REAL rules (the backend
+ * GET /rules resolves the demo tenant unauthenticated and returns its rows
+ * read-only). Mirrors listIncidents(token?) so the signed-out console can show
+ * the demo tenant's genuine ruleset, honestly labelled, never fabricated.
+ */
+export function listRules(token?: string): Promise<ApiResult<DetectionRule[]>> {
   return consoleRequest<DetectionRule[]>("/rules", { token });
 }
 
