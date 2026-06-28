@@ -68,16 +68,51 @@ def _query(adapter: Any, sub: str, task: str) -> dict[str, Any]:
     return adapter.query(STABLE_TENANT, sub, task)
 
 
-def _build_real_run() -> dict[str, Any]:
+def _resolve_binding(tenant_id: Optional[str]) -> Optional[Any]:
+    """Resolve which provider/model/key this run's agent+judge calls use.
+
+    If the authenticated tenant has saved a valid BYO credential for the run's
+    LLM provider, route THEIR runs through their provider/model/key; otherwise
+    return the platform default binding. The PUBLIC unauthenticated demo passes
+    no tenant_id, so it always gets the platform default and NEVER a user key.
+
+    Returns a ``ChatBinding`` (tenant or platform), or ``None`` only when even
+    the platform Groq key is unconfigured (the caller then fails closed)."""
+    if tenant_id:
+        try:
+            import provider_credentials
+
+            runtime = provider_credentials.runtime_for_tenant(tenant_id, LLM_PROVIDER)
+        except Exception as exc:  # noqa: BLE001 -- never break the run on a store blip
+            logger.warning("byo binding resolve failed (%s); platform default",
+                           type(exc).__name__)
+            runtime = None
+        if runtime is not None:
+            return real_agent.ChatBinding(
+                provider=runtime.provider,
+                model=runtime.model,
+                base_url=runtime.base_url,
+                api_key=runtime.api_key,
+                source="tenant",
+            )
+    return real_agent.platform_binding()
+
+
+def _build_real_run(tenant_id: Optional[str] = None) -> dict[str, Any]:
     """Do the real run. Runs inside a worker thread so the caller can enforce a
     hard wall-clock timeout. Returns a result dict; on any internal failure
-    returns ``{ok: False, reason: ...}`` so the caller falls back cleanly."""
+    returns ``{ok: False, reason: ...}`` so the caller falls back cleanly.
+
+    ``tenant_id`` (the authenticated caller's tenant) selects a BYO provider
+    binding when one is saved; the public demo passes ``None`` and uses the
+    platform default."""
     from hydra_client import RealHydraAdapter
 
     if not settings.hydra.api_key:
         return {"ok": False, "reason": "no HydraDB key configured"}
-    if not (PROVIDERS_GROQ := settings.provider(LLM_PROVIDER)) or not PROVIDERS_GROQ.api_key:
-        return {"ok": False, "reason": "no Groq key configured"}
+    binding = _resolve_binding(tenant_id)
+    if binding is None or not binding.api_key:
+        return {"ok": False, "reason": "no LLM provider key configured"}
 
     scenario = scenario_loader.get_scenario(_SCENARIO_ID)
     task = scenario["task"]
@@ -109,8 +144,8 @@ def _build_real_run() -> dict[str, Any]:
     real_agent.reset_failure_reason()
     t1 = time.monotonic()
     with ThreadPoolExecutor(max_workers=2) as pool:
-        fut_base = pool.submit(real_agent.run_agent_answer, scenario, clean_q)
-        fut_pois = pool.submit(real_agent.run_agent_answer, scenario, poison_q)
+        fut_base = pool.submit(real_agent.run_agent_answer, scenario, clean_q, binding)
+        fut_pois = pool.submit(real_agent.run_agent_answer, scenario, poison_q, binding)
         baseline_answer = fut_base.result()
         poisoned_answer = fut_pois.result()
     timings["agent_ms"] = int((time.monotonic() - t1) * 1000)
@@ -134,7 +169,7 @@ def _build_real_run() -> dict[str, Any]:
     # honest "rules_fallback" judge mode instead of a hard failure.
     real_agent.reset_failure_reason()
     t2 = time.monotonic()
-    judge = real_agent.judge_answers(scenario, baseline_answer, poisoned_answer)
+    judge = real_agent.judge_answers(scenario, baseline_answer, poisoned_answer, binding)
     timings["judge_ms"] = int((time.monotonic() - t2) * 1000)
     # If the judge fell back, record WHY (e.g. "groq 429 rate_limited") so the
     # degraded-but-real run stays diagnosable. None means the judge ran cleanly.
@@ -188,8 +223,12 @@ def _build_real_run() -> dict[str, Any]:
         "clean_sub_tenant": CLEAN_SUB,
         "poisoned_sub_tenant": POISONED_SUB,
         "tenant_id": STABLE_TENANT,
-        "llm_provider": LLM_PROVIDER,
-        "llm_model": real_agent.AGENT_MODEL,
+        # Report the provider/model that ACTUALLY answered. For a BYO tenant this
+        # is their provider/model; otherwise the platform Groq + pinned model.
+        # ``llm_source`` is "tenant" or "platform" -- the key itself is never here.
+        "llm_provider": binding.provider,
+        "llm_model": binding.model,
+        "llm_source": binding.source,
         "timings": timings,
     }
 
@@ -242,15 +281,19 @@ def _deterministic_fallback(reason: str, elapsed_ms: int) -> dict[str, Any]:
     }
 
 
-def run_real() -> dict[str, Any]:
+def run_real(tenant_id: Optional[str] = None) -> dict[str, Any]:
     """Public entrypoint. Never raises. On success returns the real result; on
     any failure or wall-clock overrun returns the deterministic fallback. Both
     are HTTP-200-safe envelopes.
+
+    ``tenant_id`` (the authenticated caller's tenant) routes the run through that
+    tenant's BYO provider when one is saved+valid; the public unauthenticated
+    demo passes ``None`` and always uses the platform default.
     """
     started = time.monotonic()
     try:
         with ThreadPoolExecutor(max_workers=1) as pool:
-            future = pool.submit(_build_real_run)
+            future = pool.submit(_build_real_run, tenant_id)
             result = future.result(timeout=_HARD_TIMEOUT_SECONDS)
     except FutureTimeout:
         elapsed = int((time.monotonic() - started) * 1000)

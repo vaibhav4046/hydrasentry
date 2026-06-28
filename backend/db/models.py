@@ -24,6 +24,7 @@ __all__ = [
     "Tenant",
     "User",
     "ApiKey",
+    "TenantProviderCredential",
     "Incident",
     "Certificate",
     "RegressionRule",
@@ -125,6 +126,49 @@ class ApiKey(SQLModel, table=True):
     )
 
 
+class TenantProviderCredential(SQLModel, table=True):
+    """A per-tenant bring-your-own-key (BYO) LLM provider credential.
+
+    A signed-in user saves their own ``{provider, model, api_key}`` here so THEIR
+    tenant's real runs route through their provider/model/key instead of the
+    platform default. Security invariants:
+
+    * The raw API key is NEVER stored: only the Fernet ciphertext
+      (``api_key_ciphertext``) and a masked SHA-256 fingerprint
+      (``key_fingerprint``, never reversible) are persisted.
+    * ``tenant_id`` scopes the row -- the tenant-scoped repo enforces that a
+      credential is only ever read/written/deleted within its owning tenant
+      (BOLA defense). One credential per (tenant, provider): the unique index
+      below makes a re-save an idempotent upsert, never a duplicate.
+    """
+
+    __tablename__ = "tenant_provider_credentials"
+    __table_args__ = (
+        # One credential per provider per tenant; also the BOLA-safe lookup key.
+        Index(
+            "ix_tenant_provider_credentials_tenant_provider",
+            "tenant_id",
+            "provider",
+            unique=True,
+        ),
+    )
+
+    id: str = Field(default_factory=_uuid, primary_key=True)
+    tenant_id: str = Field(foreign_key="tenants.id", index=True)
+    provider: str = Field(index=True)
+    model: str = Field(default="")
+    # Fernet-encrypted API key. The raw value is never persisted or returned.
+    api_key_ciphertext: str = Field(default="")
+    # Masked sha256:<first10hex> fingerprint -- safe to display, not reversible.
+    key_fingerprint: str = Field(default="")
+    # Result of the last real validation against the provider (e.g. "valid" /
+    # "invalid" / "untested"); display-only, never gates encryption.
+    last_status: str = Field(default="untested")
+    enabled: bool = Field(default=True)
+    created_at: datetime = Field(default_factory=_now, sa_column=_ts_column())
+    updated_at: datetime = Field(default_factory=_now, sa_column=_ts_column())
+
+
 class Incident(SQLModel, table=True):
     """A persisted run result: baseline vs poisoned answers + computed risk."""
 
@@ -224,6 +268,7 @@ ALL_TABLES = [
     Tenant,
     User,
     ApiKey,
+    TenantProviderCredential,
     Incident,
     Certificate,
     RegressionRule,

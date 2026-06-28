@@ -47,7 +47,15 @@ from db.repo import TenantRepo
 # ``regression_rules`` table (signature_text, attack_type, severity, enabled,
 # embedded). On a fresh DB ``create_all`` makes them; on an already-live table
 # they are added explicitly + reversibly, same pattern as 0002.
-MIGRATION_VERSION = "0003_rule_store"
+#
+# 0004_provider_credentials adds the per-tenant BYO provider credential table
+# (``tenant_provider_credentials``: encrypted api_key + masked fingerprint, one
+# row per (tenant, provider)). ``create_all(checkfirst=True)`` creates the whole
+# table -- including its unique (tenant_id, provider) index -- on both fresh and
+# already-live databases, and ``drop_all`` removes it on downgrade, so this is a
+# pure additive-table migration with no ALTER needed (cleaner than 0002/0003,
+# which had to add columns to pre-existing tables).
+MIGRATION_VERSION = "0004_provider_credentials"
 
 # Phase 5 columns added to the live regression_rules table, with the DDL type and
 # the default backfill for existing rows. Ordered so the downgrade drops them in

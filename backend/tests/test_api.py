@@ -68,17 +68,24 @@ def test_config_status_masks_secrets():
 
 def test_config_status_masks_have_no_length_field():
     """key_status no longer exposes a length (finding #4). Verified on the
-    provider listing, which is public and uses the same masker."""
+    provider listing's platform matrix, which is public and uses the same
+    masker. The endpoint now returns a ``{platform, tenant_credentials, ...}``
+    envelope; the platform list is the public masked matrix."""
     resp = client.get("/settings/providers")
     assert resp.status_code == 200
-    for p in resp.json()["data"]:
+    for p in resp.json()["data"]["platform"]:
         assert set(p["key"]) == {"configured", "fingerprint"}
 
 
 def test_settings_providers_masked():
     resp = client.get("/settings/providers")
     assert resp.status_code == 200
-    providers = resp.json()["data"]
+    body = resp.json()["data"]
+    # Unauthenticated caller: platform matrix only, no tenant BYO list, and the
+    # config UI is gated (can_configure is False without a signed-in user).
+    providers = body["platform"]
+    assert body["tenant_credentials"] == []
+    assert body["can_configure"] is False
     assert len(providers) >= 5
     for p in providers:
         assert set(p["key"]) == {"configured", "fingerprint"}

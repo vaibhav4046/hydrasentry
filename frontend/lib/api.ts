@@ -349,10 +349,20 @@ export async function getScheduledAgents(): Promise<
 }
 
 export async function getProviders(): Promise<ApiResult<ProviderStatus[]>> {
-  return withFallback(
-    await request<ProviderStatus[]>("/settings/providers"),
-    demoProviders,
+  // GET /settings/providers now returns a { platform, tenant_credentials, ... }
+  // envelope; the public (unauthenticated) view is the read-only platform
+  // matrix. Unwrap it to the legacy ProviderStatus[] shape so the demo fallback
+  // and any public caller keep working.
+  const res = await request<{ platform?: ProviderStatus[] } | ProviderStatus[]>(
+    "/settings/providers",
   );
+  if (res.ok) {
+    const data = res.data as { platform?: ProviderStatus[] } | ProviderStatus[];
+    const list = Array.isArray(data) ? data : data.platform ?? [];
+    return { ok: true, data: list };
+  }
+  markDemoFallback();
+  return { ok: true, data: demoProviders() };
 }
 
 /**

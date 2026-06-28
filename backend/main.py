@@ -194,6 +194,16 @@ class SkillScanUrlBody(BaseModel):
 
 class ProviderTestBody(BaseModel):
     provider: str
+    # Optional: a just-entered key to validate BEFORE saving. When omitted, the
+    # tenant's already-saved credential for ``provider`` is tested instead.
+    api_key: Optional[str] = None
+    model: Optional[str] = None
+
+
+class ProviderSaveBody(BaseModel):
+    provider: str
+    api_key: str
+    model: Optional[str] = None
 
 
 class ApiKeyCreateBody(BaseModel):
@@ -389,8 +399,13 @@ async def runs_real(
     limited = _rate_limited("runs_real", identity, request)
     if limited is not None:
         return limited
+    # BYO provider routing: only an AUTHENTICATED caller (JWT user or API-key
+    # agent) on their own tenant routes through a saved BYO provider/model/key.
+    # The public unauthenticated demo passes no tenant so it ALWAYS uses the
+    # platform default and never a user key.
+    byo_tenant = identity.tenant_id if identity.is_authenticated else None
     try:
-        result = await asyncio.to_thread(real_run.run_real)
+        result = await asyncio.to_thread(real_run.run_real, byo_tenant)
     except Exception as exc:  # noqa: BLE001 -- belt-and-braces, never-500 contract
         logger.warning("runs/real endpoint error: %s", type(exc).__name__)
         return JSONResponse(
@@ -1134,13 +1149,139 @@ async def graph_real_query_get() -> JSONResponse:
 
 
 @app.get("/settings/providers")
-async def settings_providers() -> JSONResponse:
-    return ok(model_router.provider_status())
+async def settings_providers(
+    identity: Identity = Depends(current_identity),
+) -> JSONResponse:
+    """Provider status for the Settings page.
+
+    Always returns the read-only PLATFORM provider matrix (masked fingerprints
+    only, never a raw key). For a signed-in user (JWT) it ALSO returns
+    ``tenant_credentials``: that tenant's saved BYO provider configs (masked),
+    so the writable UI can show what is configured. A present-but-invalid
+    credential is already a 401 from the dependency. The unauthenticated demo /
+    an API-key agent get the platform matrix with an empty tenant list -- the
+    public showcase stays read-only and never exposes anyone's keys."""
+    payload: dict[str, Any] = {
+        "platform": model_router.provider_status(),
+        "tenant_credentials": [],
+        "encryption_available": False,
+        "can_configure": False,
+    }
+    try:
+        import crypto_box
+
+        payload["encryption_available"] = crypto_box.is_encryption_available()
+    except Exception:  # noqa: BLE001 -- status flag is best-effort
+        pass
+    # Only a real signed-in user manages BYO credentials (an API-key agent
+    # authenticates an agent, not the human who configures providers).
+    if identity.auth_method == "jwt" and identity.user_id and identity.tenant_id:
+        payload["can_configure"] = True
+        try:
+            import provider_credentials
+
+            payload["tenant_credentials"] = await asyncio.to_thread(
+                provider_credentials.list_credentials, identity.tenant_id
+            )
+        except Exception as exc:  # noqa: BLE001 -- fail closed, surface honestly
+            logger.warning("list provider credentials failed: %s", type(exc).__name__)
+            return err("provider store unavailable", status=503,
+                       kind=type(exc).__name__)
+    return ok(payload)
+
+
+@app.post("/settings/providers")
+async def settings_providers_save(
+    body: ProviderSaveBody,
+    identity: Identity = Depends(require_user),
+) -> JSONResponse:
+    """Save (encrypt at rest) a BYO provider credential for the caller's tenant.
+
+    ``require_user`` gates this to a real signed-in user (the demo fallback and
+    an API-key agent are rejected). The raw key is encrypted via Fernet BEFORE it
+    touches the DB; only the ciphertext + a masked fingerprint are stored. The
+    response carries the masked DTO -- never the raw key."""
+    import provider_credentials
+
+    try:
+        dto = await asyncio.to_thread(
+            provider_credentials.save_credential,
+            identity.tenant_id, body.model_dump(), identity.auth_method,
+        )
+        return ok(dto)
+    except provider_credentials.CredentialValidationError as exc:
+        return err(str(exc), status=400)
+    except Exception as exc:  # noqa: BLE001 -- fail closed, surface honestly
+        logger.warning("save provider credential failed: %s", type(exc).__name__)
+        return err("provider store unavailable", status=503, kind=type(exc).__name__)
 
 
 @app.post("/settings/providers/test")
-async def settings_providers_test(body: ProviderTestBody) -> JSONResponse:
+async def settings_providers_test(
+    body: ProviderTestBody,
+    identity: Identity = Depends(current_identity),
+) -> JSONResponse:
+    """Validate a provider key with a REAL minimal upstream call (not a fake 200).
+
+    Two modes, both genuinely real:
+    * ``api_key`` supplied -> validate that JUST-ENTERED key (so a user can Test
+      before Save). Requires a signed-in user (the key is the caller's secret).
+    * ``api_key`` omitted -> validate the signed-in tenant's ALREADY-SAVED
+      credential (decrypt in-process -> real call). Requires a signed-in user.
+
+    With neither a key nor a signed-in user, this falls back to the legacy
+    platform-key reachability ping (the original behaviour) so the public demo's
+    Test button still works against the platform providers. No response or log
+    ever contains the key."""
+    import provider_credentials
+
+    is_user = identity.auth_method == "jwt" and identity.user_id and identity.tenant_id
+    if body.api_key:
+        if not is_user:
+            return err("sign in to test your own provider key", status=401)
+        result = await asyncio.to_thread(
+            provider_credentials.test_key, body.provider.strip().lower(),
+            body.api_key, body.model,
+        )
+        return ok(result)
+    if is_user:
+        # No key in the body -> test the saved credential for this provider.
+        saved = provider_credentials.get_credential_dto(
+            identity.tenant_id, body.provider.strip().lower()
+        )
+        if saved is not None:
+            result = await asyncio.to_thread(
+                provider_credentials.test_saved_credential,
+                identity.tenant_id, body.provider.strip().lower(),
+            )
+            return ok(result)
+    # Legacy behaviour: ping the PLATFORM provider's reachability (no user key).
     return ok(model_router.test_connection(body.provider))
+
+
+@app.delete("/settings/providers/{provider}")
+async def settings_providers_delete(
+    provider: str,
+    identity: Identity = Depends(require_user),
+) -> JSONResponse:
+    """Revoke (delete) the caller tenant's saved credential for ``provider``.
+
+    ``require_user`` gates this. BOLA-safe: a provider the tenant has not
+    configured (or another tenant's) is simply not found -> 404. The tenant's
+    runs then fall back to the platform default."""
+    import provider_credentials
+
+    try:
+        deleted = await asyncio.to_thread(
+            provider_credentials.delete_credential,
+            identity.tenant_id, provider.strip().lower(), identity.auth_method,
+        )
+        if not deleted:
+            return err(f"no saved credential for provider '{provider}'", status=404)
+        return ok({"provider": provider.strip().lower(), "deleted": True})
+    except Exception as exc:  # noqa: BLE001 -- fail closed, surface honestly
+        logger.warning("delete provider credential failed: %s", type(exc).__name__)
+        return err("provider store unavailable", status=503, kind=type(exc).__name__)
 
 
 # --- MCP endpoints ----------------------------------------------------------

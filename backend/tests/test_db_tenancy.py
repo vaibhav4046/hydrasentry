@@ -177,7 +177,7 @@ def test_migration_up_then_down_is_reversible():
         assert up["ok"] is True
         assert set(up["tables_present"]) >= {
             "tenants", "users", "incidents", "certificates",
-            "regression_rules", "audit_logs",
+            "regression_rules", "audit_logs", "tenant_provider_credentials",
         }
 
         down = migrate.downgrade()
