@@ -1,8 +1,11 @@
+import Link from "next/link";
 import { CastellanEmblem } from "../castellan/CastellanEmblem";
 
 /**
  * Observatory footer, a hairline-topped bar with the HydraSentry wordmark on the
- * left and a mono coordinate/atlas tagline on the right. Restrained, monochrome.
+ * left, persistent product links (Docs / Console) in the middle, and a mono
+ * coordinate/atlas tagline on the right. Restrained, monochrome. The Docs link
+ * keeps the docs reachable on mobile, where the header docs entry collapses.
  */
 export function ObservatoryFooter() {
   return (
@@ -28,6 +31,35 @@ export function ObservatoryFooter() {
         }}
       >
         <CastellanEmblem size={21} />
+        <nav
+          className="mono"
+          style={{ display: "flex", alignItems: "center", gap: "20px" }}
+        >
+          <Link
+            href="/docs"
+            style={{
+              fontSize: "10px",
+              letterSpacing: "0.14em",
+              textTransform: "uppercase",
+              color: "#8B94A1",
+              textDecoration: "none",
+            }}
+          >
+            Docs
+          </Link>
+          <Link
+            href="/console"
+            style={{
+              fontSize: "10px",
+              letterSpacing: "0.14em",
+              textTransform: "uppercase",
+              color: "#8B94A1",
+              textDecoration: "none",
+            }}
+          >
+            Console
+          </Link>
+        </nav>
         <div
           className="mono"
           style={{ fontSize: "10px", letterSpacing: "0.16em", color: "#5F6875" }}

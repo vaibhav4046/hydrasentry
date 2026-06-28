@@ -49,8 +49,8 @@ type LiveState =
  * Server + first paint snapshot is false; the client snapshot is true. Used to
  * gate the live-query control so a fast judge clicking on a cold, not-yet-
  * hydrated page sees an honest "loading" affordance instead of a silent no-op.
- * Mirrors the useSyncExternalStore convention in hooks/useDemoMode.ts and avoids
- * the set-state-in-effect lint of a mount flag. */
+ * Uses the useSyncExternalStore convention and avoids the set-state-in-effect
+ * lint of a mount flag. */
 const noopSubscribe = () => () => {};
 function useHydrated(): boolean {
   return useSyncExternalStore(

@@ -176,6 +176,24 @@ export function ObservatoryNav() {
           </nav>
 
           <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+            {/* Docs: install + connect + BYO + public API, copy-ready. */}
+            <Link
+              href="/docs"
+              className="obs-docs-link mono"
+              style={{
+                fontSize: "11px",
+                letterSpacing: "0.14em",
+                textTransform: "uppercase",
+                color: LINK,
+                textDecoration: "none",
+                transition: "color .2s",
+                whiteSpace: "nowrap",
+              }}
+              onMouseEnter={hov}
+              onMouseLeave={unhov}
+            >
+              Docs
+            </Link>
             {/* IA: a clear, always-visible route into the live product console.
                 No login wall — the dashboard renders the real demo tenant. */}
             <Link

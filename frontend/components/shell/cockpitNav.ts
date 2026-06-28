@@ -31,7 +31,6 @@ export const COCKPIT_NAV: CockpitNavGroup[] = [
     label: "CONSOLE",
     items: [
       { label: "Incidents", href: "/console", icon: "console" },
-      { label: "API Keys", href: "/console/keys", icon: "keys" },
       { label: "Rules", href: "/console/rules", icon: "rules" },
     ],
   },

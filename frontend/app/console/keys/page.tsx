@@ -1,22 +1,13 @@
-"use client";
+import { redirect } from "next/navigation";
 
 /**
- * Connect-your-agent page. NO ACCOUNT, NO SIGN-IN, NO KEY-MINTING.
+ * Legacy /console/keys route.
  *
- * Point your agent at HydraSentry by installing the stdio MCP server and wiring
- * any MCP-compatible client to it. Once connected, every risky memory your agent
- * retrieves is scored, certified, and lands in the public incident console. The
- * whole flow is public and copy-ready.
+ * Key-minting and sign-in are gone (the product is no-login, bring-your-own-key
+ * in Settings), so this route no longer hosts anything. Its connect-your-agent
+ * content moved to the public /docs page and the homepage install section, so we
+ * redirect here to /docs rather than leave a dead end.
  */
-import { ConsoleShell } from "@/components/auth/ConsoleShell";
-import { ConnectAgentPanel } from "@/components/console/ConnectAgentPanel";
-
 export default function KeysPage() {
-  return (
-    <ConsoleShell>
-      <div data-page style={{ maxWidth: 760, margin: "0 auto" }}>
-        <ConnectAgentPanel />
-      </div>
-    </ConsoleShell>
-  );
+  redirect("/docs");
 }

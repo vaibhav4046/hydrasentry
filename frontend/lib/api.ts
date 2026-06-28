@@ -1,19 +1,27 @@
 /**
- * Typed client for the HydraSentry backend, with an offline-safe demo fallback.
+ * Typed client for the HydraSentry backend. ALWAYS-REAL: every call hits the
+ * live backend, every time.
  *
  * Every function is a client-side fetch and returns a normalized ApiResult<T>
  * (never throws) so UI code branches on .ok instead of try/catch. The backend
  * wraps JSON in an { ok, data } envelope; request() unwraps data on success and
  * surfaces error on failure. Report markdown is plain text, fetched separately.
  *
- * FALLBACK CONTRACT: each request first tries the real backend
- * (NEXT_PUBLIC_BACKEND_URL ?? http://localhost:8000) with a short timeout. On
- * ANY failure (network error, timeout, CORS, non-2xx, malformed body) the public
- * API functions return a BUNDLED DEMO FIXTURE (lib/demoData.ts) wrapped in the
- * same ApiResult shape and flip the demo-mode latch (lib/demoMode.ts) so the UI
- * shows an honest "demo data" indicator. A reachable backend always wins, and
- * real runs keep their real graph_source. The fixtures are demo/derived data and
- * are never presented as live HydraDB.
+ * NO SESSION LATCH. The deployed backend can take a few seconds to cold-start
+ * on a serverless platform, so each request carries a generous timeout
+ * (REQUEST_TIMEOUT_MS) and there is deliberately NO one-way "backend
+ * unreachable" latch: a single slow or failed call NEVER poisons the rest of the
+ * session. The very next call tries the real backend again. Pages show a
+ * transient loading state on a cold first call and then render real data.
+ *
+ * LAST-RESORT FIXTURES. So a single transient failure never renders a blank,
+ * broken-looking page, a few read endpoints fall back to a bundled fixture
+ * (lib/demoData.ts) for THAT ONE call only. This is a per-call resilience net,
+ * not a session mode: it does not latch, does not stop the next call from
+ * trying live, and is never surfaced as a sticky session-wide "demo data"
+ * banner. A reachable backend always wins, and the explicit value-path calls
+ * (runReal / queryRealGraph) never serve fixtures at all; they return an honest
+ * failure the caller labels.
  */
 import type {
   ApiEnvelope,
@@ -53,68 +61,37 @@ import {
   demoScheduledAgents,
   demoSkillScan,
 } from "./demoData";
-import { isDemoFallbackActive, markDemoFallback } from "./demoMode";
 import { byoRunHeaders } from "./byoKey";
 
-/** Explicitly-configured backend URL, if any. */
+/** Explicitly-configured backend URL (local dev), if any. */
 const CONFIGURED_BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL;
 
-export const BACKEND_URL = CONFIGURED_BACKEND_URL ?? "http://localhost:8000";
+/** The live, deployed backend. Used whenever no explicit override is set so the
+ *  public site ALWAYS talks to a real backend (matches lib/consoleApi.ts). */
+const DEPLOYED_BACKEND_URL = "https://backend-three-puce-75.vercel.app";
 
 /**
- * Whether a usable backend URL is configured for THIS origin.
- *
- * - No NEXT_PUBLIC_BACKEND_URL → standalone demo: never fetch, serve fixtures,
- *   zero failed-request console errors. This is the default deployed behavior.
- * - A localhost/127.0.0.1 backend URL only counts when the page itself is served
- *   from localhost. A deployed page can never reach the visitor's localhost, so a
- *   stale localhost value is ignored there (standalone demo) rather than spraying
- *   ERR_CONNECTION_REFUSED into the console.
- * - Any other URL (a real backend) → try live first, fall back to fixtures on any
- *   failure.
- *
- * Evaluated lazily on the client (location is unavailable during SSR/build).
+ * The backend every call targets. An explicit NEXT_PUBLIC_BACKEND_URL wins (local
+ * dev); otherwise the deployed backend. There is no "standalone demo" mode any
+ * more: the product is always wired to a real backend.
  */
-function backendIsConfigured(): boolean {
-  const url = CONFIGURED_BACKEND_URL?.trim();
-  if (!url) return false;
-  const isLocalBackend = /^https?:\/\/(localhost|127\.0\.0\.1)(:|\/|$)/i.test(url);
-  if (!isLocalBackend) return true;
-  if (typeof window === "undefined") return true; // resolve on the client
-  const host = window.location.hostname;
-  return host === "localhost" || host === "127.0.0.1";
-}
-
-const BACKEND_CONFIGURED = backendIsConfigured();
-
-/** Per-request budget before we give up and serve bundled demo data. */
-const REQUEST_TIMEOUT_MS = 3500;
+export const BACKEND_URL =
+  CONFIGURED_BACKEND_URL?.trim() || DEPLOYED_BACKEND_URL;
 
 /**
- * One-way latch: once any request fails (or if no backend is configured), stop
- * issuing network calls for the rest of the session and serve fixtures directly.
- * This keeps the offline experience instant and prevents a console error on
- * every page, the doomed request is attempted at most once per session.
+ * Per-request budget. Generous so a serverless COLD START (first call after the
+ * function has scaled to zero, measured at ~3-4s and occasionally more)
+ * completes instead of aborting. Matches lib/consoleApi.ts.
  */
-let backendUnreachable = !BACKEND_CONFIGURED;
-
-/** True when we should skip the network entirely and go straight to fixtures. */
-function skipNetwork(): boolean {
-  return backendUnreachable;
-}
-
-/** Record that the backend is unreachable so later calls short-circuit. */
-function noteBackendDown(): void {
-  backendUnreachable = true;
-}
+const REQUEST_TIMEOUT_MS = 12000;
 
 function errorMessage(error: unknown): string {
-  if (error instanceof Error) return error.message;
+  if (error instanceof Error) {
+    if (error.name === "AbortError") return "request timed out";
+    return error.message;
+  }
   return "Network request failed";
 }
-
-/** Sentinel error used to signal "go to fixture" without touching the network. */
-const OFFLINE_RESULT = { ok: false as const, error: "offline (demo data)" };
 
 interface RequestOptions {
   method?: "GET" | "POST";
@@ -152,7 +129,6 @@ async function request<T>(
   path: string,
   options: RequestOptions = {},
 ): Promise<ApiResult<T>> {
-  if (skipNetwork()) return OFFLINE_RESULT;
   const { method = "GET", body, headers = {}, signal } = options;
   try {
     const res = await fetchWithTimeout(
@@ -190,7 +166,6 @@ async function request<T>(
     }
     return { ok: false, error: "Malformed response from backend" };
   } catch (error: unknown) {
-    noteBackendDown();
     return { ok: false, error: errorMessage(error) };
   }
 }
@@ -206,7 +181,6 @@ async function requestMcp(
   path: string,
   options: RequestOptions = {},
 ): Promise<ApiResult<McpToolResult>> {
-  if (skipNetwork()) return OFFLINE_RESULT;
   const { method = "POST", body, headers = {}, signal } = options;
   try {
     const res = await fetchWithTimeout(
@@ -239,7 +213,6 @@ async function requestMcp(
     }
     return { ok: false, error: "Malformed response from backend" };
   } catch (error: unknown) {
-    noteBackendDown();
     return { ok: false, error: errorMessage(error) };
   }
 }
@@ -248,7 +221,6 @@ async function requestText(
   path: string,
   options: RequestOptions = {},
 ): Promise<ApiResult<string>> {
-  if (skipNetwork()) return OFFLINE_RESULT;
   const { method = "GET", signal } = options;
   try {
     const accept = ["text/markdown", "text/plain", "*" + "/*"].join(", ");
@@ -263,22 +235,23 @@ async function requestText(
     }
     return { ok: true, data: text };
   } catch (error: unknown) {
-    noteBackendDown();
     return { ok: false, error: errorMessage(error) };
   }
 }
 
 /**
- * If the live request failed, mark demo mode and return the bundled fixture as a
- * successful ApiResult. Otherwise pass the live result through untouched. This is
- * what makes every page render real content offline with no error states.
+ * PER-CALL resilience net. If THIS ONE live request failed, return the bundled
+ * fixture so the page renders content instead of a blank/broken state. It does
+ * NOT latch: it does not flip any session mode and does not stop the next call
+ * from trying the real backend. With the cold-start budget raised and the latch
+ * removed, a reachable backend means this path is essentially never taken; it
+ * exists only so a single transient blip never empties a page.
  */
 function withFallback<T>(
   result: ApiResult<T>,
   fixture: () => T,
 ): ApiResult<T> {
   if (result.ok) return result;
-  markDemoFallback();
   return { ok: true, data: fixture() };
 }
 
@@ -288,16 +261,15 @@ function withFallback<T>(
  * seeded and should never legitimately be empty (e.g. the six scheduled
  * agents). On a serverless backend the SQLite seed can be missing after a cold
  * start, which would otherwise render a blank, broken-looking page; serving the
- * deterministic fixture keeps the surface populated and flips the honest
- * "demo data" indicator. Endpoints where empty is a valid real state (findings
- * before any run) must keep plain withFallback.
+ * deterministic fixture keeps the surface populated. Per-call only, no latch.
+ * Endpoints where empty is a valid real state (findings before any run) must
+ * keep plain withFallback.
  */
 function withListFallback<T>(
   result: ApiResult<T[]>,
   fixture: () => T[],
 ): ApiResult<T[]> {
   if (result.ok && result.data.length > 0) return result;
-  markDemoFallback();
   return { ok: true, data: fixture() };
 }
 
@@ -362,7 +334,8 @@ export async function getProviders(): Promise<ApiResult<ProviderStatus[]>> {
     const list = Array.isArray(data) ? data : data.platform ?? [];
     return { ok: true, data: list };
   }
-  markDemoFallback();
+  // Per-call resilience net only (no latch): a single failed read still renders
+  // the provider matrix instead of a blank page; the next call tries live again.
   return { ok: true, data: demoProviders() };
 }
 
@@ -501,24 +474,14 @@ export async function scanSkillFromMarketplace(
 export async function toggleAgent(
   id: string,
 ): Promise<ApiResult<ScheduledAgent>> {
-  // If the agents list was served from the bundled fixture (the live backend
-  // returned an empty seed, or is unreachable), the real toggle endpoint does
-  // not know this fixture id, calling it would 404 and log a console error.
-  // Flip the bundled agent locally instead so the optimistic UI reconciles
-  // cleanly with zero failed requests.
-  if (skipNetwork() || isDemoFallbackActive()) {
-    markDemoFallback();
-    const agent = demoScheduledAgents().find((a) => a.id === id);
-    if (!agent) return { ok: false, error: `agent '${id}' not found` };
-    return { ok: true, data: { ...agent, enabled: !agent.enabled } };
-  }
   const live = await request<ScheduledAgent>(
     `/scheduled-agents/${encodeURIComponent(id)}/toggle`,
     { method: "POST" },
   );
   if (live.ok) return live;
-  // Offline: flip the bundled agent so the optimistic UI reconciles cleanly.
-  markDemoFallback();
+  // Per-call only: if this toggle did not land (e.g. the list was served from
+  // the fixture on a cold start so the real id is unknown), flip the bundled
+  // agent locally so the optimistic UI reconciles cleanly. No session latch.
   const agent = demoScheduledAgents().find((a) => a.id === id);
   if (!agent) return { ok: false, error: `agent '${id}' not found` };
   return { ok: true, data: { ...agent, enabled: !agent.enabled } };
@@ -547,8 +510,7 @@ export async function testProvider(
  * Posts the key to POST /settings/providers/test (no auth required for a
  * just-entered key). The backend exercises it once against the provider and
  * returns a verdict WITHOUT ever echoing or storing the key. This targets the
- * deployed backend directly (the public site ships with NEXT_PUBLIC_BACKEND_URL
- * unset) and bypasses the demo-fallback latch, since it is an explicit
+ * live backend directly and never serves a fixture; it is an explicit,
  * user-initiated validation. The key is sent only in this one request body.
  */
 export async function testProviderKeyPublic(
@@ -617,7 +579,8 @@ function withMcpFallback(
   secret?: string,
 ): ApiResult<McpToolResult> {
   if (result.ok) return result;
-  markDemoFallback();
+  // Per-call only (no latch): a single failed tool call still renders a tool
+  // body in the console; the next invocation tries the real gateway again.
   return { ok: true, data: demoMcpResult(tool, secret) };
 }
 
@@ -726,17 +689,12 @@ export function runStreamUrl(idOrScenario: string): string {
 const LIVE_QUERY_TIMEOUT_MS = 9000;
 
 /**
- * Dedicated target for the live HydraDB query.
- *
- * The public site deliberately ships with NEXT_PUBLIC_BACKEND_URL unset so the
- * standalone demo serves bundled fixtures with zero failed requests. The live
- * query is the one explicit, user-initiated call that genuinely wants the real
- * backend, so it targets the deployed backend directly (CORS-allowlisted for
- * the public origin) and never participates in the demo-fallback latch. An
- * explicit NEXT_PUBLIC_BACKEND_URL, when present (local dev), still wins.
+ * Target for the explicit value-path calls (live HydraDB query, real run, key
+ * validation). Identical to BACKEND_URL now that the whole client is
+ * always-real; kept as a named alias for the value-path call sites, which NEVER
+ * serve a fixture (they return an honest failure the caller labels).
  */
-const LIVE_QUERY_BACKEND_URL =
-  CONFIGURED_BACKEND_URL?.trim() || "https://backend-three-puce-75.vercel.app";
+const LIVE_QUERY_BACKEND_URL = BACKEND_URL;
 
 /**
  * Run a GENUINE, just-now HydraDB `query_paths` traversal via
@@ -745,20 +703,18 @@ const LIVE_QUERY_BACKEND_URL =
  * derived) real graph for the public /graph page.
  *
  * Unlike `request()`, this:
- *  - uses a longer timeout (the real graph traversal takes ~3s, well past the
- *    3.5s default), and
+ *  - uses its own timeout tuned for the real graph traversal, and
  *  - returns the WHOLE top-level body as data (the endpoint replies with
  *    { ok, real, graph_source, query_ms, triplet_count, graph, ... }, not the
  *    { ok, data } envelope), and
- *  - bypasses the session "backend unreachable" latch, because it is an
- *    explicit user action that should always be allowed to try the real call.
+ *  - never serves a fixture; it is the explicit, user-initiated live call, so a
+ *    failure surfaces honestly and the caller renders the captured sample.
  *
  * Honors the no-throw ApiResult contract: any transport/parse failure, or the
  * backend's own fail-closed { ok:false, fallback:"captured" } body, surfaces as
  * a normalized result the caller branches on. The caller decides what to render;
- * this function never fabricates a real:true result. When no real backend is
- * configured (standalone demo) it returns ok:false so the caller shows the
- * captured sample.
+ * this function never fabricates a real:true result. On any failure it returns
+ * ok:false so the caller shows the captured sample, clearly labelled.
  */
 export async function queryRealGraph(): Promise<ApiResult<LiveGraphQuery>> {
   const controller = new AbortController();
@@ -819,11 +775,10 @@ const REAL_RUN_TIMEOUT_MS = 11000;
  *
  * Like queryRealGraph, this is an explicit, user-initiated call that genuinely
  * wants the real backend, so it:
- *  - targets the deployed backend directly (the public site ships with
- *    NEXT_PUBLIC_BACKEND_URL unset for the standalone demo; an explicit value,
- *    in local dev, still wins),
- *  - uses a longer timeout than the default request budget, and
- *  - bypasses the session "backend unreachable" latch.
+ *  - targets the live backend directly (an explicit NEXT_PUBLIC_BACKEND_URL, in
+ *    local dev, still wins),
+ *  - uses a timeout tuned for the real run, and
+ *  - never serves a fixture; a failure surfaces honestly for the caller.
  *
  * Honors the no-throw ApiResult contract. The backend itself never 500s and
  * fail-closes to { ok:true, real:false, mode:"deterministic_fallback" } on any
