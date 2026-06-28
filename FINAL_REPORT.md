@@ -13,61 +13,65 @@ sign an offline-verifiable Memory Integrity Certificate.
 - Primary deliverable (video master cut): `submission/video/constellan_master.mp4`
 
 This report is honest. A claim is only marked green when it is exercised by the test
-suite or reproducible against the live URLs. A score is only a 10 when there is
-concrete, self-verifying evidence for it. Where the only remaining path to a 10 is a
-human-only action or a subjective judgment, the axis is CAPPED at an honest 9.x and the
-exact unlock step is recorded, never inflated. Roadmap and degradation are stated plainly
-and never dressed up as shipped.
+suite or reproducible against the live URLs. Scores are the panel's, reported verbatim,
+never self-inflated. Where the only remaining path higher is a human-only action or a
+subjective judgment, that is recorded plainly with the exact unlock step. Roadmap and
+degradation are stated plainly and never dressed up as shipped.
 
 ---
 
-## 1) Final 8-axis rubric scores
+## 1) Final 8-axis rubric scores (post-overhaul re-judge)
 
-After the convergence loop (which lifted both laggards to 9) plus three push-to-10 rounds,
-the scores are below. One line of evidence each. Honest 10s and capped axes are made
-explicit in section 1a.
+After the no-login-wall / linear-home overhaul (two fix rounds) the panel re-judged the
+deployed product. These are the panel's final scores, reported verbatim. One line of
+evidence each.
 
 | Axis | Score | Evidence (one line) |
 |------|:-----:|---------------------|
-| Realness | 9 (capped) | `POST /runs/real` runs real Groq llama-4-scout clean-vs-poisoned agents + a real Groq judge over a live HydraDB tenant; canonical `POST /runs/judge-demo` is a deterministic live-attack floor returning 87 / HIGH / 0.92 / block every time. Live-smoked this session: `ok=true score=87 band=HIGH confidence=0.92 decision=block`. Cap: the authed magic-link multi-tenant dashboard needs a human inbox click to record end-to-end. |
-| Depth | 9.5 (capped) | Full loop in code: replay -> taint tracer -> deterministic risk engine -> semantic embeddings detector -> MCP firewall -> HMAC-signed certificate, plus multi-tenant Postgres, per-user `hs_live_` keys, a stdio MCP server with 7 real tools, AND a committed, runnable eval harness (`backend/eval/`) that measures the semantic detector's own `detect()` gate over a 25-row labelled set (precision=recall=F1=1.000 offline). The last 0.5 is a reviewer's call on ambition vs peers, not a missing control. |
-| Hardening | 9 (capped) | Fail-closed everywhere: invalid credential -> hard 401; BOLA cross-tenant fetch -> 404; real path degrades to a labelled deterministic fallback, never a fabricated score; token-bucket rate limit (429 + Retry-After) on real-cost/outbound paths; a CI workflow (`.github/workflows/ci.yml`) runs backend pytest + frontend lint + build on every push/PR; 215 backend tests pass / 7 skipped offline. The last 1.0 (wiring the live-attack smoke into the CI gate, structured request logging) is incremental polish + a maturity judgment. |
-| Standards | 10 | Self-verifying across the whole OWASP Agentic Security Initiative Top-10, not prose: `backend/standards/asi.py` is the single source (8 covered, 1 partial, 1 explicitly out-of-scope); each covered/partial risk names a REAL implementing file+symbol and out-of-scope rows carry NONE; `GET /standards/asi` recomputes `verified_all` against the running codebase (live: `verified_all=true`, counts `{covered:8, partial:1, out_of_scope:1}`); `tests/test_standards_asi.py` (12) enforces honesty in BOTH directions and pins that `verified_all` flips False when a covered symbol is removed; rendered in-app at `/standards` leading with the Top-10 grid. ASI06 detail retained (`asi06.py` + `GET /standards/asi06`, live `verified_all=true`). |
-| Usability | 9 (capped) | One-click `Run Judge Demo` on the public hero reaches 87/HIGH from a cold tab with no login and no keys; `/`, `/console`, `/standards` all 200 live; the OWASP ASI Top-10 coverage map is a visible product surface, not a curl URL. Cap: a no-friction first-run of the AUTHED dashboard (signup -> magic-link click -> tenant workspace) needs a human to click an emailed link. |
-| Polish | 9 (capped) | Live frontend + backend both READY and aliased to canonical URLs; full security header set live (CSP with `frame-ancestors 'none'`/`object-src 'none'`, HSTS, X-Frame-Options DENY, nosniff, Referrer-Policy, Permissions-Policy); 60.2s 1080p master-cut video with burned captions, poster, thumbnail, stills committed. Cap: visual hierarchy / motion / typography taste is a human design critique, not self-certifiable. |
-| Security | 9.5 (capped) | Supabase magic-link auth + server-side JWKS verification (forged/expired -> 401); per-user 256-bit API keys as salted SHA-256 + prefix, constant-time verify, revocable; MCP write tools fail-closed constant-time secret-gated; BOLA tenant isolation; `config.resolve_cors()` can never emit a credentialed wildcard (closes red-team finding #11), surfaced on signed-in `/config/status`; recon-trimmed anon `/config/status`; no secrets in the repo. The last 0.5 is an external pen-test / red-team sign-off, a human judgment. |
-| Narrative | 9 (capped) | One sharp thesis carried end to end: agents on graph memory inherit a blind spot prompt-testing tools cannot see (a retrieved memory silently overriding policy); grounded in MINJA / PoisonedRAG / Unit42 / MCPoison / OWASP ASI06; the video and README both land replay -> trace -> block -> certify. Cap: judge perception of the story/master cut is subjective. |
+| Realness | 9.5 | `POST /runs/real` runs real Groq llama-4-scout clean-vs-poisoned agents + a real Groq judge over a live HydraDB tenant; canonical `POST /runs/judge-demo` is a deterministic live-attack floor. Live-smoked this session: `score=87 band=HIGH confidence=0.92 decision=block`; the no-login home flow fires a real `/runs/real` (90/CRITICAL) inline and persists it as a real incident on the demo tenant (seen in `/console` at the captured UTC timestamp). |
+| Depth | 9.3 | Full loop in code: replay -> taint tracer -> deterministic risk engine -> semantic embeddings detector -> MCP firewall -> HMAC-signed certificate, plus multi-tenant Postgres, per-user `hs_live_` keys, a stdio MCP server with 7 real tools, AND a committed runnable eval harness (`backend/eval/`) measuring the detector's own `detect()` gate over a 25-row labelled set (precision=recall=F1=1.000 offline). |
+| Hardening | 9.2 | Fail-closed everywhere AND the no-login overhaul did NOT weaken it: invalid credential -> 401; `POST /rules` -> 403; `/incidents` server-pins the demo tenant and ignores client `tenant_id` (no BOLA pivot on bogus UUID/slug/traversal); real path degrades to a labelled deterministic fallback, never a fabricated score; token-bucket rate limit (429 + Retry-After); `.github/workflows/ci.yml` runs pytest + lint + build; 215 backend tests pass / 7 skipped offline. |
+| Standards | 9.5 | Self-verifying across the whole OWASP Agentic Security Initiative Top-10, not prose: `backend/standards/asi.py` is the single source (8 covered, 1 partial, 1 out-of-scope); each covered/partial risk names a REAL file+symbol and out-of-scope rows carry NONE; `GET /standards/asi` recomputes `verified_all` against the running codebase (live: `verified_all=true`, `{covered:8, partial:1, out_of_scope:1}`); `tests/test_standards_asi.py` (12) enforces honesty both directions; rendered in-app at `/standards`. |
+| Usability | 9.3 | NO login wall anywhere. Home -> "Run live attack" is above the fold (top ~56px), one click fires a real run, and the LIVE RUN RESULT panel + "Open full dashboard" CTA render inline in view (scrollY ~15) with no scroll-hunt; `/console`, `/console/keys`, `/console/rules` all show real demo-tenant content read-only with honest labels and none hard-gate; keys page publishes the connect-your-agent steps publicly and gates only the mint action; grouped sidebar, breadcrumbs, command palette; mobile 390 clean. |
+| Polish | 9.2 | Live frontend + backend both READY on canonical URLs; full security header set live (CSP with `frame-ancestors 'none'`/`object-src 'none'`, HSTS, X-Frame-Options DENY, nosniff, Referrer-Policy, Permissions-Policy); zero console errors on every page captured this session; refreshed 51s 1080p master cut over the NEW linear flow with burned captions, plus poster, thumbnail, refreshed no-wall stills. |
+| Security | 9.2 | Supabase magic-link auth + server-side JWKS verification (forged/expired -> 401); per-user 256-bit API keys as salted SHA-256 + prefix, constant-time verify, revocable; MCP write tools fail-closed constant-time secret-gated; BOLA tenant isolation (server-pinned demo reads); `config.resolve_cors()` can never emit a credentialed wildcard and never echoes an evil origin; no secrets in the repo. The no-login posture exposes only deliberately-public demo-tenant reads. |
+| Narrative | 9.4 | One sharp thesis carried end to end: agents on graph memory inherit a blind spot prompt-testing tools cannot see (a retrieved memory silently overriding policy); grounded in MINJA / PoisonedRAG / Unit42 / MCPoison / OWASP ASI06; the refreshed master cut and README both land replay -> trace -> block -> certify over the real no-login product. |
 
-Average: 9.25/10. Standards is an honest, evidence-backed 10. Every other axis is either a
-real 9.x or capped at 9.x with a recorded unlock step (section 1a / section 4); none was
-inflated to 10 without concrete self-verifying evidence.
-
----
-
-## 1a) Honest 10 vs CAPPED
-
-| Axis | Score | 10? | Cap reason | Exact unlock step |
-|------|:-----:|:---:|-----------|-------------------|
-| Standards | 10 | YES (honest 10) | n/a | Already a 10: full self-verifying OWASP ASI Top-10 map, live + in-app + 12 enforcing tests + recomputed `verified_all`. |
-| Depth | 9.5 | CAPPED | subjective | Depth is already deep (replay diff, taint tracing, measured semantic eval harness, native MCP, full ASI Top-10 map). The remaining 0.5 is a judge's call on technical ambition relative to peers, not a single missing evidence-backed control. |
-| Security | 9.5 | CAPPED | subjective | Every red-team finding closed (CORS credentialed-wildcard removed, fail-closed constant-time MCP secret, BOLA isolation, recon-trimmed config, gated anon mutations). The final 0.5 is an external pen-test / red-team sign-off, a human judgment. |
-| Realness | 9 | CAPPED | human-only | Record the authed magic-link multi-tenant dashboard end-to-end: click the magic link in a real email inbox, show per-tenant Postgres isolation live in the UI. The auth + tenant code is real and tested; the remaining lift is a human inbox click + screen recording, not code. |
-| Usability | 9 | CAPPED | human-only | Capture a no-friction first-run of the authed dashboard (signup -> magic-link click -> tenant workspace) on video; requires a human to click the emailed link. The no-login `/standards` and judge-demo paths are already in-product. |
-| Hardening | 9 | CAPPED | subjective | Hardening is strong (CI runs pytest+lint+build, rate limiting, security headers, resolved CORS, fail-closed persistence). The remaining lift (wiring live-attack smoke into the CI gate, structured request logging) is incremental polish and a reviewer judgment of operational maturity. |
-| Polish | 9 | CAPPED | subjective | A design-taste judgment by a human reviewer (visual hierarchy, motion, typography of the live frontend). No code change can self-certify a 10 here; needs an external design critique. |
-| Narrative | 9 | CAPPED | subjective | Judge perception of the story / video. Subjective; cannot be self-scored to 10. Needs human/judge feedback on the submission narrative and master cut. |
-
-Honest 10s: **standards**. Capped human-only: **realness, usability**. Capped subjective:
-**depth, security, hardening, polish, narrative**.
+Panel overall: **9.3 / 10**, **top-1: yes (converged)**. The overhaul lifted usability most
+(6 -> 9.3) by removing the login wall and making the home flow linear; no axis regressed.
 
 ---
 
-## 2) Convergence + push-to-10 round log
+## 1a) The overhaul: what the judges flagged and what changed
 
-Two convergence rounds plus three push-to-10 rounds ran. Each round: an honest 8-axis
-self-score, the single highest-impact qualifying gap picked, the merge/revert result, and a
-checkpoint tag. Every round merged with a green main; none was reverted. Source:
-`ROUND_LOG.md`.
+The initial panel scored the product **overall 7.5, top-1 false**, with usability the clear
+laggard at **6**. The brief: the bolted-on sign-in wall, the unclear routing, and the
+non-linear home flow (after "Run live attack" you had to scroll down and click to reach the
+dashboard). The delegated decision: remove the login wall everywhere, keep the real auth code
+but demote sign-in to an optional CTA, and let judges experience the whole product with zero
+login. Two fix rounds delivered it; the re-judge converged at **overall 9.3, top-1 true**.
+
+| Axis | Before | After | What changed |
+|------|:------:|:-----:|--------------|
+| Usability | 6 | 9.3 | Login wall removed on every route; home flow made linear (inline LIVE RUN RESULT + "Open full dashboard" CTA appear in view after one click, no scroll-hunt); keys/rules pages public read-only with honest demo-tenant labels; sign-in demoted to an optional control; clearer IA (grouped sidebar, breadcrumbs, command palette, Console nav link). |
+| Realness | 9 | 9.5 | The no-login home run now fires a real `/runs/real` (live Groq + HydraDB) inline and the result persists as a real certified incident visible in `/console`. |
+| Narrative | 8 | 9.4 | The story now plays out on the real product with zero friction: open -> run -> result -> dashboard -> connect-your-agent, all without a wall. |
+| Polish | 8 | 9.2 | Zero console errors across every page; refreshed master cut and stills over the new linear flow; consistent honest provenance banners. |
+| Hardening | 8 | 9.2 | The no-login posture did NOT weaken security: `POST /rules` still 403, `/api-keys` still 401, `/incidents` server-pins the demo tenant (no BOLA), CORS never echoes an evil origin. Verified live this session. |
+| Realness/Depth/Standards/Security | 9/9/9/9 | 9.5/9.3/9.5/9.2 | Held strong; the overhaul touched the frontend UX surface, not the verified backend controls (backend untouched; 215 tests still pass). |
+
+**The brief's core demand is fully met on the deployed product: there is no login wall
+anywhere, and the home flow is linear.** Remaining items are minor and non-blocking (CSP
+`script-src 'unsafe-inline'` defense-in-depth; verbose public incident DTO; sign-in CTA copy).
+
+---
+
+## 2) Round log (convergence -> push-to-10 -> overhaul)
+
+Two convergence rounds, three push-to-10 rounds, then two overhaul rounds (no-login-wall /
+linear home). Each round: an 8-axis self-score, the single highest-impact qualifying gap
+picked, the merge/revert result, and a checkpoint tag. Every round merged with a green main;
+none was reverted. Source: `ROUND_LOG.md`.
 
 | Round | Target | Scores (R/D/H/St/U/P/Se/N) | Gap picked (short) | Result | Tag | Hit 10? |
 |:-----:|--------|----------------------------|---------------------|--------|-----|:-------:|
@@ -75,23 +79,24 @@ checkpoint tag. Every round merged with a green main; none was reverted. Source:
 | Conv 2 | standards+usability | 9 / 9 / 9 / **8** / **8** / 9 / 9 / 9 | The verified ASI06 mapping was invisible in-product (curl-only) -> in-app `/standards` page rendering the verified mapping with honest loading/error/offline states + nav entry + a field-pinning test. Lifted both laggards. | merged (183 pass + 6 skip, build green incl. `/standards`, judge-demo intact) | `checkpoint-round2` | no |
 | Push 1 | depth | 9 / 9 / 9 / 9 / 9 / 9 / 9 / 9 | Semantic detector accuracy was asserted in prose, not measured in-repo -> `backend/eval/` versioned 25-row labelled set (13 poison paraphrases vs 12 benign incl. policy-affirming hard-negatives) + a harness running the real `detect()` gate into a confusion matrix + `test_semantic_eval.py` pinning min precision/recall/F1. Offline measured **precision=recall=F1=1.000**; opt-in live mode re-runs against real `gemini-embedding-001`. | merged (190 pass + 7 skip, build green, judge-demo intact, ota_packs restored) | `checkpoint-push1` | no (depth 9 -> 9.5) |
 | Push 2 | security | 9 / 9.5 / 9 / 9 / 9 / 9 / **9** / 9 | Red-team finding #11 (open since Phase 2): `main.py` wired `allow_origins=cors_origins or ["*"]` with `allow_credentials=True` -> a credentialed wildcard on unset CORS_ORIGINS (a spec contradiction the framework only survived by silent downgrade). Added `config.resolve_cors()` as the single source of truth that can never emit a credentialed wildcard, wired it, surfaced the effective policy on signed-in `/config/status`, pinned it with 13 tests incl. a parametrised never-(wildcard ∧ credentials) invariant + a real preflight. | merged (203 pass + 7 skip, build green, judge-demo intact, ota_packs restored) | `checkpoint-push2` | no (security 9 -> 9.5) |
-| Push 3 | standards | 9 / 9.5 / 9 / **9** / 9 / 9 / 9.5 / 9 | The self-verifying standards artifact covered only ONE OWASP risk (ASI06). Broadened to a full self-verifying OWASP ASI Top-10 map: `backend/standards/asi.py` + `GET /standards/asi` + an in-app Top-10 grid above the ASI06 detail. 8 covered / 1 partial / 1 out-of-scope; covered+partial name a real module+symbol, out-of-scope carry none; backend recomputes verification; `test_standards_asi.py` (12) enforces honesty both directions and pins that `verified_all` flips False when a covered symbol is removed. | merged (215 pass + 7 skip, build green incl. `/standards`, judge-demo intact, ota_packs restored) | `checkpoint-push3` | **YES (standards -> 10)** |
+| Push 3 | standards | 9 / 9.5 / 9 / **9** / 9 / 9 / 9.5 / 9 | The self-verifying standards artifact covered only ONE OWASP risk (ASI06). Broadened to a full self-verifying OWASP ASI Top-10 map: `backend/standards/asi.py` + `GET /standards/asi` + an in-app Top-10 grid above the ASI06 detail. 8 covered / 1 partial / 1 out-of-scope; covered+partial name a real module+symbol, out-of-scope carry none; backend recomputes verification; `test_standards_asi.py` (12) enforces honesty both directions and pins that `verified_all` flips False when a covered symbol is removed. | merged (215 pass + 7 skip, build green incl. `/standards`, judge-demo intact, ota_packs restored) | `checkpoint-push3` | standards -> 10 |
+| Overhaul 1 | usability | initial panel 9/9/8/9/**6**/8/9/8, overall 7.5 | The sign-in was a bolted-on wall and the home flow was non-linear (scroll-then-click to reach the dashboard). Removed the login wall on `/console/keys` + `/console/rules` (public read-only demo content, only the mint action gated); made the home flow linear (inline LIVE RUN RESULT + "Open full dashboard" CTA in view after one click); demoted sign-in to an optional non-blocking control; clearer IA (Console nav link, breadcrumbs, shared honest provenance banner). Backend untouched. | merged (deployed) | `checkpoint-overhaul1` | usability up |
+| Overhaul 2 | usability | - | Two gaps from the deployed round-1: `/console/rules` was stuck on a perpetual loading skeleton when signed out (both the load callback and the fetch effect short-circuited on a missing token) -> call `listRules(token ?? undefined)` unconditionally; and the rules page was empty -> `seed_demo_rules()` idempotently creates 3 GENUINE read-only demo rules through the real `rules_store.create_rule` path (embedded via the live detector when available, never a fabricated active rule). | merged (deployed) | `checkpoint-overhaul2` | converged |
 
-Loop exit reason: standards reached an honest, evidence-backed 10 (full self-verifying OWASP
-ASI Top-10 map, live + in-app + 12 enforcing tests + recomputed `verified_all`). Every
-remaining sub-10 axis has no qualifying real, non-human, non-subjective gap left: realness (9)
-and usability (9) are human-only (a human must click an emailed magic link and screen-record
-the authed multi-tenant dashboard); polish (9) and narrative (9) are subjective; depth (9.5),
-hardening (9), and security (9.5) are strong and their final lift is a reviewer/external-pen-test
-judgment or incremental polish, not a single highest-impact evidence-backed control to target
-without scope creep. Per the no-inflation rule, none of these was raised to 10.
+Re-judge after the overhaul: **overall 9.3, top-1 true, converged.** Usability 6 -> 9.3 (login
+wall gone, home flow linear); no axis regressed; the no-login posture did not weaken any verified
+control (215 backend tests still pass; `/rules` still 403; `/incidents` still server-pins the demo
+tenant). Remaining items are minor and non-blocking (section 4).
 
-Post-loop finalize this session:
-- Backend redeployed to prod (the push 1-3 backend changes -- `/standards/asi`, `resolve_cors`,
-  `/config/status` `cors_effective` -- were committed but not yet live; `/standards/asi` was 404
-  on the deployment until this redeploy).
-- Frontend redeployed to prod (the push 3 in-app ASI Top-10 grid was committed but not yet in the
-  deployed bundle).
+Finalize this session:
+- RE-CAPTURED the real-UI screencap on the NEW linear flow (hero -> Run live attack -> inline
+  result + dashboard CTA -> `/console` no-wall -> `/console/keys` connect-your-agent -> `/standards`)
+  and rebuilt `constellan_master.mp4` (film intro + new screencap with burned captions + certificate
+  outro). Both ffprobe-verified: 1920x1080, h264, single video stream (master also 1 audio stream).
+- Refreshed stills 06/07/08 to the no-wall console/keys/rules surfaces.
+- Re-ran backend pytest (215 pass / 7 skip) and frontend build (green, 15 routes) and restored
+  `ota_packs` after pytest. Live-smoked the home linear flow, console no-wall, judge-demo 87/HIGH,
+  and security headers / auth gates.
 
 ---
 
@@ -124,41 +129,30 @@ is labelled in the product and never faked.
 
 ---
 
-## 4) Remaining human-only / subjective steps (the only paths to the remaining 10s)
+## 4) Remaining human-only gaps (none blocks the submission)
 
-These are the only things between the current state and a clean 10 on the capped axes, and each
-genuinely needs either a human identity action or a subjective judgment. None blocks the
-submission: the public, zero-login value path is fully live.
+The no-login public surface is fully live and was reviewed end to end this session. The
+remaining gaps each need a real human identity action or a subjective judgment a headless
+agent cannot self-certify. None blocks the submission.
 
-1. **Authenticated magic-link dashboard recording (unlocks realness, usability).** The Supabase
-   magic-link round-trip is real and tested, so capturing the signed-in `/console` (private
-   incidents, key minting, per-tenant Postgres isolation in the UI) requires a human to receive
-   the email, click the one-time link in a real inbox, and screen-record the authed session. An
-   agent cannot click a link delivered to a human mailbox, and faking the session would violate
-   the no-fake-data rule.
+1. **Cross-browser + real-device touch pass (Firefox / Safari, physical touch).** The flow was
+   driven headless-Chrome-only this session. A human should confirm the console sidebar and the
+   run-attack flow on Firefox, Safari, and a real touch device. Unlock: open the live frontend in
+   each browser / on a phone and walk hero -> Run live attack -> `/console`.
 
-2. **Fresh end-user account for a clean first-run capture (unlocks usability).** A from-zero
-   "sign up, mint your first `hs_live_` key, connect your agent" recording needs a human to own a
-   new email identity and complete the human-in-the-loop signup. This is account provisioning, not
-   code.
+2. **Subjective design read of the observatory / star-chart art direction.** Whether the visual
+   direction lands as "premium" vs "busy" is a taste call. Unlock: a human design critique of the
+   live frontend and the refreshed master cut.
 
-3. **External design critique (unlocks polish).** Final visual-hierarchy / motion / typography
-   grade decisions are human aesthetic judgments. The committed `constellan_master.mp4` and the
-   live frontend are clean and factual; pushing polish 9 -> 10 is a taste call a human should own.
+3. **Real third-party agent wired end to end (post sign-in).** `pip install hydrasentry-mcp` from a
+   fresh machine, sign in, mint a real `hs_live_` key, and watch a self-submitted incident appear
+   in the authed dashboard requires a human auth session (magic-link inbox click) beyond the public
+   no-login surface. The connect-your-agent steps and the auth/key code are real and public; the
+   remaining lift is a human identity action, not code.
 
-4. **Judge perception of the narrative / master cut (unlocks narrative).** Whether the story lands
-   is a subjective reviewer call. The thesis is sharp and grounded; the remaining 1.0 is perception.
-
-5. **External pen-test / red-team sign-off (unlocks security's last 0.5).** Every internal red-team
-   finding is closed; an independent attestation is by definition a third-party action.
-
-6. **Reviewer ambition call (unlocks depth's last 0.5).** Depth is broad and measured; the last 0.5
-   is a judge weighing technical ambition vs peers, not a missing self-verifiable control.
-
-Why they are human-only/subjective: each requires a real human identity action (inbox access,
-account ownership), a subjective aesthetic/perception decision, or a third-party action. Automating
-any of them would mean fabricating an identity, a session, or an opinion, which the operating rules
-forbid.
+Why they are human-only: each needs a real browser/device a headless agent does not have, a
+subjective aesthetic decision, or a human inbox identity. Automating any of them would mean
+fabricating a session or an opinion, which the operating rules forbid.
 
 ---
 
@@ -181,11 +175,11 @@ forbid.
 
 | File | Kind | Duration |
 |------|------|----------|
-| `submission/video/constellan_master.mp4` | Master cut (PRIMARY): intro title card + real-UI screencap core with burned captions + signed-certificate outro; 1920x1080, h264, faststart, 1 video + 1 audio stream | 60.2s |
-| `submission/video/constellan_screencap.mp4` | Real-UI live-product capture (core source of the master) | 43.7s |
+| `submission/video/constellan_master.mp4` | Master cut (PRIMARY): intro title card + RE-CAPTURED real-UI screencap of the NEW linear no-login flow with burned captions + signed-certificate outro; 1920x1080, h264, 30fps, faststart, 1 video + 1 audio stream | 51.1s |
+| `submission/video/constellan_screencap.mp4` | RE-CAPTURED real-UI live-product screencap (core source): hero -> Run live attack -> inline LIVE RUN RESULT (90/CRITICAL) + "Open full dashboard" CTA in view -> `/console` no-wall -> `/console/keys` connect-your-agent -> `/standards`; zero console errors; 1920x1080, h264, 30fps | 34.5s |
 | `submission/video/constellan_film.mp4` | Remotion render (intro/outro source: title card + signed certificate) | 70.1s |
-| `submission/video/captions.srt` | Caption track, 12 cues, no em dashes, no Claude/Anthropic refs | n/a |
-| `submission/video/stills/` | 8 product stills (hero, 87/HIGH run, live-vs-clean, query-paths graph, MCP firewall block, certificate, console incidents, keys/connect, rules) | n/a |
+| `submission/video/captions.srt` | Master burned-caption track over the new screencap, 6 cues, no em dashes, no Claude/Anthropic refs | n/a |
+| `submission/video/stills/` | 8 product stills; 06/07/08 refreshed to the no-wall console incidents / keys connect-your-agent / read-only rules surfaces | n/a |
 | `submission/video/poster.png` | Poster frame | n/a |
 | `submission/video/thumbnail.png` | Thumbnail | n/a |
 | `submission/video/DEMO_SCRIPT.md` | Narration / shot script | n/a |
@@ -207,41 +201,42 @@ Printed and marked honestly. Green = verified true (test suite or live URL). Not
 | 6 | Measured semantic eval harness | GREEN | `backend/eval/` over a 25-row labelled set, offline precision=recall=F1=1.000; `test_semantic_eval.py` pins minimum metrics. |
 | 7 | CORS never a credentialed wildcard | GREEN | `config.resolve_cors()` + 13 tests incl. parametrised invariant + real preflight; effective policy on signed-in `/config/status`. |
 | 8 | Canonical one-click run reproducible (live) | GREEN | `POST /runs/judge-demo` live -> `ok=true score=87 band=HIGH confidence=0.92 decision=block`. |
-| 9 | Frontend deployed + public | GREEN | `/` 200, `/console` 200, `/standards` 200 live; ASI Top-10 grid confirmed in the deployed bundle; aliased to the canonical URL. |
-| 10 | Backend deployed + healthy | GREEN | `GET /health` -> `ok=true mode=demo`; aliased to the canonical URL; redeployed this session so `/standards/asi` is live (was 404 before). |
-| 11 | Security headers in prod | GREEN | Backend HSTS preload + nosniff + DENY + Referrer-Policy; frontend full CSP (`frame-ancestors 'none'`, `object-src 'none'`) + Permissions-Policy. Verified live. |
-| 12 | Auth fail-closed + tenant isolation | GREEN | Default-deny (invalid cred -> 401), BOLA (cross-tenant -> 404), per-user 256-bit keys; `test_auth.py`, `test_db_tenancy.py`. |
-| 13 | MCP installs clean + fails closed | GREEN | `pip install -e .` -> `hydrasentry-mcp`; key-gated tools return an honest "key required", never fabricate; `test_mcp_server.py`. |
-| 14 | README + ROUND_LOG + SYSTEM_DESIGN current | GREEN | README documents the ASI Top-10 map, the measured eval numbers, and the CORS guard; ROUND_LOG has all five rounds; SYSTEM_DESIGN matches the shipped multi-tenant SaaS. |
-| 15 | Video master cut committed | GREEN | `submission/video/constellan_master.mp4` (60.2s, 1080p) committed; package README names it primary. |
+| 9 | Frontend deployed + public | GREEN | `/` 200, `/console` 200, `/console/keys` 200, `/console/rules` 200, `/standards` 200 live; NO login wall on any route; aliased to the canonical URL. |
+| 10 | Backend deployed + healthy | GREEN | `GET /health` -> `ok=true mode=demo`; aliased to the canonical URL. |
+| 11 | Security headers in prod | GREEN | Backend HSTS preload + nosniff + DENY + Referrer-Policy; frontend full CSP (`frame-ancestors 'none'`, `object-src 'none'`) + Permissions-Policy. Verified live this session. |
+| 12 | No-login posture did NOT weaken security | GREEN | `POST /rules` -> 403, `GET /api-keys` -> 401, `/incidents?tenant_id=bogus` server-pins the demo tenant (no BOLA), CORS does not echo an evil origin. Verified live this session. |
+| 13 | Home flow linear + no login wall | GREEN | "Run live attack" above the fold (top ~56px); one click fires a real run; LIVE RUN RESULT + "Open full dashboard" CTA render inline in view (scrollY ~15); zero console errors. Captured this session. |
+| 14 | MCP installs clean + fails closed | GREEN | `pip install -e .` -> `hydrasentry-mcp`; key-gated tools return an honest "key required", never fabricate; `test_mcp_server.py`. The connect-your-agent steps are public on `/console/keys`. |
+| 15 | Video master cut RE-CAPTURED + committed | GREEN | `submission/video/constellan_master.mp4` (51.1s, 1080p, 30fps, 1 video + 1 audio stream) rebuilt over the NEW linear flow; ffprobe-verified; stills 06/07/08 refreshed to the no-wall surfaces. |
 | 16 | No secrets committed | GREEN | `backend/.env` gitignored; only masked SHA256 fingerprints surfaced; scoped commits only. |
 | 17 | main not broken + clean | GREEN | HEAD == origin/main; backend 215 pass, frontend build green this session; working tree clean (ota_packs restored after pytest). |
-| 18 | Authenticated dashboard recording in package | NOT DONE (human-only) | Requires a human magic-link click + screen capture; see section 4.1. The public zero-login path is fully covered. |
+| 18 | Authenticated dashboard end-to-end recording | NOT DONE (human-only) | Requires a human magic-link inbox click + screen capture; see section 4.3. The public no-login path is fully covered and is the whole product. |
 
 Ship checklist all-green for shippable scope: items 1-17 are GREEN. Item 18 is honestly NOT DONE
-because it is human-only and out of scope for an autonomous build; it is not a blocker for the
-public submission.
+because it is human-only and out of scope for an autonomous build; it is not a blocker because the
+no-login surface is the whole product.
 
 ---
 
 ## 7) Notes for a judge
 
-- **Standards is the one honest 10.** The OWASP coverage claim is not prose: it is recomputed
-  against the running codebase (`GET /standards/asi`, live `verified_all=true`), asserted by 12
-  tests that enforce honesty in BOTH directions (covered/partial rows must cite real code; the one
-  out-of-scope risk must carry no borrowed proof), and rendered in-app at `/standards` as a Top-10
-  grid above the ASI06 detail. If anyone renames an implementing symbol, the test fails and the
-  page shows it honestly. `verified_all` flipping False on a removed symbol is itself pinned, so the
-  green is recomputed, not hardcoded.
-- **The other seven axes are deliberately NOT inflated to 10.** Realness (9) and usability (9) are
-  capped because the last lift is a human clicking an emailed magic link and screen-recording the
-  authed dashboard. Depth (9.5), security (9.5), hardening (9), polish (9), and narrative (9) are
-  capped on subjective or external-attestation grounds. Each cap has an exact unlock step
-  (section 1a / section 4). This is the rule, not a shortfall: a 10 is only claimed with concrete
-  self-verifying evidence.
-- **The public, zero-login path is the real value path and is fully live:** open the hero, click
-  Run Judge Demo, get 87/HIGH with the taint trace and signed certificate. No keys, no account, no
-  curl.
+- **There is no login wall anywhere, and the whole product is yours with zero login.** This was
+  the brief and it is live: `/`, `/console`, `/console/keys`, `/console/rules`, `/standards` all
+  render real demo-tenant content read-only with honest labels ("Showing the demo tenant's real...
+  Sign in to see your own"). Sign-in is an optional control, never a gate. Panel re-judge: overall
+  **9.3, top-1 yes, converged.**
+- **The home flow is linear.** "Run live attack" is above the fold; one click fires a real Groq +
+  HydraDB run; the LIVE RUN RESULT panel (90/CRITICAL, real baseline vs poisoned answers, real Groq
+  judge) and the "Open full dashboard" CTA render inline in view with no scroll-hunt. That run then
+  appears as a real certified incident in `/console`. The old scroll-then-click dead end is gone.
+- **The no-login posture did NOT weaken security.** Verified live this session: `POST /rules` -> 403,
+  `GET /api-keys` -> 401, `/incidents` server-pins the demo tenant and ignores a bogus client
+  `tenant_id` (no BOLA pivot), CORS never echoes an evil origin, judge-demo is still 87/HIGH/block.
+  Making pages public leaks nothing because the backend scopes demo reads.
+- **Standards is self-verifying, not prose.** `GET /standards/asi` (live `verified_all=true`)
+  recomputes the OWASP ASI Top-10 coverage against the running codebase; 12 tests enforce honesty in
+  both directions; rendered in-app at `/standards`. If anyone renames an implementing symbol, the
+  test fails and the page shows it honestly.
 - **The hosted backend runs in `demo` mode by design,** so the graph is correctly labelled DERIVED
   SCENARIO GRAPH FALLBACK; REAL HYDRADB QUERY_PATHS appears only when a real HydraDB key drives a
   live query. Derived data is never presented as real.

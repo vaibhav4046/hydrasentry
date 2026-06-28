@@ -15,23 +15,27 @@ the value path is mocked, and every real-vs-derived state is labelled on screen.
 ## Primary deliverable
 
 **`constellan_master.mp4` is the primary video.** It is the assembled master cut:
-a short Remotion title intro, then the real-UI screen capture of the live product
-as the core, then the Remotion closing wordmark, with the narration burned in as
-captions over the screen-capture section. 60.2s, 1920x1080, h264, 30fps, faststart.
-Every frame of the core is the actual deployed product; the intro and outro are
-clearly the rendered title/wordmark, so the honesty rule holds. This is the cut to
-submit.
+a short Remotion title intro, then the RE-CAPTURED real-UI screen capture of the
+NEW linear no-login flow as the core, then the Remotion closing wordmark, with the
+narration burned in as captions over the screen-capture section. 51.1s, 1920x1080,
+h264, 30fps, faststart. Every frame of the core is the actual deployed product; the
+intro and outro are clearly the rendered title/wordmark, so the honesty rule holds.
+This is the cut to submit.
 
 Segment breakdown: Remotion intro (film 2.0s to 13.0s, the HydraSentry title card
-"Agents do not fail at the prompt. They fail at memory.") -> real screen capture
-(full 43.67s, six burned-in caption cues) -> Remotion outro (film 64.5s to 70.0s,
+"Agents do not fail at the prompt. They fail at memory.") -> RE-CAPTURED real screen
+capture (34.5s, six burned-in caption cues) -> Remotion outro (film 64.5s to 70.0s,
 the signed certificate resolving to REPLAY / TRACE / BLOCK / CERTIFY).
 
 **`constellan_screencap.mp4` is the raw real-UI capture (core source).** Headless
-Chrome driving the live Vercel frontend and backend (backend verified healthy,
-mode=demo), with the "Run live attack" button really clicked and the live Groq
-result rendered in place. Every frame is the actual deployed product, not an
-animation. Used as the middle of the master cut.
+Chrome (CDP screencast) driving the live Vercel frontend and backend (backend
+verified healthy, mode=demo) through the NEW linear flow: the hero with "Run live
+attack" above the fold, the button really clicked, the live Groq result (90/CRITICAL)
+plus the "Open full dashboard" CTA rendering inline IN VIEW (no scroll-hunt), then
+`/console` (no login wall, real demo-tenant incidents), `/console/keys`
+(connect-your-agent steps public), and `/standards` (OWASP ASI Top-10 self-verifying
+map). Every frame is the actual deployed product, not an animation; zero console
+errors during capture. Used as the middle of the master cut.
 
 **`constellan_film.mp4` is the polished Remotion companion (intro/outro source).**
 A Remotion render (noir/monochrome motion design) of the same story across eight
@@ -53,8 +57,8 @@ cut.
 
 | File | Kind | Duration | Resolution | Codec / fps | Size | Notes |
 |------|------|----------|------------|-------------|------|-------|
-| `constellan_master.mp4` | Assembled master cut (PRIMARY) | 60.20s | 1920x1080 | h264 / 30fps | ~6.1 MB | Remotion intro + real screen capture (burned-in captions) + Remotion outro wordmark. yuv420p, faststart, AAC stereo. The cut to submit. |
-| `constellan_screencap.mp4` | Real-UI screen capture (core source) | 43.67s | 1920x1080 | h264 / 12fps | ~3.9 MB | Live frontend + live backend, "Run live attack" really clicked, live Groq CRITICAL result, /graph live HydraDB query, /mcp firewall block, /console incidents. |
+| `constellan_master.mp4` | Assembled master cut (PRIMARY) | 51.07s | 1920x1080 | h264 / 30fps | ~4.3 MB | Remotion intro + RE-CAPTURED real screen capture of the NEW linear no-login flow (burned-in captions) + Remotion outro wordmark. yuv420p, faststart, AAC stereo. The cut to submit. |
+| `constellan_screencap.mp4` | Real-UI screen capture (core source) | 34.53s | 1920x1080 | h264 / 30fps | ~2.7 MB | RE-CAPTURED NEW linear flow: hero -> "Run live attack" clicked -> inline LIVE RUN RESULT (90/CRITICAL) + "Open full dashboard" CTA in view -> /console no-wall demo-tenant incidents -> /console/keys connect-your-agent -> /standards OWASP ASI map. Zero console errors. |
 | `constellan_film.mp4` | Remotion render (intro/outro source) | 70.06s | 1920x1080 | h264 / 30fps | ~10.8 MB | 8-scene noir motion film of the same story; ends on signed certificate + moat strip + REPLAY · TRACE · BLOCK · CERTIFY wordmark. |
 
 All three MP4s verified with ffprobe: duration > 0, one h264 video stream,
@@ -63,8 +67,9 @@ stereo audio track (silent over the screen-capture section). All play.
 
 ### Captions
 
-- `captions.srt` - 12 cues, ~0:00 to ~2:00, matching the 90-second beat table
-  narration. No em dashes, no Claude/Anthropic references.
+- `captions.srt` - the master burned-caption track, 6 cues timed over the new
+  screencap (master-relative ~0:11 to ~0:45). No em dashes, no Claude/Anthropic
+  references.
 
 ### Poster / thumbnail
 
@@ -86,9 +91,9 @@ All captured from the live product via headless Chrome + Chrome DevTools Protoco
 | `stills/03_query_paths_graph.png` | /graph live HydraDB query_paths constellation, tainted path traced, "LIVE QUERY / REAL HYDRADB SAMPLE" badge. |
 | `stills/04_mcp_firewall_block.png` | /mcp gateway, protected-write `quarantine_memory` blocked: `{"ok":false,"error":"unauthorized"}`; scan_context -> ALLOW in the call log. |
 | `stills/05_memory_certificate.png` | Verified Memory Integrity Certificate: MIC-2026-REFUND-001, risk 87, BLOCKED, tainted node, regression rule, seal. (Poster source.) |
-| `stills/06_console_incidents.png` | Demo tenant's real incident dashboard: 11 incidents, 11 BLOCKED, criticals-over-time chart, full history with real UTC timestamps. |
-| `stills/07_console_keys_connect_agent.png` | /console/keys - honestly documents the Supabase magic-link auth wall (signed out). Page chrome reads "API Keys". |
-| `stills/08_console_rules.png` | /console/rules - same auth wall, page chrome reads "Detection Rules". |
+| `stills/06_console_incidents.png` | /console with NO login wall: the demo tenant's real incident dashboard (signed out), honest banner "Showing the demo tenant's real persisted incidents (read-only). Sign in to see and manage your own", criticals-over-time chart, real UTC timestamps, grouped sidebar IA. |
+| `stills/07_console_keys_connect_agent.png` | /console/keys with NO login wall: the connect-your-agent steps (`pip install hydrasentry-mcp` + MCP client config) are fully public, a labelled key PREVIEW row, and ONLY the mint action gated ("Sign in to mint"). |
+| `stills/08_console_rules.png` | /console/rules with NO login wall: the demo tenant's 3 real read-only detection rules (static ENABLED pills, no toggle/delete when signed out), honest read-only provenance banner. |
 
 ### Script + copy
 
@@ -106,12 +111,13 @@ All captured from the live product via headless Chrome + Chrome DevTools Protoco
   documented, and the deterministic floor is 87/HIGH.
 - `constellan_film.mp4`: **rendered** with Remotion (motion design). It dramatises
   the real story; it is not a screen recording. Treat it as the cinematic cut.
-- Stills `07` and `08`: honest **limitation**. `/console/keys` and `/console/rules`
-  hard-gate behind Supabase magic-link auth (no public bypass). Signed out, both
-  correctly show the real sign-in gate. The post-login ConnectAgentPanel
-  (`pip install hydrasentry-mcp` + `hs_live_` key) and the rule table only render
-  after a magic-link round-trip, which a headless capture cannot complete. The
-  page chrome still reads "API Keys" / "Detection Rules", so the route is correct.
+- `/console`, `/console/keys`, and `/console/rules`: **NO login wall** anymore.
+  Signed out, all three show the real demo tenant's content read-only with honest
+  labels ("Showing the demo tenant's real... Sign in to see your own"). The
+  connect-your-agent steps on `/console/keys` are fully public; only the mint
+  action is gated behind a quick sign-in. The only thing a headless capture still
+  cannot show is the AUTHED tenant (post magic-link sign-in), which by design needs
+  a human inbox click; that is the one honest human-only gap, not a product wall.
 
 ---
 
