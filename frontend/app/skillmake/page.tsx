@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { PageShell } from "@/components/shared/PageShell";
 import { UNSAFE_DEMO_SKILL, BLANK_SKILL_TEMPLATE } from "@/components/skillmake/demoSkill";
-import { scanSkill, scanSkillFromMarketplace } from "@/lib/api";
+import { scanSkill, scanSkillFromMarketplace, mcpQuarantineMemory } from "@/lib/api";
 import { C } from "@/lib/cockpit/derive";
 import type { SkillScan } from "@/lib/types";
 
@@ -140,6 +140,23 @@ export default function SkillMakePage() {
     } else {
       void handleScan(name);
     }
+  }
+
+  /**
+   * Quarantine: issue the REAL protected MCP write (POST /mcp/quarantine_memory)
+   * scoped to the owned demo tenant, then record the disposition. Without a
+   * shared secret the backend returns `unauthorized` (the honest fail-closed
+   * path) and the panel reflects that rather than faking a success.
+   */
+  async function handleQuarantine() {
+    setStatus("quarantining");
+    const r = await mcpQuarantineMemory(
+      skillName || "unsafe-demo-skill",
+      "hydrasentry-owned-test",
+      "support_agent",
+    );
+    const accepted = r.ok && Boolean(r.data.ok);
+    setStatus(accepted ? "quarantined" : "quarantine blocked (shared secret required)");
   }
 
   const findings = scan?.findings ?? [];
@@ -447,7 +464,7 @@ export default function SkillMakePage() {
               </button>
               <button
                 type="button"
-                onClick={() => setStatus("quarantined")}
+                onClick={() => void handleQuarantine()}
                 style={{
                   cursor: "pointer",
                   fontFamily: "inherit",

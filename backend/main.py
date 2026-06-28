@@ -626,6 +626,8 @@ async def results_summary() -> JSONResponse:
 # isolation now holds under real auth, not just an unauthenticated header.
 
 def _incident_dto(inc: Any) -> dict[str, Any]:
+    """Full single-incident DTO (detail view). Includes the baseline/poisoned
+    answer text the detail page renders."""
     return {
         "id": inc.id,
         "tenant_id": inc.tenant_id,
@@ -640,6 +642,27 @@ def _incident_dto(inc: Any) -> dict[str, Any]:
         "mode": inc.mode,
         "baseline_answer": inc.baseline_answer,
         "poisoned_answer": inc.poisoned_answer,
+        "created_at": inc.created_at.isoformat() if inc.created_at else None,
+    }
+
+
+def _incident_list_dto(inc: Any) -> dict[str, Any]:
+    """Lean list DTO. The dashboard feed + analytics render only these summary
+    fields; the verbose baseline/poisoned answer bodies are intentionally
+    omitted from the list and only served by GET /incidents/{id} (detail). This
+    keeps the public list response tight without changing what the UI renders."""
+    return {
+        "id": inc.id,
+        "tenant_id": inc.tenant_id,
+        "scenario": inc.scenario,
+        "risk_score": inc.risk_score,
+        "band": inc.band,
+        "decision": inc.decision,
+        "attack_type": inc.attack_type,
+        "graph_source": inc.graph_source,
+        "confidence": inc.confidence,
+        "llm_provider": inc.llm_provider,
+        "mode": inc.mode,
         "created_at": inc.created_at.isoformat() if inc.created_at else None,
     }
 
@@ -662,7 +685,7 @@ async def list_incidents(
             action="list_incidents", actor=identity.auth_method,
             detail={"count": len(rows)},
         )
-        return ok([_incident_dto(r) for r in rows])
+        return ok([_incident_list_dto(r) for r in rows])
     except Exception as exc:  # noqa: BLE001 -- fail closed, surface honestly
         logger.warning("list_incidents failed: %s", type(exc).__name__)
         return err("incident store unavailable", status=503,

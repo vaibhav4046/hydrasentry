@@ -3,10 +3,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { PageShell } from "@/components/shared/PageShell";
 import { useRunDemo } from "@/hooks/useRunDemo";
-import { getScenarios } from "@/lib/api";
+import { getScenarios, runScenario } from "@/lib/api";
 import { deriveCockpit, C } from "@/lib/cockpit/derive";
 import type { CockpitVals } from "@/lib/cockpit/derive";
-import type { ScenarioSummary } from "@/lib/types";
+import type { ScenarioSummary, RunArtifact } from "@/lib/types";
 
 const MONO = "var(--font-geist-mono), 'JetBrains Mono', monospace";
 
@@ -45,6 +45,11 @@ export default function ReplayPage() {
   const v = useMemo(() => deriveCockpit(run, { isRunning }), [run, isRunning]);
   const [scenario, setScenario] = useState(CANONICAL_ID);
   const [scenarios, setScenarios] = useState<ScenarioSummary[]>([]);
+  // Real per-scenario replay artifacts, keyed by scenario id. A non-canonical
+  // chip fires POST /runs/{id} and caches the genuine artifact so the cards show
+  // the REAL score / decision / attack type rather than a hardcoded posture.
+  const [artifacts, setArtifacts] = useState<Record<string, RunArtifact>>({});
+  const [replaying, setReplaying] = useState(false);
 
   // Real scenario list with per-scenario baseline/poisoned answers (falls back
   // to the bundled fixture in the API layer).
@@ -54,34 +59,52 @@ export default function ReplayPage() {
     });
   }, []);
 
+  // Selecting a non-canonical chip genuinely replays it against the backend and
+  // caches the real artifact. The canonical refund tab stays wired to the shared
+  // judge-demo run via deriveCockpit (so the top-bar Run Demo drives it).
+  function selectScenario(id: string) {
+    setScenario(id);
+    if (id === CANONICAL_ID || artifacts[id]) return;
+    setReplaying(true);
+    void runScenario(id).then((r) => {
+      setReplaying(false);
+      if (r.ok) setArtifacts((prev) => ({ ...prev, [id]: r.data }));
+    });
+  }
+
   const scIds = scenarios.length ? scenarios.map((s) => s.id) : SCENARIO_IDS;
   const selected = scenarios.find((s) => s.id === scenario);
   const isCanonical = scenario === CANONICAL_ID;
+  const artifact = artifacts[scenario];
 
   // Per-tab content. The canonical refund scenario stays driven by the live
   // judge-demo run (so a real run flips it to 87/HIGH/poisoned). Every other tab
-  // renders that scenario's real, distinct baseline/poisoned answers from the
-  // loaded scenario data, with a representative "attack caught" posture (the
-  // poisoned reply is the unsafe behavior HydraSentry flags). No fake sameness.
-  const view = scenarioView({ isCanonical, v, selected });
+  // renders that scenario's REAL replay artifact (score / band / decision /
+  // attack type / confidence) once the chip's POST /runs/{id} resolves, and
+  // falls back to the scenario's real baseline/poisoned answers while it runs.
+  const view = scenarioView({ isCanonical, v, selected, artifact });
   const p = view.poisoned;
 
-  // Completed stages: from the live run's real stage list when present,
-  // else the source's "first three done" idle posture.
-  const doneCount = isCanonical && run ? run.stages.length : 3;
+  // Completed stages: from the live run's real stage list when present, else the
+  // selected scenario's real replay stages, else the idle "first three" posture.
+  const doneCount = isCanonical && run
+    ? run.stages.length
+    : artifact
+      ? artifact.stages.length
+      : 3;
 
   return (
     <PageShell>
       <div data-page style={{ display: "flex", flexDirection: "column", gap: 18 }}>
         {/* Scenario chips */}
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
           {scIds.map((id) => {
             const on = scenario === id;
             return (
               <button
                 key={id}
                 type="button"
-                onClick={() => setScenario(id)}
+                onClick={() => selectScenario(id)}
                 style={{
                   cursor: "pointer",
                   fontFamily: MONO,
@@ -98,6 +121,11 @@ export default function ReplayPage() {
               </button>
             );
           })}
+          {replaying && (
+            <span style={{ fontFamily: MONO, fontSize: 10, color: C.faint }}>
+              replaying against live backend…
+            </span>
+          )}
         </div>
 
         {/* Baseline vs poisoned */}
@@ -315,20 +343,22 @@ type ReplayView = Pick<
  * Resolve the Replay comparison for the selected scenario tab.
  *
  * The canonical refund scenario stays wired to the live judge-demo run (so a
- * real run flips it to 87/HIGH/poisoned). Every other tab renders that
- * scenario's real, distinct baseline_answer / poisoned_answer with a
- * representative "attack caught" posture: the poisoned reply IS the unsafe
- * behavior HydraSentry flags, so the cards show UNSAFE / HIGH honestly rather
- * than repeating the refund scenario's text.
+ * real run flips it to 87/HIGH/poisoned). Every other tab REPLAYS that scenario
+ * for real (POST /runs/{id}) and renders the genuine artifact: its real risk
+ * score / band / decision / attack type / confidence via deriveCockpit, with the
+ * baseline/poisoned answer text from the artifact (or the loaded scenario data
+ * until the replay resolves). No hardcoded risk=84 / conf=0.90 posture.
  */
 function scenarioView({
   isCanonical,
   v,
   selected,
+  artifact,
 }: {
   isCanonical: boolean;
   v: CockpitVals;
   selected: ScenarioSummary | undefined;
+  artifact: RunArtifact | undefined;
 }): ReplayView {
   if (isCanonical) return v;
 
@@ -338,29 +368,51 @@ function scenarioView({
   const poison =
     selected?.poisoned_answer?.trim() ||
     "Injected context steered the agent into the unsafe action.";
+
+  // Genuine replay artifact present: derive the real posture from it.
+  if (artifact) {
+    const d = deriveCockpit(artifact, { isRunning: false });
+    return {
+      poisoned: d.poisoned,
+      riskState: d.riskState,
+      chipColor: d.chipColor,
+      risk: d.risk,
+      // Prefer the scenario's distinct answer text; fall back to the derived run.
+      baselineText: baseline || d.baselineText,
+      poisonText: poison || d.poisonText,
+      poisonTextColor: d.poisonTextColor,
+      poisonCardBorder: d.poisonCardBorder,
+      poisonCardBg: d.poisonCardBg,
+      poisonTag: d.poisonTag,
+      poisonState: d.poisonState,
+      gaugeDash: d.gaugeDash,
+      attackType: d.attackType,
+      conf: d.conf,
+      behaviorDiff: d.behaviorDiff,
+    };
+  }
+
+  // No artifact yet (replay in flight or unavailable): show the scenario's real,
+  // distinct answers in a neutral "pending" posture, never a fabricated score.
   const attack = selected?.attack_type ?? "context_integrity";
   const forbidden = selected?.forbidden_behavior?.trim();
-
-  // Representative caught posture for a known attack scenario (deterministic,
-  // not a live score): the poisoned reply demonstrates the unsafe behavior.
-  const risk = 84;
   return {
-    poisoned: true,
-    riskState: "HIGH",
-    chipColor: C.white,
-    risk,
+    poisoned: false,
+    riskState: "REPLAYING",
+    chipColor: C.silver,
+    risk: 0,
     baselineText: baseline,
     poisonText: poison,
-    poisonTextColor: C.ink,
-    poisonCardBorder: "rgba(255,255,255,0.34)",
-    poisonCardBg: "rgba(255,255,255,0.05)",
-    poisonTag: C.white,
-    poisonState: "UNSAFE",
-    gaugeDash: (170 - 170 * (risk / 100)).toFixed(1),
+    poisonTextColor: C.silver,
+    poisonCardBorder: "rgba(255,255,255,0.16)",
+    poisonCardBg: "rgba(255,255,255,0.016)",
+    poisonTag: C.silver,
+    poisonState: "PENDING",
+    gaugeDash: "170",
     attackType: attack,
-    conf: "0.90",
+    conf: "...",
     behaviorDiff:
       forbidden ||
-      "Behavior shifted from the safe baseline to the attacker's goal under poisoned context.",
+      "Replaying this scenario against the live backend to compute the real posture…",
   };
 }
