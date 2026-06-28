@@ -18,6 +18,12 @@ const MONO = "var(--font-geist-mono), 'JetBrains Mono', monospace";
 interface RuleTableProps {
   rules: DetectionRule[] | null;
   token: string | null;
+  /**
+   * Read-only mode for the signed-out demo ruleset: rows render with a static
+   * status pill instead of an interactive toggle, and the delete control is
+   * hidden. Mirrors the backend, which rejects demo-tenant writes with 403.
+   */
+  readOnly?: boolean;
   onChanged: () => void;
   onError: (message: string) => void;
 }
@@ -89,7 +95,27 @@ function EnabledToggle({
   );
 }
 
-export function RuleTable({ rules, token, onChanged, onError }: RuleTableProps) {
+function StatusPill({ enabled }: { enabled: boolean }) {
+  return (
+    <span
+      style={{
+        fontFamily: MONO,
+        fontSize: 9.5,
+        letterSpacing: "0.1em",
+        padding: "3px 8px",
+        borderRadius: 6,
+        flexShrink: 0,
+        color: enabled ? C.silver : C.faint,
+        border: `1px solid ${enabled ? "rgba(234,240,250,0.22)" : "rgba(255,255,255,0.1)"}`,
+        whiteSpace: "nowrap",
+      }}
+    >
+      {enabled ? "ENABLED" : "DISABLED"}
+    </span>
+  );
+}
+
+export function RuleTable({ rules, token, readOnly = false, onChanged, onError }: RuleTableProps) {
   const [busyId, setBusyId] = useState<string | null>(null);
   // Guard against writing state / triggering a reload after unmount: a PATCH or
   // DELETE can still be in flight when the operator navigates away.
@@ -138,8 +164,9 @@ export function RuleTable({ rules, token, onChanged, onError }: RuleTableProps) 
         <div style={{ fontFamily: MONO, fontSize: 10, letterSpacing: "0.12em", color: C.faint, marginBottom: 8 }}>
           NO RULES YET
         </div>
-        Add a signature to tune detection for your tenant. Paste an example of the
-        poisoned text you want caught — its paraphrases will be flagged too.
+        {readOnly
+          ? "The demo tenant has no detection rules to show. Sign in to create signatures that tune detection for your own tenant."
+          : "Add a signature to tune detection for your tenant. Paste an example of the poisoned text you want caught — its paraphrases will be flagged too."}
       </div>
     );
   }
@@ -189,27 +216,33 @@ export function RuleTable({ rules, token, onChanged, onError }: RuleTableProps) 
               </div>
             </div>
             <SeverityBadge severity={rule.severity} />
-            <EnabledToggle rule={rule} busy={busy} onToggle={() => void toggle(rule)} />
-            <button
-              type="button"
-              onClick={() => void remove(rule)}
-              disabled={busy}
-              className="hydra-button-danger"
-              aria-label={`Delete rule ${rule.name}`}
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 6,
-                padding: "7px 11px",
-                borderRadius: 8,
-                fontSize: 11.5,
-                cursor: busy ? "wait" : "pointer",
-                flexShrink: 0,
-              }}
-            >
-              <Trash2 size={13} />
-              Delete
-            </button>
+            {readOnly ? (
+              <StatusPill enabled={rule.enabled} />
+            ) : (
+              <>
+                <EnabledToggle rule={rule} busy={busy} onToggle={() => void toggle(rule)} />
+                <button
+                  type="button"
+                  onClick={() => void remove(rule)}
+                  disabled={busy}
+                  className="hydra-button-danger"
+                  aria-label={`Delete rule ${rule.name}`}
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 6,
+                    padding: "7px 11px",
+                    borderRadius: 8,
+                    fontSize: 11.5,
+                    cursor: busy ? "wait" : "pointer",
+                    flexShrink: 0,
+                  }}
+                >
+                  <Trash2 size={13} />
+                  Delete
+                </button>
+              </>
+            )}
           </div>
         );
       })}
