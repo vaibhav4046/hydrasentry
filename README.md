@@ -1,5 +1,7 @@
 # HydraSentry
 
+> 🏆 **Winner - HydraDB Build Blitz 2026.**
+
 **A graph-native Memory Integrity Certificate system and multi-tenant SaaS for AI agents that run on HydraDB. Graph-native proof, not prompt vibes.**
 
 > Repo and product are both `hydrasentry` / **HydraSentry**. Internal identifiers (tenant ids, the report header, the `python -m constellan` CLI module, a few code strings) keep their original names on purpose, so technical ids stay stable.
